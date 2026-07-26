@@ -5,6 +5,7 @@ const cors = require("cors");
 const authRoutes = require("./routes/auth");
 const webhookRoutes = require("./routes/webhooks");
 const mentorRoutes = require("./routes/mentor");
+const projectsRoutes = require("./routes/projects");
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.use("/api/webhooks", express.text({ type: "*/*" }), webhookRoutes);
 app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/mentor", mentorRoutes);
+app.use("/api/projects", projectsRoutes);
 
 app.get("/health", (req, res) => res.json({ ok: true, service: "marketing-platform-server" }));
 
