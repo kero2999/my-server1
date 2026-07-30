@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-protected="true">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الفصل السابع: أساسيات العلامة التجارية</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root { --gold: #ffd700; --dark: #0d1b2a; --secondary: #ff6f00; --accent: #00bfa5; --purple: #7c3aed; --rose: #e11d48; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Tajawal', sans-serif; background: var(--dark); color: #fff; overflow-x: hidden; scroll-behavior: smooth; }
+.geo-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; overflow: hidden; }
+.geo-shape { position: absolute; opacity: 0.08; animation: float 20s infinite ease-in-out; }
+.geo-circle { border-radius: 50%; border: 3px solid var(--gold); }
+.geo-triangle { width: 0; height: 0; border-left: 60px solid transparent; border-right: 60px solid transparent; border-bottom: 100px solid var(--secondary); }
+.geo-square { border: 3px solid var(--accent); transform: rotate(45deg); }
+.geo-hexagon { width: 100px; height: 55px; background: var(--secondary); position: relative; }
+.geo-hexagon:before, .geo-hexagon:after { content: ""; position: absolute; width: 0; border-left: 50px solid transparent; border-right: 50px solid transparent; }
+.geo-hexagon:before { bottom: 100%; border-bottom: 27.5px solid var(--secondary); }
+.geo-hexagon:after { top: 100%; border-top: 27.5px solid var(--secondary); }
+@keyframes float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-30px) rotate(180deg); } }
+@keyframes pulse { 0%, 100% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.1); opacity: 1; } }
+@keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes shine { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+.nav-bar { position: fixed; top: 0; width: 100%; background: rgba(13,27,42,0.95); backdrop-filter: blur(10px); z-index: 1000; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--gold); }
+.nav-logo { font-size: 1.2rem; font-weight: 800; color: var(--gold); display: flex; align-items: center; gap: 10px; }
+.nav-progress { display: flex; gap: 5px; align-items: center; }
+.nav-dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.3); cursor: pointer; transition: all 0.3s; }
+.nav-dot.active { background: var(--gold); transform: scale(1.3); }
+.nav-controls { display: flex; gap: 15px; }
+.nav-btn { background: transparent; border: 2px solid var(--gold); color: var(--gold); padding: 8px 20px; border-radius: 25px; cursor: pointer; font-family: 'Tajawal', sans-serif; font-weight: 700; transition: all 0.3s; }
+.nav-btn:hover { background: var(--gold); color: var(--dark); }
+.slides-container { position: relative; width: 100%; }
+.slide { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 100px 40px 60px; position: relative; overflow: hidden; }
+.slide-content { max-width: 1200px; width: 100%; position: relative; z-index: 10; }
+.section-header { display: flex; align-items: center; gap: 20px; margin-bottom: 40px; }
+.section-number { width: 80px; height: 80px; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: 900; color: #fff; flex-shrink: 0; position: relative; overflow: hidden; }
+.section-number::after { content: ''; position: absolute; inset: 0; background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%); animation: shine 3s infinite; }
+.section-title-text { font-size: 2.5rem; font-weight: 800; }
+.content-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-top: 30px; }
+.content-card { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border-radius: 20px; padding: 30px; border: 1px solid rgba(255,255,255,0.1); transition: all 0.4s; position: relative; overflow: hidden; }
+.content-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: var(--card-accent, var(--gold)); }
+.content-card:hover { transform: translateY(-10px); box-shadow: 0 20px 40px rgba(0,0,0,0.3); border-color: var(--card-accent, var(--gold)); }
+.card-icon { font-size: 3rem; margin-bottom: 15px; color: var(--card-accent, var(--gold)); }
+.card-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 15px; color: #fff; }
+.card-text { font-size: 1.1rem; line-height: 2; color: rgba(255,255,255,0.85); }
+.quote-box { background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,111,0,0.1)); border-right: 5px solid var(--gold); border-radius: 0 20px 20px 0; padding: 40px; margin: 30px 0; position: relative; }
+.quote-box::before { content: '"'; font-size: 6rem; color: var(--gold); opacity: 0.3; position: absolute; top: -10px; right: 20px; line-height: 1; }
+.quote-text { font-size: 1.4rem; font-weight: 700; line-height: 2; color: #fff; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; }
+.title-card { background: rgba(255,255,255,0.1); backdrop-filter: blur(20px); border-radius: 30px; padding: 60px; border: 2px solid rgba(255,255,255,0.2); text-align: center; position: relative; overflow: hidden; }
+.title-card::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: conic-gradient(transparent, var(--gold), transparent 30%); animation: rotate 4s linear infinite; }
+.title-card-inner { position: relative; z-index: 1; background: rgba(13,27,42,0.9); border-radius: 25px; padding: 50px; }
+.title-main { font-size: 4rem; font-weight: 900; color: var(--gold); margin-bottom: 20px; text-shadow: 0 0 30px rgba(255,215,0,0.3); }
+.title-sub { font-size: 1.8rem; color: #fff; margin-bottom: 30px; }
+.title-icon { font-size: 5rem; color: var(--gold); margin-bottom: 20px; animation: pulse 2s infinite; }
+.golden-rule { background: linear-gradient(90deg, var(--gold), #ff8c00); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 1.4rem; font-weight: 700; margin-top: 20px; }
+.value-highlight { background: linear-gradient(90deg, var(--gold), #ff8c00); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; }
+.animate-on-scroll { opacity: 0; transform: translateY(30px); transition: all 0.8s ease-out; }
+.animate-on-scroll.visible { opacity: 1; transform: translateY(0); }
+.brand-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 30px; }
+.brand-card { background: rgba(255,255,255,0.05); border-radius: 20px; padding: 30px; border: 1px solid rgba(255,255,255,0.1); transition: all 0.4s; position: relative; overflow: hidden; text-align: center; }
+.brand-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: var(--brand-accent, var(--gold)); }
+.brand-card:hover { transform: translateY(-10px); border-color: var(--brand-accent, var(--gold)); }
+.brand-icon { font-size: 2.5rem; margin-bottom: 15px; color: var(--brand-accent, var(--gold)); }
+.brand-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 10px; }
+.brand-desc { font-size: 1rem; line-height: 1.8; color: rgba(255,255,255,0.85); }
+.color-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 30px; border-radius: 20px; overflow: hidden; }
+.color-table th { padding: 20px; font-size: 1.2rem; font-weight: 800; text-align: center; background: rgba(255,255,255,0.1); }
+.color-table td { padding: 18px 20px; font-size: 1.05rem; line-height: 1.8; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.color-table tr:last-child td { border-bottom: none; }
+.color-table tr:hover td { background: rgba(255,255,255,0.05); }
+.color-dot { width: 30px; height: 30px; border-radius: 50%; display: inline-block; margin-left: 10px; vertical-align: middle; border: 2px solid rgba(255,255,255,0.3); }
+.personality-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 30px; }
+.personality-item { background: rgba(255,255,255,0.05); border-radius: 15px; padding: 20px; border: 1px solid rgba(255,255,255,0.1); transition: all 0.3s; text-align: center; }
+.personality-item:hover { transform: scale(1.05); border-color: var(--gold); }
+.personality-icon { font-size: 2rem; margin-bottom: 10px; color: var(--gold); }
+.personality-name { font-size: 1rem; font-weight: 700; }
+.tone-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 30px; }
+.tone-card { background: rgba(255,255,255,0.05); border-radius: 20px; padding: 30px; border: 1px solid rgba(255,255,255,0.1); transition: all 0.4s; position: relative; overflow: hidden; }
+.tone-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: var(--tone-accent, var(--gold)); }
+.tone-card:hover { transform: translateY(-10px); border-color: var(--tone-accent, var(--gold)); }
+.tone-label { font-size: 1.2rem; font-weight: 700; margin-bottom: 15px; color: var(--tone-accent, var(--gold)); }
+.tone-example { font-size: 1rem; line-height: 1.8; color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; border-right: 3px solid var(--tone-accent, var(--gold)); }
+.positioning-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 30px; }
+.positioning-card { background: rgba(255,255,255,0.05); border-radius: 20px; padding: 30px; border: 1px solid rgba(255,255,255,0.1); transition: all 0.4s; display: flex; align-items: flex-start; gap: 20px; }
+.positioning-card:hover { transform: translateY(-5px); border-color: var(--gold); }
+.positioning-icon { font-size: 2.5rem; color: var(--gold); flex-shrink: 0; }
+.positioning-text { font-size: 1.1rem; line-height: 1.8; }
+.positioning-highlight { color: var(--gold); font-weight: 700; }
+.promise-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 30px; }
+.promise-card { background: rgba(255,255,255,0.05); border-radius: 20px; padding: 30px; border: 1px solid rgba(255,255,255,0.1); transition: all 0.4s; text-align: center; }
+.promise-card:hover { transform: translateY(-10px); border-color: var(--gold); }
+.promise-icon { font-size: 2.5rem; color: var(--gold); margin-bottom: 15px; }
+.promise-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 10px; }
+.promise-desc { font-size: 1rem; line-height: 1.8; color: rgba(255,255,255,0.85); }
+.equity-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 30px; }
+.equity-card { background: rgba(255,255,255,0.05); border-radius: 20px; padding: 30px; border: 1px solid rgba(255,255,255,0.1); transition: all 0.4s; }
+.equity-card:hover { transform: translateY(-5px); border-color: var(--gold); }
+.equity-title { font-size: 1.3rem; font-weight: 700; color: var(--gold); margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+.equity-list { list-style: none; }
+.equity-list li { padding: 8px 0; font-size: 1.05rem; color: rgba(255,255,255,0.85); display: flex; align-items: center; gap: 10px; }
+.equity-list li::before { content: '✓'; color: var(--gold); font-weight: 700; }
+.case-study { background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,111,0,0.05)); border: 2px solid rgba(255,215,0,0.2); border-radius: 25px; padding: 40px; margin-top: 30px; position: relative; overflow: hidden; }
+.case-study::before { content: ''; position: absolute; top: 0; right: 0; width: 6px; height: 100%; background: var(--gold); }
+.case-study-title { font-size: 1.6rem; font-weight: 800; color: var(--gold); margin-bottom: 25px; display: flex; align-items: center; gap: 15px; }
+.case-study-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+.case-item { background: rgba(255,255,255,0.05); border-radius: 15px; padding: 20px; display: flex; align-items: flex-start; gap: 15px; }
+.case-item-icon { width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #fff; flex-shrink: 0; }
+.case-item-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 5px; }
+.case-item-desc { font-size: 0.95rem; color: rgba(255,255,255,0.7); line-height: 1.6; }
+.summary-box { background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,111,0,0.05)); border: 2px solid rgba(255,215,0,0.2); border-radius: 25px; padding: 50px; margin-top: 30px; position: relative; overflow: hidden; }
+.summary-box::before { content: ''; position: absolute; top: 0; right: 0; width: 100%; height: 4px; background: linear-gradient(90deg, var(--gold), var(--secondary)); }
+.summary-text { font-size: 1.3rem; line-height: 2.2; color: rgba(255,255,255,0.9); }
+.summary-list { list-style: none; margin-top: 20px; }
+.summary-list li { padding: 12px 20px; margin-bottom: 10px; background: rgba(255,255,255,0.05); border-radius: 12px; border-right: 4px solid var(--gold); font-size: 1.1rem; display: flex; align-items: center; gap: 12px; transition: all 0.3s; }
+.summary-list li:hover { background: rgba(255,255,255,0.1); transform: translateX(-5px); }
+.summary-list li i { color: var(--gold); }
+.benefits-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 30px; }
+.benefit-item { background: rgba(255,255,255,0.05); border-radius: 15px; padding: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.1); transition: all 0.3s; }
+.benefit-item:hover { transform: translateY(-5px); border-color: var(--gold); }
+.benefit-icon { font-size: 2rem; margin-bottom: 10px; color: var(--gold); }
+.benefit-text { font-size: 1rem; font-weight: 600; }
+.examples-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 30px; }
+.example-card { background: rgba(255,255,255,0.05); border-radius: 20px; padding: 30px; border: 1px solid rgba(255,255,255,0.1); transition: all 0.4s; }
+.example-card:hover { transform: translateY(-5px); border-color: var(--gold); }
+.example-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
+.example-icon { font-size: 2.5rem; color: var(--gold); }
+.example-name { font-size: 1.3rem; font-weight: 700; }
+.example-traits { font-size: 1rem; line-height: 1.8; color: rgba(255,255,255,0.85); }
+@media (max-width: 768px) {
+    .brand-grid, .tone-grid, .promise-grid, .positioning-grid, .case-study-grid, .two-col, .examples-grid, .equity-grid, .personality-grid, .benefits-grid { grid-template-columns: 1fr; }
+    .title-main { font-size: 2.5rem; }
+    .section-title-text { font-size: 1.8rem; }
+    .slide { padding: 80px 20px 40px; }
+}
+</style>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d1b2a">
+
+<style>
+.site-floatnav{position:fixed;bottom:22px;left:22px;z-index:2000;display:flex;gap:8px;align-items:center;flex-wrap:wrap;max-width:90vw;}
+.site-floatnav a{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(13,27,42,0.92);backdrop-filter:blur(10px);
+  border:2px solid #ffd700;color:#ffd700;
+  padding:10px 16px;border-radius:25px;
+  font-family:'Tajawal',sans-serif;font-weight:700;font-size:0.85rem;
+  text-decoration:none;transition:all .3s;
+}
+.site-floatnav a:hover{background:#ffd700;color:#0d1b2a;}
+.site-floatnav a.disabled{opacity:0.3;pointer-events:none;}
+.site-floatnav a.quiz-link{border-color:#00bfa5;color:#00bfa5;}
+.site-floatnav a.quiz-link:hover{background:#00bfa5;color:#0d1b2a;}
+@media (max-width:640px){
+  .site-floatnav{left:10px;bottom:10px;gap:6px;}
+  .site-floatnav a{padding:8px 10px;font-size:0.75rem;}
+  .site-floatnav a span.label{display:none;}
+}
+</style>
+</head>
+<body>
+<script>
+(function(){
+  var localSession = localStorage.getItem('lms_session_v1');
+  var remoteToken = localStorage.getItem('lms_token_v1');
+  var remotePaid = false;
+  if (remoteToken) {
+    try {
+      var ru = JSON.parse(localStorage.getItem('lms_remote_user_v1'));
+      remotePaid = ru && String(ru.status || '').trim().toLowerCase() === 'active';
+    } catch(e){}
+  }
+  var trialActive = false;
+  try {
+    var t = JSON.parse(localStorage.getItem('lms_trial_v1'));
+    if (t) { trialActive = ((Date.now() - t.startAt) / 1000) < 600; }
+  } catch(e){}
+
+  var allowed = !!localSession || (!!remoteToken && remotePaid) || trialActive;
+  if(!allowed){
+    location.replace(remoteToken ? 'upgrade.html' : 'index.html');
+    return;
+  }
+
+  // قفل تسلسلي: لازم يجتاز اختبار الفصل رقم 6 قبل الدخول هنا (لا يُطبَّق في وضع المعاينة التجريبية)
+  var isTrialOnly = trialActive && !localSession && !(remoteToken && remotePaid);
+  if (!isTrialOnly) {
+    var uname = localSession || (function(){
+      try {
+        var ru2 = JSON.parse(localStorage.getItem('lms_remote_user_v1'));
+        return ru2 ? ru2.email : null;
+      } catch(e){ return null; }
+    })();
+    if (uname) {
+      try {
+        var progress = JSON.parse(localStorage.getItem('lms_progress_v1_' + uname)) || {};
+        var prevQuiz = progress.quizzes && progress.quizzes[6];
+        if (!prevQuiz || !prevQuiz.passed) {
+          location.replace('dashboard.html?locked=7');
+          return;
+        }
+      } catch(e){}
+    }
+  }
+})();
+</script>
+
+<div class="geo-bg">
+    <div class="geo-shape geo-circle" style="width:300px;height:300px;top:10%;left:5%;animation-delay:0s;"></div>
+    <div class="geo-shape geo-triangle" style="top:60%;right:10%;animation-delay:2s;"></div>
+    <div class="geo-shape geo-square" style="width:150px;height:150px;top:30%;right:30%;animation-delay:4s;"></div>
+    <div class="geo-shape geo-hexagon" style="top:70%;left:20%;animation-delay:6s;"></div>
+    <div class="geo-shape geo-circle" style="width:200px;height:200px;top:20%;right:5%;animation-delay:8s;"></div>
+    <div class="geo-shape geo-square" style="width:100px;height:100px;top:80%;left:40%;animation-delay:10s;"></div>
+</div>
+
+<div class="nav-bar">
+    <div class="nav-logo"><i class="fas fa-crown"></i> الفصل السابع</div>
+    <div class="nav-progress" id="navProgress"></div>
+    <div class="nav-controls">
+        <button class="nav-btn" onclick="prevSlide()"><i class="fas fa-chevron-right"></i> السابق</button>
+        <button class="nav-btn" onclick="nextSlide()">التالي <i class="fas fa-chevron-left"></i></button>
+    </div>
+</div>
+
+<div class="slides-container" id="slidesContainer">
+
+<!-- SLIDE 0: Title -->
+<div class="slide" data-slide="0">
+    <div class="slide-content" style="text-align:center;">
+        <div class="title-card animate-on-scroll">
+            <div class="title-card-inner">
+                <div class="title-icon"><i class="fas fa-gem"></i></div>
+                <div class="title-main">الفصل السابع</div>
+                <div class="title-sub">أساسيات العلامة التجارية</div>
+                <div class="golden-rule">Branding Fundamentals</div>
+                <p style="margin-top:30px;font-size:1.2rem;color:rgba(255,255,255,0.7);">بناء هوية قوية تبقى في ذهن العميل</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 1: ما هي العلامة التجارية -->
+<div class="slide" data-slide="1">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background:linear-gradient(135deg,var(--gold),var(--secondary));">01</div>
+            <div class="section-title-text">ما هي العلامة التجارية؟</div>
+        </div>
+        <div class="quote-box animate-on-scroll">
+            <div class="quote-text">العلامة التجارية هي الصورة والانطباع والمشاعر والأفكار التي تتكون في عقل العميل عندما يسمع اسم شركتك أو يرى منتجك.</div>
+        </div>
+        <div class="content-grid animate-on-scroll">
+            <div class="content-card" style="--card-accent:var(--gold);">
+                <div class="card-icon"><i class="fas fa-lightbulb"></i></div>
+                <div class="card-title">البراند ليس ما تقوله أنت</div>
+                <div class="card-text">بل هو ما يقوله الناس عنك عندما لا تكون موجوداً.</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--accent);">
+                <div class="card-icon"><i class="fas fa-heart"></i></div>
+                <div class="card-title">المنتج يمكن تقليده</div>
+                <div class="card-text">أما العلامة التجارية القوية فمن الصعب جداً تقليدها لأنها تعتمد على المشاعر والثقة.</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--secondary);">
+                <div class="card-icon"><i class="fas fa-users"></i></div>
+                <div class="card-title">الفرق الأساسي</div>
+                <div class="card-text">فرق كبير بين بيع منتج وبين بناء علامة تجارية قوية.</div>
+            </div>
+        </div>
+        <div class="examples-grid animate-on-scroll" style="margin-top:30px;">
+            <div class="example-card">
+                <div class="example-header"><div class="example-icon"><i class="fas fa-car"></i></div><div class="example-name">Mercedes</div></div>
+                <div class="example-traits">الفخامة • الجودة • الهيبة • السعر المرتفع</div>
+            </div>
+            <div class="example-card">
+                <div class="example-header"><div class="example-icon"><i class="fas fa-couch"></i></div><div class="example-name">IKEA</div></div>
+                <div class="example-traits">أثاث عملي • أسعار مناسبة • تصميم بسيط • تركيب ذاتي</div>
+            </div>
+            <div class="example-card">
+                <div class="example-header"><div class="example-icon"><i class="fas fa-bottle-droplet"></i></div><div class="example-name">كوكاكولا</div></div>
+                <div class="example-traits">السعادة • المشاركة • التجمعات • اللون الأحمر</div>
+            </div>
+            <div class="example-card">
+                <div class="example-header"><div class="example-icon"><i class="fas fa-apple-alt"></i></div><div class="example-name">Apple</div></div>
+                <div class="example-traits">الابتكار • البساطة • التفرد • التصميم الأنيق</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 2: مكونات البراند وفوائده -->
+<div class="slide" data-slide="2">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background:linear-gradient(135deg,var(--purple),var(--rose));">02</div>
+            <div class="section-title-text">مكونات وفوائد البراند</div>
+        </div>
+        <div class="two-col">
+            <div>
+                <h3 style="font-size:1.5rem;margin-bottom:20px;color:var(--gold);"><i class="fas fa-puzzle-piece"></i> المكونات</h3>
+                <div class="brand-grid animate-on-scroll">
+                    <div class="brand-card" style="--brand-accent:var(--gold);"><div class="brand-icon"><i class="fas fa-signature"></i></div><div class="brand-title">الاسم</div></div>
+                    <div class="brand-card" style="--brand-accent:var(--accent);"><div class="brand-icon"><i class="fas fa-palette"></i></div><div class="brand-title">الألوان</div></div>
+                    <div class="brand-card" style="--brand-accent:var(--secondary);"><div class="brand-icon"><i class="fas fa-font"></i></div><div class="brand-title">الخطوط</div></div>
+                    <div class="brand-card" style="--brand-accent:var(--purple);"><div class="brand-icon"><i class="fas fa-image"></i></div><div class="brand-title">الشعار</div></div>
+                    <div class="brand-card" style="--brand-accent:var(--rose);"><div class="brand-icon"><i class="fas fa-user-tie"></i></div><div class="brand-title">شخصية الشركة</div></div>
+                    <div class="brand-card" style="--brand-accent:var(--gold);"><div class="brand-icon"><i class="fas fa-box-open"></i></div><div class="brand-title">التغليف</div></div>
+                    <div class="brand-card" style="--brand-accent:var(--accent);"><div class="brand-icon"><i class="fas fa-star"></i></div><div class="brand-title">جودة المنتج</div></div>
+                    <div class="brand-card" style="--brand-accent:var(--secondary);"><div class="brand-icon"><i class="fas fa-headset"></i></div><div class="brand-title">خدمة العملاء</div></div>
+                    <div class="brand-card" style="--brand-accent:var(--purple);"><div class="brand-icon"><i class="fas fa-bullhorn"></i></div><div class="brand-title">الإعلانات</div></div>
+                </div>
+            </div>
+            <div>
+                <h3 style="font-size:1.5rem;margin-bottom:20px;color:var(--gold);"><i class="fas fa-trophy"></i> الفوائد</h3>
+                <div class="benefits-grid animate-on-scroll">
+                    <div class="benefit-item"><div class="benefit-icon"><i class="fas fa-brain"></i></div><div class="benefit-text">يتذكرك</div></div>
+                    <div class="benefit-item"><div class="benefit-icon"><i class="fas fa-handshake"></i></div><div class="benefit-text">يثق بك</div></div>
+                    <div class="benefit-item"><div class="benefit-icon"><i class="fas fa-shopping-cart"></i></div><div class="benefit-text">يشتري منك</div></div>
+                    <div class="benefit-item"><div class="benefit-icon"><i class="fas fa-redo"></i></div><div class="benefit-text">يعود مرة أخرى</div></div>
+                    <div class="benefit-item"><div class="benefit-icon"><i class="fas fa-share-alt"></i></div><div class="benefit-text">يرشحك للآخرين</div></div>
+                    <div class="benefit-item"><div class="benefit-icon"><i class="fas fa-chart-line"></i></div><div class="benefit-text">يرفع الأسعار</div></div>
+                    <div class="benefit-item"><div class="benefit-icon"><i class="fas fa-shield-alt"></i></div><div class="benefit-text">يقلل المنافسة</div></div>
+                    <div class="benefit-item"><div class="benefit-icon"><i class="fas fa-gem"></i></div><div class="benefit-text">يزيد القيمة</div></div>
+                </div>
+                <div class="quote-box animate-on-scroll" style="margin-top:20px;">
+                    <div class="quote-text" style="font-size:1.1rem;">مطعمان يبيعان نفس البرجر بنفس الجودة — الأول بدون هوية، والثاني بعلامة تجارية قوية. أيهما يجذب العملاء أكثر؟ <span class="value-highlight">بالطبع الثاني.</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 3: الهوية البصرية -->
+<div class="slide" data-slide="3">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background:linear-gradient(135deg,var(--accent),var(--gold));">03</div>
+            <div class="section-title-text">الهوية البصرية (Visual Identity)</div>
+        </div>
+        <p class="animate-on-scroll" style="font-size:1.2rem;margin-bottom:20px;">اللغة المرئية التي يتعرف بها الناس على البراند حتى قبل قراءة اسمه.</p>
+        <div class="content-grid animate-on-scroll">
+            <div class="content-card" style="--card-accent:var(--gold);">
+                <div class="card-icon"><i class="fas fa-image"></i></div>
+                <div class="card-title">الشعار (Logo)</div>
+                <div class="card-text">الرمز الأساسي للعلامة. شعار التفاحة معروف حتى بدون كتابة الاسم.</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--accent);">
+                <div class="card-icon"><i class="fas fa-palette"></i></div>
+                <div class="card-title">الألوان</div>
+                <div class="card-text">كل لون يرسل رسالة نفسية مختلفة للعميل.</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--secondary);">
+                <div class="card-icon"><i class="fas fa-font"></i></div>
+                <div class="card-title">الخطوط (Typography)</div>
+                <div class="card-text">نوع الخط يعطي إحساساً مختلفاً — رسمي أو مرح.</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--purple);">
+                <div class="card-icon"><i class="fas fa-camera"></i></div>
+                <div class="card-title">الصور</div>
+                <div class="card-text">صور حقيقية؟ رسومات؟ صور فاخرة؟ كل ذلك جزء من الهوية.</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--rose);">
+                <div class="card-icon"><i class="fas fa-paint-brush"></i></div>
+                <div class="card-title">أسلوب التصميم</div>
+                <div class="card-text">بسيط؟ فاخر؟ شبابي؟ تقني؟ يؤثر في الانطباع الأول.</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--gold);">
+                <div class="card-icon"><i class="fas fa-check-double"></i></div>
+                <div class="card-title">قواعد الهوية</div>
+                <div class="card-text">الثبات • البساطة • سهولة التذكر • الوضوح • التناسق</div>
+            </div>
+        </div>
+        <table class="color-table animate-on-scroll">
+            <tr><th>اللون</th><th>الدلالة</th><th>الاستخدام</th></tr>
+            <tr><td><span class="color-dot" style="background:#2196F3;"></span> الأزرق</td><td>الثقة • الاحترافية • الأمان</td><td>البنوك وشركات التكنولوجيا</td></tr>
+            <tr><td><span class="color-dot" style="background:#f44336;"></span> الأحمر</td><td>الطاقة • الحماس • السرعة • الشهية</td><td>مطاعم الوجبات السريعة</td></tr>
+            <tr><td><span class="color-dot" style="background:#4CAF50;"></span> الأخضر</td><td>الطبيعة • الصحة • النمو</td><td>المنتجات العضوية والصحية</td></tr>
+            <tr><td><span class="color-dot" style="background:#212121;"></span> الأسود</td><td>الفخامة • القوة • الرقي</td><td>العلامات الفاخرة</td></tr>
+        </table>
+    </div>
+</div>
+
+<!-- SLIDE 4: شخصية البراند -->
+<div class="slide" data-slide="4">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background:linear-gradient(135deg,var(--rose),var(--purple));">04</div>
+            <div class="section-title-text">شخصية البراند (Brand Personality)</div>
+        </div>
+        <div class="quote-box animate-on-scroll">
+            <div class="quote-text">لو كانت علامتك التجارية إنساناً... كيف ستكون شخصيته؟</div>
+        </div>
+        <p class="animate-on-scroll" style="font-size:1.1rem;margin:20px 0;">هي الصفات الإنسانية التي تعبر عن العلامة التجارية وتجعل الناس يشعرون بأنها "شخص" له أسلوبه الخاص.</p>
+        <div class="personality-grid animate-on-scroll">
+            <div class="personality-item"><div class="personality-icon"><i class="fas fa-hiking"></i></div><div class="personality-name">المغامر</div></div>
+            <div class="personality-item"><div class="personality-icon"><i class="fas fa-mask"></i></div><div class="personality-name">البطل</div></div>
+            <div class="personality-item"><div class="personality-icon"><i class="fas fa-book"></i></div><div class="personality-name">الحكيم</div></div>
+            <div class="personality-item"><div class="personality-icon"><i class="fas fa-hand-holding-heart"></i></div><div class="personality-name">الصديق</div></div>
+            <div class="personality-item"><div class="personality-icon"><i class="fas fa-lightbulb"></i></div><div class="personality-name">المبدع</div></div>
+            <div class="personality-item"><div class="personality-icon"><i class="fas fa-chess-king"></i></div><div class="personality-name">القائد</div></div>
+            <div class="personality-item"><div class="personality-icon"><i class="fas fa-smile-beam"></i></div><div class="personality-name">المرح</div></div>
+            <div class="personality-item"><div class="personality-icon"><i class="fas fa-hands-helping"></i></div><div class="personality-name">الراعي</div></div>
+            <div class="personality-item"><div class="personality-icon"><i class="fas fa-gem"></i></div><div class="personality-name">الفاخر</div></div>
+            <div class="personality-item"><div class="personality-icon"><i class="fas fa-fist-raised"></i></div><div class="personality-name">الثائر</div></div>
+            <div class="personality-item"><div class="personality-icon"><i class="fas fa-running"></i></div><div class="personality-name">الرياضي</div></div>
+            <div class="personality-item"><div class="personality-icon"><i class="fas fa-heart"></i></div><div class="personality-name">العاشق</div></div>
+        </div>
+        <div class="content-grid animate-on-scroll" style="margin-top:30px;">
+            <div class="content-card" style="--card-accent:var(--gold);">
+                <div class="card-icon"><i class="fas fa-tshirt"></i></div>
+                <div class="card-title">ملابس شبابية</div>
+                <div class="card-text">عصرية • جريئة • مرحة • مليئة بالطاقة</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--accent);">
+                <div class="card-icon"><i class="fas fa-clock"></i></div>
+                <div class="card-title">ساعات فاخرة</div>
+                <div class="card-text">راقية • هادئة • أنيقة • احترافية</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 5: نبرة التواصل -->
+<div class="slide" data-slide="5">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background:linear-gradient(135deg,var(--secondary),var(--gold));">05</div>
+            <div class="section-title-text">نبرة التواصل (Tone of Voice)</div>
+        </div>
+        <div class="quote-box animate-on-scroll">
+            <div class="quote-text">ليست فقط ماذا تقول، بل كيف تقوله.</div>
+        </div>
+        <div class="tone-grid animate-on-scroll">
+            <div class="tone-card" style="--tone-accent:var(--gold);">
+                <div class="tone-label"><i class="fas fa-briefcase"></i> رسمية</div>
+                <div class="tone-example">"يسعدنا خدمتك، ونرحب باستفساراتك."</div>
+            </div>
+            <div class="tone-card" style="--tone-accent:var(--accent);">
+                <div class="tone-label"><i class="fas fa-smile"></i> ودية</div>
+                <div class="tone-example">"أهلاً بك! نحن هنا لمساعدتك في أي وقت."</div>
+            </div>
+            <div class="tone-card" style="--tone-accent:var(--secondary);">
+                <div class="tone-label"><i class="fas fa-rocket"></i> شبابية</div>
+                <div class="tone-example">"جاهز؟ لنبدأ المغامرة!"</div>
+            </div>
+            <div class="tone-card" style="--tone-accent:var(--purple);">
+                <div class="tone-label"><i class="fas fa-crown"></i> فاخرة</div>
+                <div class="tone-example">"لأنك تستحق الأفضل."</div>
+            </div>
+            <div class="tone-card" style="--tone-accent:var(--rose);">
+                <div class="tone-label"><i class="fas fa-graduation-cap"></i> تعليمية</div>
+                <div class="tone-example">"إليك خطوات بسيطة تساعدك على تحقيق أفضل النتائج."</div>
+            </div>
+            <div class="tone-card" style="--tone-accent:var(--gold);">
+                <div class="tone-label"><i class="fas fa-exclamation-triangle"></i> تحذير</div>
+                <div class="tone-example">يجب أن تكون النبرة <span class="value-highlight">ثابتة</span> في كل نقاط التواصل.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 6: التموضع -->
+<div class="slide" data-slide="6">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background:linear-gradient(135deg,var(--purple),var(--accent));">06</div>
+            <div class="section-title-text">التموضع (Positioning)</div>
+        </div>
+        <div class="quote-box animate-on-scroll">
+            <div class="quote-text">المكانة التي تريد أن تحتلها علامتك التجارية في ذهن العميل مقارنة بالمنافسين.</div>
+        </div>
+        <div class="positioning-grid animate-on-scroll">
+            <div class="positioning-card">
+                <div class="positioning-icon"><i class="fas fa-tag"></i></div>
+                <div class="positioning-text"><span class="positioning-highlight">"أرخص الأسعار"</span><br>متجر يركز على السعر كميزة تنافسية رئيسية.</div>
+            </div>
+            <div class="positioning-card">
+                <div class="positioning-icon"><i class="fas fa-award"></i></div>
+                <div class="positioning-text"><span class="positioning-highlight">"أعلى جودة"</span><br>متجر يركز على الجودة الفائقة مقابل السعر.</div>
+            </div>
+            <div class="positioning-card">
+                <div class="positioning-icon"><i class="fas fa-shipping-fast"></i></div>
+                <div class="positioning-text"><span class="positioning-highlight">"أسرع توصيل"</span><br>شركة تركز على السرعة في خدمة التوصيل.</div>
+            </div>
+            <div class="positioning-card">
+                <div class="positioning-icon"><i class="fas fa-leaf"></i></div>
+                <div class="positioning-text"><span class="positioning-highlight">"صديقة للبيئة"</span><br>علامة تركز على الاستدامة والمسؤولية البيئية.</div>
+            </div>
+        </div>
+        <div class="content-card animate-on-scroll" style="--card-accent:var(--gold);margin-top:30px;">
+            <div class="card-title"><i class="fas fa-map-signs"></i> كيف تحدد التموضع؟</div>
+            <div class="card-text" style="display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-top:15px;">
+                <div style="text-align:center;"><div style="font-size:2rem;color:var(--gold);margin-bottom:10px;"><i class="fas fa-users"></i></div><div>اعرف جمهورك</div></div>
+                <div style="text-align:center;"><div style="font-size:2rem;color:var(--gold);margin-bottom:10px;"><i class="fas fa-search"></i></div><div>ادرس منافسيك</div></div>
+                <div style="text-align:center;"><div style="font-size:2rem;color:var(--gold);margin-bottom:10px;"><i class="fas fa-star"></i></div><div>حدد ميزتك التنافسية</div></div>
+                <div style="text-align:center;"><div style="font-size:2rem;color:var(--gold);margin-bottom:10px;"><i class="fas fa-bullhorn"></i></div><div>أوصل الرسالة باستمرار</div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 7: وعد العلامة التجارية -->
+<div class="slide" data-slide="7">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background:linear-gradient(135deg,var(--gold),var(--rose));">07</div>
+            <div class="section-title-text">وعد العلامة التجارية (Brand Promise)</div>
+        </div>
+        <div class="quote-box animate-on-scroll">
+            <div class="quote-text">التعهد الذي تقدمه لعملائك في كل مرة يتعاملون فيها معك. ليس مجرد شعار دعائي، بل وعد يجب أن ينعكس في الواقع.</div>
+        </div>
+        <div class="promise-grid animate-on-scroll">
+            <div class="promise-card">
+                <div class="promise-icon"><i class="fas fa-shipping-fast"></i></div>
+                <div class="promise-title">توصيل سريع</div>
+                <div class="promise-desc">متجر إلكتروني يعد بالتوصيل خلال 24 ساعة.</div>
+            </div>
+            <div class="promise-card">
+                <div class="promise-icon"><i class="fas fa-carrot"></i></div>
+                <div class="promise-title">مكونات طازجة</div>
+                <div class="promise-desc">مطعم يعد باستخدام مكونات طازجة يومياً.</div>
+            </div>
+            <div class="promise-card">
+                <div class="promise-icon"><i class="fas fa-shield-alt"></i></div>
+                <div class="promise-title">جودة تدوم</div>
+                <div class="promise-desc">شركة ملابس تعد بجودة تدوم لفترة طويلة.</div>
+            </div>
+        </div>
+        <div class="content-card animate-on-scroll" style="--card-accent:var(--gold);margin-top:30px;">
+            <div class="card-title"><i class="fas fa-clipboard-check"></i> خصائص الوعد الجيد</div>
+            <div class="card-text">
+                <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:15px;margin-top:15px;text-align:center;">
+                    <div><div style="font-size:2rem;color:var(--gold);"><i class="fas fa-eye"></i></div><div>واضح</div></div>
+                    <div><div style="font-size:2rem;color:var(--gold);"><i class="fas fa-check-circle"></i></div><div>واقعي</div></div>
+                    <div><div style="font-size:2rem;color:var(--gold);"><i class="fas fa-tasks"></i></div><div>يمكن تحقيقه</div></div>
+                    <div><div style="font-size:2rem;color:var(--gold);"><i class="fas fa-heart"></i></div><div>يهم العميل</div></div>
+                    <div><div style="font-size:2rem;color:var(--gold);"><i class="fas fa-infinity"></i></div><div>مستمر</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 8: قيمة العلامة التجارية -->
+<div class="slide" data-slide="8">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background:linear-gradient(135deg,var(--accent),var(--purple));">08</div>
+            <div class="section-title-text">قيمة العلامة التجارية (Brand Equity)</div>
+        </div>
+        <div class="quote-box animate-on-scroll">
+            <div class="quote-text">القيمة الإضافية التي تمنحها العلامة التجارية للمنتج بسبب سمعتها وثقة العملاء بها، وليس بسبب المنتج وحده.</div>
+        </div>
+        <div class="equity-grid animate-on-scroll">
+            <div class="equity-card">
+                <div class="equity-title"><i class="fas fa-arrow-up"></i> ما الذي يزيد القيمة؟</div>
+                <ul class="equity-list">
+                    <li>جودة المنتجات</li>
+                    <li>رضا العملاء</li>
+                    <li>السمعة الجيدة</li>
+                    <li>التجارب الإيجابية</li>
+                    <li>التسويق المستمر</li>
+                    <li>الابتكار</li>
+                    <li>خدمة العملاء الممتازة</li>
+                </ul>
+            </div>
+            <div class="equity-card">
+                <div class="equity-title"><i class="fas fa-chart-line"></i> فوائد Brand Equity</div>
+                <ul class="equity-list">
+                    <li>قدرة أكبر على تسعير المنتجات</li>
+                    <li>زيادة ولاء العملاء</li>
+                    <li>سهولة إطلاق منتجات جديدة</li>
+                    <li>مقاومة أقوى للمنافسة</li>
+                    <li>ارتفاع قيمة الشركة في السوق</li>
+                </ul>
+            </div>
+        </div>
+        <div class="case-study animate-on-scroll">
+            <div class="case-study-title"><i class="fas fa-mobile-alt"></i> مثال عملي</div>
+            <div class="case-study-grid">
+                <div class="case-item">
+                    <div class="case-item-icon" style="background:var(--gold);"><i class="fas fa-mobile"></i></div>
+                    <div>
+                        <div class="case-item-title">هاتف بعلامة معروفة</div>
+                        <div class="case-item-desc">العميل يفضل الشراء حتى لو كان هناك هاتف آخر بنفس المواصفات وسعر أقل، لأنه يثق في العلامة.</div>
+                    </div>
+                </div>
+                <div class="case-item">
+                    <div class="case-item-icon" style="background:var(--accent);"><i class="fas fa-shield-alt"></i></div>
+                    <div>
+                        <div class="case-item-title">الثقة = الأمان</div>
+                        <div class="case-item-desc">الشعور بالأمان عند الشراء من علامة موثوقة يستحق دفع سعر أعلى.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 9: خلاصة الفصل -->
+<div class="slide" data-slide="9">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background:linear-gradient(135deg,var(--gold),var(--secondary));"><i class="fas fa-bookmark"></i></div>
+            <div class="section-title-text">خلاصة الفصل</div>
+        </div>
+        <div class="summary-box animate-on-scroll">
+            <div class="summary-text">
+                العلامة التجارية ليست شعاراً أو اسماً فقط، بل هي <span class="value-highlight">تجربة متكاملة</span> تبدأ من أول إعلان يراه العميل، مروراً بالهوية البصرية، وأسلوب الحديث، وجودة المنتج، وخدمة العملاء، وحتى الانطباع الذي يبقى في ذهنه بعد الشراء.
+            </div>
+            <ul class="summary-list">
+                <li><i class="fas fa-eye"></i> الهوية البصرية تجعل العميل يتعرف عليك فوراً</li>
+                <li><i class="fas fa-user"></i> شخصية البراند تبني رابطاً عاطفياً مع العميل</li>
+                <li><i class="fas fa-comment-dots"></i> نبرة التواصل تخلق اتساقاً في كل نقاط التواصل</li>
+                <li><i class="fas fa-map-marker-alt"></i> التموضع يحدد مكانتك في ذهن العميل</li>
+                <li><i class="fas fa-handshake"></i> الوعد يبني الثقة من خلال الالتزام المستمر</li>
+                <li><i class="fas fa-gem"></i> قيمة البراند تمنحك ميزة تنافسية يصعب تقليدها</li>
+            </ul>
+        </div>
+        <div class="case-study animate-on-scroll" style="margin-top:20px;">
+            <div class="case-study-title"><i class="fas fa-coffee"></i> مثال تطبيقي: علامة قهوة مختصة</div>
+            <div class="case-study-grid">
+                <div class="case-item"><div class="case-item-icon" style="background:var(--gold);"><i class="fas fa-bullseye"></i></div><div><div class="case-item-title">البراند</div><div class="case-item-desc">تجربة قهوة فاخرة تمنح العميل لحظات هادئة ومميزة</div></div></div>
+                <div class="case-item"><div class="case-item-icon" style="background:var(--accent);"><i class="fas fa-palette"></i></div><div><div class="case-item-title">الهوية البصرية</div><div class="case-item-desc">ألوان بنية وبيج، شعار بسيط، خطوط أنيقة وصور دافئة</div></div></div>
+                <div class="case-item"><div class="case-item-icon" style="background:var(--secondary);"><i class="fas fa-user"></i></div><div><div class="case-item-title">شخصية البراند</div><div class="case-item-desc">راقية، هادئة، تهتم بالتفاصيل</div></div></div>
+                <div class="case-item"><div class="case-item-icon" style="background:var(--purple);"><i class="fas fa-comment"></i></div><div><div class="case-item-title">Tone of Voice</div><div class="case-item-desc">لغة ودودة وملهمة تتحدث عن متعة القهوة وجودتها</div></div></div>
+                <div class="case-item"><div class="case-item-icon" style="background:var(--rose);"><i class="fas fa-map-signs"></i></div><div><div class="case-item-title">Positioning</div><div class="case-item-desc">أفضل قهوة مختصة لعشاق الجودة، وليس الأرخص سعراً</div></div></div>
+                <div class="case-item"><div class="case-item-icon" style="background:var(--gold);"><i class="fas fa-handshake"></i></div><div><div class="case-item-title">Brand Promise</div><div class="case-item-desc">حبوب قهوة طازجة ومحمصة بعناية في كل طلب</div></div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<script>
+let currentSlide = 0;
+const totalSlides = 10;
+const slides = document.querySelectorAll('.slide');
+const navProgress = document.getElementById('navProgress');
+
+function initNavDots() {
+    navProgress.innerHTML = '';
+    for (let i = 0; i < totalSlides; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'nav-dot' + (i === currentSlide ? ' active' : '');
+        dot.onclick = () => goToSlide(i);
+        navProgress.appendChild(dot);
+    }
+}
+
+function updateNavDots() {
+    const dots = document.querySelectorAll('.nav-dot');
+    dots.forEach((dot, i) => {
+        dot.classList.toggle('active', i === currentSlide);
+    });
+}
+
+function goToSlide(n) {
+    if (n < 0 || n >= totalSlides) return;
+    currentSlide = n;
+    slides.forEach((slide, i) => {
+        slide.style.display = i === n ? 'flex' : 'none';
+    });
+    updateNavDots();
+    animateVisibleElements();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function nextSlide() { goToSlide(currentSlide + 1); }
+function prevSlide() { goToSlide(currentSlide - 1); }
+
+function animateVisibleElements() {
+    const visibleSlide = slides[currentSlide];
+    if (!visibleSlide) return;
+    const elements = visibleSlide.querySelectorAll('.animate-on-scroll');
+    elements.forEach((el, i) => {
+        setTimeout(() => el.classList.add('visible'), i * 150);
+    });
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft') nextSlide();
+    if (e.key === 'ArrowRight') prevSlide();
+});
+
+goToSlide(0);
+initNavDots();
+</script>
+<div class="site-floatnav"><a href="ch6.html"><i class="fas fa-chevron-right"></i><span class="label">السابق</span></a><a href="dashboard.html"><i class="fas fa-house"></i><span class="label">لوحتي</span></a><a class="quiz-link" href="quiz.html?ch=7"><i class="fas fa-clipboard-check"></i><span class="label">الاختبار</span></a><a href="ch8.html"><span class="label">التالي</span><i class="fas fa-chevron-left"></i></a></div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/progress.js"></script>
+<script src="js/trial.js"></script>
+<script src="js/protect-content.js"></script>
+<script>
+const CHAPTER_NUM = 7;
+const _origGoToSlide = goToSlide;
+goToSlide = function(target){
+  _origGoToSlide(target);
+  if (window.LMSProgress) LMSProgress.trackSlide(CHAPTER_NUM, currentSlide, totalSlides);
+};
+(function(){
+  var params = new URLSearchParams(location.search);
+  var urlSlide = parseInt(params.get('slide'));
+  var savedSlide = window.LMSProgress ? LMSProgress.getLastSlide(CHAPTER_NUM) : null;
+  var target = urlSlide || savedSlide;
+  if (target && target > 1 && target <= totalSlides) {
+    setTimeout(function(){ goToSlide(target); }, 350);
+  } else if (window.LMSProgress) {
+    LMSProgress.trackSlide(CHAPTER_NUM, 1, totalSlides);
+  }
+})();
+</script>
+<script>document.addEventListener("DOMContentLoaded", function(){ if(window.LMSTrial) LMSTrial.mountBadgeAndGuard(); });</script>
+<script src="js/mentor.js"></script>
+<script>document.addEventListener("DOMContentLoaded", function(){ if(window.LMSMentor) LMSMentor.mount(CHAPTER_NUM); });</script>
+<script src="js/sw-register.js"></script>
+</body>
+</html>

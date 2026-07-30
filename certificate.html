@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-protected="true">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>شهادة الإتمام — منصة التسويق التعليمية</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d1b2a">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="css/shared.css">
+<style>
+.cert-page{max-width:960px;margin:0 auto;padding:40px 24px 90px;position:relative;z-index:5;}
+.locked-box{text-align:center;padding:70px 30px;border-radius:24px;}
+.locked-box i{font-size:3rem;color:var(--text-faint);margin-bottom:18px;}
+.locked-box h2{font-size:1.3rem;font-weight:800;margin-bottom:10px;}
+.locked-box p{color:var(--text-faint);margin-bottom:24px;}
+
+.certificate{
+  position:relative;
+  background:linear-gradient(155deg,#0a1620,#0d1b2a 45%,#13253a);
+  border-radius:26px;
+  padding:8px;
+  overflow:hidden;
+  box-shadow:0 30px 80px rgba(0,0,0,0.5);
+}
+.cert-frame{
+  position:relative;
+  border:1.5px solid rgba(255,215,0,0.55);
+  border-radius:20px;
+  padding:54px 50px 40px;
+  overflow:hidden;
+}
+.cert-frame::before{
+  content:'';position:absolute;inset:9px;
+  border:1px solid rgba(255,215,0,0.25);border-radius:14px;
+  pointer-events:none;
+}
+.corner{position:absolute;width:34px;height:34px;border:2px solid var(--gold);opacity:0.85;}
+.corner.tl{top:16px;left:16px;border-left-width:2px;border-top-width:2px;border-right:none;border-bottom:none;}
+.corner.tr{top:16px;right:16px;border-right-width:2px;border-top-width:2px;border-left:none;border-bottom:none;}
+.corner.bl{bottom:16px;left:16px;border-left-width:2px;border-bottom-width:2px;border-right:none;border-top:none;}
+.corner.br{bottom:16px;right:16px;border-right-width:2px;border-bottom-width:2px;border-left:none;border-top:none;}
+
+.cert-inner{position:relative;z-index:2;text-align:center;color:#fff;}
+
+.cert-brand{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  margin-bottom:22px;
+}
+.cert-brand .brand-badge{
+  width:38px;height:38px;border-radius:11px;
+  background:linear-gradient(135deg,var(--gold),var(--secondary));
+  display:flex;align-items:center;justify-content:center;color:#0d1b2a;font-size:1.05rem;
+}
+.cert-brand .brand-name{font-weight:900;font-size:1.05rem;letter-spacing:0.5px;}
+.cert-brand .brand-name span{color:var(--gold);}
+
+.cert-level-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(255,215,0,0.1);border:1px solid rgba(255,215,0,0.4);
+  padding:6px 18px;border-radius:20px;font-size:0.76rem;font-weight:800;
+  color:var(--gold);letter-spacing:1px;margin-bottom:20px;
+}
+
+.cert-seal{
+  width:64px;height:64px;border-radius:50%;margin:0 auto 16px;
+  background:linear-gradient(135deg,var(--gold),var(--secondary));
+  display:flex;align-items:center;justify-content:center;font-size:1.6rem;color:#0d1b2a;
+  box-shadow:0 8px 22px rgba(255,215,0,0.3);
+}
+.cert-kicker{letter-spacing:4px;font-size:0.72rem;color:rgba(255,255,255,0.45);font-weight:700;margin-bottom:10px;}
+.cert-title{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;margin-bottom:6px;}
+.cert-line{width:80px;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:18px auto 24px;}
+.cert-presented{font-size:0.88rem;color:rgba(255,255,255,0.55);margin-bottom:8px;}
+.cert-name{font-family:'Playfair Display',serif;font-size:2.3rem;font-weight:900;color:var(--gold);margin-bottom:20px;}
+.cert-desc{font-size:0.95rem;color:rgba(255,255,255,0.78);max-width:560px;margin:0 auto 8px;line-height:1.95;}
+.cert-course{font-weight:800;color:#fff;}
+.cert-project-note{
+  display:inline-flex;align-items:center;gap:8px;margin-top:14px;
+  font-size:0.82rem;color:var(--success);font-weight:700;
+  background:rgba(0,200,150,0.1);border:1px solid rgba(0,200,150,0.3);
+  padding:6px 16px;border-radius:20px;
+}
+
+.cert-stats{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:14px;
+  margin-top:34px;padding-top:26px;border-top:1px solid rgba(255,255,255,0.12);
+}
+.cert-stats .block{text-align:center;}
+.cert-stats .block .val{font-weight:900;font-size:1.15rem;color:var(--gold);}
+.cert-stats .block .lbl{font-size:0.68rem;color:rgba(255,255,255,0.5);margin-top:5px;}
+
+.cert-sign-row{
+  display:flex;justify-content:space-between;align-items:flex-end;
+  margin-top:34px;gap:20px;flex-wrap:wrap;
+}
+.cert-sign{text-align:center;min-width:150px;}
+.cert-sign .sign-line{width:140px;height:1px;background:rgba(255,255,255,0.3);margin:0 auto 8px;}
+.cert-sign .sign-name{font-family:'Playfair Display',serif;font-size:0.95rem;font-weight:700;color:#fff;}
+.cert-sign .sign-lbl{font-size:0.68rem;color:rgba(255,255,255,0.45);margin-top:3px;}
+.cert-id-tag{font-size:0.7rem;color:rgba(255,255,255,0.35);letter-spacing:1px;}
+
+.cert-actions{display:flex;justify-content:center;gap:14px;margin-top:30px;}
+
+@media (max-width:640px){
+  .cert-frame{padding:38px 22px 30px;}
+  .cert-stats{grid-template-columns:repeat(2,1fr);row-gap:20px;}
+  .cert-title{font-size:1.5rem;}
+  .cert-name{font-size:1.7rem;}
+}
+
+@media print{
+  .topbar, .cert-actions, .geo-bg{display:none !important;}
+  body{background:#fff;}
+  .cert-page{padding:0;max-width:none;}
+  .certificate{box-shadow:none;}
+}
+</style>
+</head>
+<body>
+
+<div class="geo-bg">
+  <div class="geo-shape geo-circle" style="width:200px;height:200px;top:6%;left:4%;"></div>
+</div>
+
+<nav class="topbar">
+  <a href="dashboard.html" class="icon-btn" title="العودة للوحة"><i class="fas fa-arrow-right"></i></a>
+  <div class="brand"><i class="fas fa-award"></i> <span class="full">شهادة الإتمام</span></div>
+  <div class="spacer"></div>
+  <button class="icon-btn" onclick="LMSTheme.toggleTheme()"><i class="fas fa-moon" data-theme-icon></i></button>
+  <div id="userChipHolder"></div>
+</nav>
+
+<div class="cert-page">
+  <div class="locked-box surface-card" id="lockedBox" style="display:none;">
+    <i class="fas fa-lock"></i>
+    <h2>الشهادة غير متاحة بعد</h2>
+    <p id="lockedSub">أكمل جميع الفصول التسعة واجتز اختباراتها للحصول على شهادتك.</p>
+    <a class="btn btn-primary" href="dashboard.html" id="lockedBtn"><i class="fas fa-house"></i> العودة للوحة</a>
+  </div>
+
+  <div id="certHolder" style="display:none;">
+    <div class="certificate">
+      <div class="cert-frame">
+        <span class="corner tl"></span><span class="corner tr"></span>
+        <span class="corner bl"></span><span class="corner br"></span>
+        <div class="cert-inner">
+
+          <div class="cert-brand">
+            <div class="brand-badge"><i class="fas fa-graduation-cap"></i></div>
+            <div class="brand-name">4 <span>Levels</span> — منصة التسويق التعليمية</div>
+          </div>
+
+          <div class="cert-level-badge"><i class="fas fa-layer-group"></i> المستوى الأول — Level 1</div>
+
+          <div class="cert-seal"><i class="fas fa-award"></i></div>
+          <div class="cert-kicker">CERTIFICATE OF COMPLETION</div>
+          <div class="cert-title">شهادة إتمام المستوى الأول</div>
+          <div class="cert-line"></div>
+          <div class="cert-presented">تشهد منصة 4 Levels بأن</div>
+          <div class="cert-name" id="certName">—</div>
+          <div class="cert-desc">
+            قد أكمل بنجاح <span class="cert-course">المستوى الأول: أساسيات التسويق والتسويق الرقمي</span>
+            المكوّن من تسعة فصول، واجتاز جميع الاختبارات المرتبطة بها بتفوّق.
+          </div>
+          <div class="cert-project-note"><i class="fas fa-circle-check"></i> اجتاز مشروع التخرج التطبيقي بنجاح</div>
+
+          <div class="cert-stats">
+            <div class="block">
+              <div class="val" id="certDate">—</div>
+              <div class="lbl">تاريخ الإصدار</div>
+            </div>
+            <div class="block">
+              <div class="val">٩ / ٩</div>
+              <div class="lbl">الفصول المكتملة</div>
+            </div>
+            <div class="block">
+              <div class="val" id="certScore">—</div>
+              <div class="lbl">نسبة النجاح</div>
+            </div>
+            <div class="block">
+              <div class="val"><i class="fas fa-circle-check" style="color:var(--success);"></i></div>
+              <div class="lbl">مشروع التخرج</div>
+            </div>
+          </div>
+
+          <div class="cert-sign-row">
+            <div class="cert-sign">
+              <div class="sign-line"></div>
+              <div class="sign-name">4 Levels</div>
+              <div class="sign-lbl">منصة التسويق التعليمية</div>
+            </div>
+            <div class="cert-id-tag" id="certId">—</div>
+            <div class="cert-sign">
+              <div class="sign-line"></div>
+              <div class="sign-name">المستوى الأول</div>
+              <div class="sign-lbl">Marketing Fundamentals</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="cert-actions">
+      <button class="btn btn-primary" onclick="window.print()"><i class="fas fa-download"></i> طباعة / حفظ PDF</button>
+      <a class="btn btn-ghost" href="dashboard.html"><i class="fas fa-house"></i> العودة للوحة</a>
+    </div>
+  </div>
+</div>
+
+<script src="js/theme.js"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/progress.js"></script>
+<script src="js/ui.js"></script>
+<script>
+function init() {
+  const user = LMSAuth.currentUser();
+  LMSUi.renderUserChip(document.getElementById('userChipHolder'));
+
+  if (!LMSProgress.canGetCertificate()) {
+    document.getElementById('lockedBox').style.display = 'block';
+    if (!LMSProgress.allChaptersPassed()) {
+      const done = LMSProgress.getCompletedCount();
+      document.getElementById('lockedSub').textContent = 'أكملت ' + done + ' من 9 فصول حتى الآن. أكمل الباقي واجتز اختباراته لفتح الشهادة.';
+    } else {
+      document.getElementById('lockedSub').textContent = 'أكملت كل الفصول والاختبارات 🎉 باقي خطوة أخيرة: سلّم مشروع التخرج عشان تفتح شهادتك.';
+      const btn = document.getElementById('lockedBtn');
+      btn.href = 'project.html';
+      btn.innerHTML = '<i class="fas fa-flag-checkered"></i> اذهب لمشروع التخرج';
+    }
+    return;
+  }
+
+  document.getElementById('certHolder').style.display = 'block';
+  document.getElementById('certName').textContent = user.fullName;
+  document.getElementById('certDate').textContent = new Date().toLocaleDateString('ar-EG', { year:'numeric', month:'long', day:'numeric' });
+  document.getElementById('certScore').textContent = LMSProgress.getAverageScore() + '%';
+  document.getElementById('certId').textContent = 'MKT-' + (user.email.slice(0,4).toUpperCase()) + '-' + new Date().getFullYear();
+}
+init();
+</script>
+<script src="js/sw-register.js"></script>
+</body>
+</html>

@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-protected="true">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الفصل التاسع: مقدمة في التسويق الرقمي (Digital Marketing Fundamentals)</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root {
+    --gold: #ffd700;
+    --dark: #0d1b2a;
+    --secondary: #ff6f00;
+    --accent: #00bfa5;
+    --purple: #7c3aed;
+    --rose: #e11d48;
+    --blue: #3b82f6;
+    --teal: #14b8a6;
+    --cyan: #06b6d4;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'Tajawal', sans-serif;
+    background: var(--dark);
+    color: #fff;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+}
+.geo-bg {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 0; overflow: hidden;
+}
+.geo-shape {
+    position: absolute; opacity: 0.06;
+    animation: float 25s infinite ease-in-out;
+}
+.geo-circle { border-radius: 50%; border: 3px solid var(--gold); }
+.geo-triangle {
+    width: 0; height: 0;
+    border-left: 60px solid transparent;
+    border-right: 60px solid transparent;
+    border-bottom: 100px solid var(--secondary);
+}
+.geo-square { border: 3px solid var(--accent); transform: rotate(45deg); }
+@keyframes float {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-30px) rotate(180deg); }
+}
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.1); opacity: 1; }
+}
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+@keyframes shine {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+.nav-bar {
+    position: fixed; top: 0; width: 100%;
+    background: rgba(13, 27, 42, 0.95);
+    backdrop-filter: blur(10px);
+    z-index: 1000;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--gold);
+}
+.nav-logo {
+    font-size: 1.2rem; font-weight: 800; color: var(--gold);
+    display: flex; align-items: center; gap: 10px;
+}
+.nav-progress { display: flex; gap: 5px; align-items: center; }
+.nav-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    cursor: pointer; transition: all 0.3s;
+}
+.nav-dot.active { background: var(--gold); transform: scale(1.3); }
+.nav-controls { display: flex; gap: 15px; }
+.nav-btn {
+    background: transparent; border: 2px solid var(--gold);
+    color: var(--gold); padding: 8px 20px;
+    border-radius: 25px; cursor: pointer;
+    font-family: 'Tajawal', sans-serif; font-weight: 700;
+    transition: all 0.3s;
+}
+.nav-btn:hover { background: var(--gold); color: var(--dark); }
+.slides-container { position: relative; width: 100%; }
+.slide {
+    min-height: 100vh;
+    display: none;
+    align-items: center; justify-content: center;
+    padding: 100px 40px 60px;
+    position: relative; overflow: hidden;
+}
+.slide.active { display: flex; }
+.slide-content {
+    max-width: 1200px; width: 100%;
+    position: relative; z-index: 10;
+}
+.section-header {
+    display: flex; align-items: center; gap: 20px; margin-bottom: 40px;
+}
+.section-number {
+    width: 80px; height: 80px; border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.5rem; font-weight: 900; color: #fff;
+    flex-shrink: 0; position: relative; overflow: hidden;
+}
+.section-number::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%);
+    animation: shine 3s infinite;
+}
+.section-title-text { font-size: 2.5rem; font-weight: 800; }
+.content-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 25px; margin-top: 30px;
+}
+.content-card {
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(10px);
+    border-radius: 20px; padding: 30px;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: all 0.4s; position: relative; overflow: hidden;
+}
+.content-card::before {
+    content: ''; position: absolute; top: 0; left: 0;
+    width: 100%; height: 4px;
+    background: var(--card-accent, var(--gold));
+}
+.content-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    border-color: var(--card-accent, var(--gold));
+}
+.card-icon { font-size: 2.5rem; margin-bottom: 15px; color: var(--card-accent, var(--gold)); }
+.card-title { font-size: 1.3rem; font-weight: 700; margin-bottom: 12px; color: #fff; }
+.card-text { font-size: 1.05rem; line-height: 1.9; color: rgba(255,255,255,0.85); }
+.quote-box {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 111, 0, 0.1));
+    border-right: 5px solid var(--gold);
+    border-radius: 0 20px 20px 0;
+    padding: 35px; margin: 30px 0; position: relative;
+}
+.quote-box::before {
+    content: ''"''; font-size: 5rem; color: var(--gold); opacity: 0.3;
+    position: absolute; top: -10px; right: 20px; line-height: 1;
+}
+.quote-text { font-size: 1.3rem; font-weight: 700; line-height: 2; color: #fff; }
+.two-col {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 40px; align-items: start;
+}
+.title-card {
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(20px);
+    border-radius: 30px; padding: 60px;
+    border: 2px solid rgba(255,255,255,0.2);
+    text-align: center; position: relative; overflow: hidden;
+}
+.title-card::before {
+    content: ''; position: absolute; top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: conic-gradient(transparent, var(--gold), transparent 30%);
+    animation: rotate 4s linear infinite;
+}
+.title-card-inner {
+    position: relative; z-index: 1;
+    background: rgba(13, 27, 42, 0.9);
+    border-radius: 25px; padding: 50px;
+}
+.title-main {
+    font-size: 3.5rem; font-weight: 900; color: var(--gold);
+    margin-bottom: 20px;
+    text-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+}
+.title-sub { font-size: 1.6rem; color: #fff; margin-bottom: 30px; }
+.title-icon {
+    font-size: 4rem; color: var(--gold); margin-bottom: 20px;
+    animation: pulse 2s infinite;
+}
+.golden-rule {
+    background: linear-gradient(90deg, var(--gold), #ff8c00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-size: 1.3rem; font-weight: 700; margin-top: 20px;
+}
+.value-highlight {
+    background: linear-gradient(90deg, var(--gold), #ff8c00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+}
+.animate-on-scroll {
+    opacity: 0; transform: translateY(30px);
+    transition: all 0.8s ease-out;
+}
+.animate-on-scroll.visible { opacity: 1; transform: translateY(0); }
+.flow-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 30px;
+    position: relative;
+}
+.flow-container::before {
+    content: '';
+    position: absolute;
+    right: 28px;
+    top: 20px;
+    bottom: 20px;
+    width: 3px;
+    background: linear-gradient(to bottom, var(--gold), var(--accent));
+    border-radius: 3px;
+}
+.flow-step {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 12px 0;
+    position: relative;
+}
+.flow-number {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold), var(--secondary));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; font-weight: 900; color: var(--dark);
+    flex-shrink: 0;
+    z-index: 2;
+    box-shadow: 0 0 20px rgba(255,215,0,0.3);
+}
+.flow-text {
+    font-size: 1.1rem;
+    background: rgba(255,255,255,0.05);
+    padding: 15px 25px;
+    border-radius: 15px;
+    flex: 1;
+    border-right: 3px solid var(--gold);
+}
+.platform-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-top: 30px;
+}
+.platform-card {
+    background: rgba(255,255,255,0.05);
+    border-radius: 20px;
+    padding: 25px;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: all 0.4s;
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+}
+.platform-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 4px;
+    background: var(--plat-accent, var(--gold));
+}
+.platform-card:hover {
+    transform: translateY(-8px);
+    border-color: var(--plat-accent, var(--gold));
+}
+.platform-icon {
+    font-size: 2.5rem;
+    margin-bottom: 12px;
+    color: var(--plat-accent, var(--gold));
+}
+.platform-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+.platform-desc {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: rgba(255,255,255,0.8);
+}
+.ad-type-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    margin-top: 30px;
+}
+.ad-type-card {
+    background: rgba(255,255,255,0.05);
+    border-radius: 20px;
+    padding: 25px;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: all 0.4s;
+    position: relative;
+    overflow: hidden;
+}
+.ad-type-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 4px;
+    background: var(--ad-accent, var(--gold));
+}
+.ad-type-card:hover {
+    transform: translateY(-8px);
+    border-color: var(--ad-accent, var(--gold));
+}
+.ad-type-icon {
+    font-size: 2.2rem;
+    margin-bottom: 12px;
+    color: var(--ad-accent, var(--gold));
+}
+.ad-type-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+.ad-type-desc {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: rgba(255,255,255,0.8);
+}
+.journey-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 30px;
+    position: relative;
+}
+.journey-timeline::before {
+    content: '';
+    position: absolute;
+    right: 35px;
+    top: 20px;
+    bottom: 20px;
+    width: 4px;
+    background: linear-gradient(to bottom, var(--gold), var(--accent), var(--purple), var(--rose));
+    border-radius: 3px;
+}
+.journey-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 15px 0;
+    position: relative;
+}
+.journey-badge {
+    width: 70px; height: 70px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.6rem;
+    flex-shrink: 0;
+    z-index: 2;
+    box-shadow: 0 0 20px rgba(0,0,0,0.3);
+}
+.journey-content {
+    flex: 1;
+    background: rgba(255,255,255,0.05);
+    padding: 20px 25px;
+    border-radius: 15px;
+    border-right: 3px solid var(--journey-color, var(--gold));
+}
+.journey-content-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--journey-color, var(--gold));
+}
+.journey-content-text {
+    font-size: 1rem;
+    line-height: 1.8;
+    color: rgba(255,255,255,0.85);
+}
+.example-box {
+    background: linear-gradient(135deg, rgba(0,191,165,0.1), rgba(0,191,165,0.05));
+    border: 2px solid rgba(0,191,165,0.3);
+    border-radius: 20px;
+    padding: 30px;
+    margin-top: 20px;
+}
+.example-box-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.example-box-text {
+    font-size: 1.05rem;
+    line-height: 2;
+    color: rgba(255,255,255,0.9);
+}
+.summary-list {
+    list-style: none;
+    margin-top: 20px;
+}
+.summary-list li {
+    padding: 12px 20px;
+    margin-bottom: 10px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
+    border-right: 4px solid var(--gold);
+    font-size: 1.05rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.3s;
+}
+.summary-list li:hover {
+    background: rgba(255,255,255,0.1);
+    transform: translateX(-5px);
+}
+.summary-list li i {
+    color: var(--gold);
+}
+.internet-flow {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-top: 30px;
+}
+.internet-step {
+    background: rgba(255,255,255,0.05);
+    border-radius: 20px;
+    padding: 25px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: all 0.4s;
+    position: relative;
+}
+.internet-step:hover {
+    transform: translateY(-8px);
+    border-color: var(--gold);
+}
+.internet-step-num {
+    width: 50px; height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold), var(--secondary));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; font-weight: 900; color: var(--dark);
+    margin: 0 auto 15px;
+}
+.internet-step-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+.internet-step-desc {
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.8);
+    line-height: 1.6;
+}
+.targeting-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 15px;
+}
+.targeting-item {
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+    font-size: 0.95rem;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.targeting-item i {
+    display: block;
+    color: var(--gold);
+    margin-bottom: 5px;
+    font-size: 1.2rem;
+}
+@media (max-width: 768px) {
+    .platform-grid, .ad-type-grid, .internet-flow, .two-col, .targeting-grid { grid-template-columns: 1fr; }
+    .title-main { font-size: 2.5rem; }
+    .section-title-text { font-size: 1.8rem; }
+    .nav-bar { padding: 10px 15px; }
+    .slide { padding: 80px 20px 40px; }
+    .flow-container::before { right: 23px; }
+    .flow-number { width: 50px; height: 50px; font-size: 1.1rem; }
+    .journey-timeline::before { right: 28px; }
+    .journey-badge { width: 55px; height: 55px; font-size: 1.2rem; }
+}
+</style>
+<base target="_blank">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d1b2a">
+
+<style>
+.site-floatnav{position:fixed;bottom:22px;left:22px;z-index:2000;display:flex;gap:8px;align-items:center;flex-wrap:wrap;max-width:90vw;}
+.site-floatnav a{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(13,27,42,0.92);backdrop-filter:blur(10px);
+  border:2px solid #ffd700;color:#ffd700;
+  padding:10px 16px;border-radius:25px;
+  font-family:'Tajawal',sans-serif;font-weight:700;font-size:0.85rem;
+  text-decoration:none;transition:all .3s;
+}
+.site-floatnav a:hover{background:#ffd700;color:#0d1b2a;}
+.site-floatnav a.disabled{opacity:0.3;pointer-events:none;}
+.site-floatnav a.quiz-link{border-color:#00bfa5;color:#00bfa5;}
+.site-floatnav a.quiz-link:hover{background:#00bfa5;color:#0d1b2a;}
+@media (max-width:640px){
+  .site-floatnav{left:10px;bottom:10px;gap:6px;}
+  .site-floatnav a{padding:8px 10px;font-size:0.75rem;}
+  .site-floatnav a span.label{display:none;}
+}
+</style>
+</head>
+<body>
+<script>
+(function(){
+  var localSession = localStorage.getItem('lms_session_v1');
+  var remoteToken = localStorage.getItem('lms_token_v1');
+  var remotePaid = false;
+  if (remoteToken) {
+    try {
+      var ru = JSON.parse(localStorage.getItem('lms_remote_user_v1'));
+      remotePaid = ru && String(ru.status || '').trim().toLowerCase() === 'active';
+    } catch(e){}
+  }
+  var trialActive = false;
+  try {
+    var t = JSON.parse(localStorage.getItem('lms_trial_v1'));
+    if (t) { trialActive = ((Date.now() - t.startAt) / 1000) < 600; }
+  } catch(e){}
+
+  var allowed = !!localSession || (!!remoteToken && remotePaid) || trialActive;
+  if(!allowed){
+    location.replace(remoteToken ? 'upgrade.html' : 'index.html');
+    return;
+  }
+
+  // قفل تسلسلي: لازم يجتاز اختبار الفصل رقم 8 قبل الدخول هنا (لا يُطبَّق في وضع المعاينة التجريبية)
+  var isTrialOnly = trialActive && !localSession && !(remoteToken && remotePaid);
+  if (!isTrialOnly) {
+    var uname = localSession || (function(){
+      try {
+        var ru2 = JSON.parse(localStorage.getItem('lms_remote_user_v1'));
+        return ru2 ? ru2.email : null;
+      } catch(e){ return null; }
+    })();
+    if (uname) {
+      try {
+        var progress = JSON.parse(localStorage.getItem('lms_progress_v1_' + uname)) || {};
+        var prevQuiz = progress.quizzes && progress.quizzes[8];
+        if (!prevQuiz || !prevQuiz.passed) {
+          location.replace('dashboard.html?locked=9');
+          return;
+        }
+      } catch(e){}
+    }
+  }
+})();
+</script>
+
+
+<div class="geo-bg">
+    <div class="geo-shape geo-circle" style="width:300px;height:300px;top:10%;left:5%;"></div>
+    <div class="geo-shape geo-square" style="width:150px;height:150px;top:60%;right:10%;animation-delay:-5s;"></div>
+    <div class="geo-shape geo-circle" style="width:200px;height:200px;bottom:20%;left:20%;animation-delay:-10s;"></div>
+    <div class="geo-shape geo-triangle" style="top:30%;right:20%;animation-delay:-15s;"></div>
+    <div class="geo-shape geo-square" style="width:100px;height:100px;bottom:10%;right:30%;animation-delay:-8s;"></div>
+</div>
+
+<nav class="nav-bar">
+    <div class="nav-logo"><i class="fas fa-globe"></i> الفصل التاسع</div>
+    <div class="nav-progress" id="navProgress"></div>
+    <div class="nav-controls">
+        <button class="nav-btn" onclick="prevSlide()"><i class="fas fa-chevron-right"></i> السابق</button>
+        <button class="nav-btn" onclick="nextSlide()">التالي <i class="fas fa-chevron-left"></i></button>
+    </div>
+</nav>
+
+<div class="slides-container">
+
+<div class="slide active" id="slide-0">
+    <div class="slide-content" style="text-align:center;">
+        <div class="title-card animate-on-scroll">
+            <div class="title-card-inner">
+                <div class="title-icon"><i class="fas fa-globe-americas"></i></div>
+                <h1 class="title-main">الفصل التاسع</h1>
+                <p class="title-sub">مقدمة في التسويق الرقمي</p>
+                <p style="font-size:1.3rem; color:var(--gold); margin-bottom:20px;">Digital Marketing Fundamentals</p>
+                <div style="width:100px; height:3px; background:var(--gold); margin:20px auto; border-radius:2px;"></div>
+                <p style="font-size:1.1rem; color:rgba(255,255,255,0.7); line-height:2;">
+                    استخدام الإنترنت والتقنيات الرقمية للترويج للمنتجات وتحقيق المبيعات.
+                </p>
+                <p class="golden-rule" style="margin-top:30px;"><i class="fas fa-quote-left"></i> التسويق الرقمي هو القلب النابض لأي نشاط تجاري</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="slide" id="slide-1">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background:linear-gradient(135deg, var(--gold), var(--secondary));"><i class="fas fa-wifi"></i></div>
+            <h2 class="section-title-text">أولاً: كيف يعمل الإنترنت؟</h2>
+        </div>
+        <div class="quote-box animate-on-scroll">
+            <p class="quote-text">الإنترنت هو شبكة عالمية تربط مليارات الأجهزة ببعضها البعض. عندما تفتح موقعًا أو تطبيقًا أو تشاهد فيديو، فأنت تستخدم الإنترنت.</p>
+        </div>
+        <div class="section-header animate-on-scroll" style="margin-top:40px;">
+            <div class="section-number" style="background:linear-gradient(135deg, var(--accent), var(--teal)); width:60px; height:60px; font-size:1.5rem;"><i class="fas fa-search"></i></div>
+            <h2 class="section-title-text" style="font-size:1.8rem;">مثال: البحث عن "أفضل حذاء رياضي"</h2>
+        </div>
+        <div class="internet-flow animate-on-scroll">
+            <div class="internet-step">
+                <div class="internet-step-num">1</div>
+                <div class="internet-step-title">يرسل هاتفك الطلب</div>
+                <div class="internet-step-desc">تكتب الكلمة في محرك البحث</div>
+            </div>
+            <div class="internet-step">
+                <div class="internet-step-num">2</div>
+                <div class="internet-step-title">يصل للخادم (Server)</div>
+                <div class="internet-step-desc">الطلب يسافر عبر الشبكة</div>
+            </div>
+            <div class="internet-step">
+                <div class="internet-step-num">3</div>
+                <div class="internet-step-title">يبحث الخادم</div>
+                <div class="internet-step-desc">يجد المعلومات المناسبة</div>
+            </div>
+            <div class="internet-step">
+                <div class="internet-step-num">4</div>
+                <div class="internet-step-title">يعيد النتائج</div>
+                <div class="internet-step-desc">تظهر أمامك خلال ثانية!</div>
+            </div>
+        </div>
+        <div class="section-header animate-on-scroll" style="margin-top:50px;">
+            <div class="section-number" style="background:linear-gradient(135deg, var(--purple), var(--blue)); width:60px; height:60px; font-size:1.5rem;"><i class="fas fa-cogs"></i></div>
+            <h2 class="section-title-text" style="font-size:1.8rem;">مكونات الإنترنت التي تهم المسوق</h2>
+        </div>
+        <div class="content-grid animate-on-scroll">
+            <div class="content-card" style="--card-accent:var(--gold);">
+                <div class="card-icon"><i class="fas fa-globe"></i></div>
+                <div class="card-title">الموقع الإلكتروني</div>
+                <div class="card-text">المنزل الرئيسي للشركة على الإنترنت. يحتوي على المنتجات، الأسعار، الدفع، والشحن.</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--accent);">
+                <div class="card-icon"><i class="fas fa-search"></i></div>
+                <div class="card-title">محركات البحث</div>
+                <div class="card-text">Google, Bing — تساعد الناس في العثور على المعلومات والمنتجات.</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--secondary);">
+                <div class="card-icon"><i class="fas fa-window-maximize"></i></div>
+                <div class="card-title">المتصفح</div>
+                <div class="card-text">Chrome, Edge, Safari — البرنامج الذي تستخدمه لدخول المواقع.</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--purple);">
+                <div class="card-icon"><i class="fas fa-server"></i></div>
+                <div class="card-title">السيرفر</div>
+                <div class="card-text">جهاز يحتفظ بالموقع ويرسل الصفحات للزوار.</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--rose);">
+                <div class="card-icon"><i class="fas fa-link"></i></div>
+                <div class="card-title">اسم النطاق (Domain)</div>
+                <div class="card-text">example.com — العنوان الذي يكتبه المستخدم للوصول للموقع.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="slide" id="slide-2">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background:linear-gradient(135deg, var(--accent), var(--teal));"><i class="fas fa-shopping-bag"></i></div>
+            <h2 class="section-title-text">مثال عملي: رحلة شراء ساعة</h2>
+        </div>
+        <div class="flow-container animate-on-scroll">
+            <div class="flow-step">
+                <div class="flow-number">1</div>
+                <div class="flow-text">أحمد يريد شراء ساعة <i class="fas fa-arrow-down" style="color:var(--gold); margin:0 10px;"></i> يفتح Google</div>
+            </div>
+            <div class="flow-step">
+                <div class="flow-number">2</div>
+                <div class="flow-text">يبحث: "أفضل ساعة ذكية" <i class="fas fa-arrow-down" style="color:var(--gold); margin:0 10px;"></i> يظهر إعلان لمتجر</div>
+            </div>
+            <div class="flow-step">
+                <div class="flow-number">3</div>
+                <div class="flow-text">يضغط على الإعلان <i class="fas fa-arrow-down" style="color:var(--gold); margin:0 10px;"></i> يدخل الموقع</div>
+            </div>
+            <div class="flow-step">
+                <div class="flow-number">4</div>
+                <div class="flow-text">يشاهد المنتجات <i class="fas fa-arrow-down" style="color:var(--gold); margin:0 10px;"></i> يشتري الساعة</div>
+            </div>
+            <div class="flow-step">
+                <div class="flow-number" style="background:var(--accent);"><i class="fas fa-check"></i></div>
+                <div class="flow-text" style="border-color:var(--accent); font-weight:700;">كل هذه الرحلة تعتمد على الإنترنت!</div>
+            </div>
+        </div>
+        <div class="content-card animate-on-scroll" style="--card-accent:var(--gold); margin-top:40px;">
+            <div class="card-icon"><i class="fas fa-lightbulb"></i></div>
+            <div class="card-title">لماذا يجب على المسوق فهم الإنترنت؟</div>
+            <div class="card-text" style="margin-top:15px;">
+                <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:15px;">
+                    <div style="text-align:center; padding:15px; background:rgba(255,255,255,0.05); border-radius:12px;">
+                        <div style="font-size:2rem; color:var(--gold); margin-bottom:8px;"><i class="fas fa-route"></i></div>
+                        <div style="font-weight:700;">كيف يصل العميل</div>
+                    </div>
+                    <div style="text-align:center; padding:15px; background:rgba(255,255,255,0.05); border-radius:12px;">
+                        <div style="font-size:2rem; color:var(--gold); margin-bottom:8px;"><i class="fas fa-eye"></i></div>
+                        <div style="font-weight:700;">لماذا يزور الموقع</div>
+                    </div>
+                    <div style="text-align:center; padding:15px; background:rgba(255,255,255,0.05); border-radius:12px;">
+                        <div style="font-size:2rem; color:var(--gold); margin-bottom:8px;"><i class="fas fa-door-open"></i></div>
+                        <div style="font-weight:700;">لماذا يغادر</div>
+                    </div>
+                    <div style="text-align:center; padding:15px; background:rgba(255,255,255,0.05); border-radius:12px;">
+                        <div style="font-size:2rem; color:var(--gold); margin-bottom:8px;"><i class="fas fa-shopping-cart"></i></div>
+                        <div style="font-weight:700;">كيف يجعله يشتري</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="slide" id="slide-3">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background:linear-gradient(135deg, var(--purple), var(--blue));"><i class="fas fa-th-large"></i></div>
+            <h2 class="section-title-text">ثانياً: المنصات الرقمية</h2>
+        </div>
+        <div class="quote-box animate-on-scroll">
+            <p class="quote-text">المنصة الرقمية هي أي مكان على الإنترنت يتفاعل فيه الناس أو يستهلكون المحتوى أو يشترون المنتجات. كل منصة لها جمهور مختلف.</p>
+        </div>
+        <div class="platform-grid animate-on-scroll">
+            <div class="platform-card" style="--plat-accent:var(--gold);">
+                <div class="platform-icon"><i class="fas fa-share-alt"></i></div>
+                <div class="platform-title">التواصل الاجتماعي</div>
+                <div class="platform-desc">Facebook, Instagram, TikTok, LinkedIn, Snapchat, X</div>
+                <div style="margin-top:10px; font-size:0.85rem; color:var(--gold);"><i class="fas fa-bullseye"></i> بناء العلامة، الوعي، التفاعل</div>
+            </div>
+            <div class="platform-card" style="--plat-accent:var(--accent);">
+                <div class="platform-icon"><i class="fas fa-search"></i></div>
+                <div class="platform-title">محركات البحث</div>
+                <div class="platform-desc">Google — يستخدمها الأشخاص عندما يريدون شراء شيء</div>
+                <div style="margin-top:10px; font-size:0.85rem; color:var(--accent);"><i class="fas fa-bullseye"></i> استهداف نية الشراء</div>
+            </div>
+            <div class="platform-card" style="--plat-accent:var(--secondary);">
+                <div class="platform-icon"><i class="fas fa-envelope"></i></div>
+                <div class="platform-title">البريد الإلكتروني</div>
+                <div class="platform-desc">وسيلة ممتازة للتواصل مع العملاء</div>
+                <div style="margin-top:10px; font-size:0.85rem; color:var(--secondary);"><i class="fas fa-bullseye"></i> عروض، خصومات، أخبار</div>
+            </div>
+            <div class="platform-card" style="--plat-accent:var(--purple);">
+                <div class="platform-icon"><i class="fas fa-globe"></i></div>
+                <div class="platform-title">المواقع الإلكترونية</div>
+                <div class="platform-desc">مركز كل العمليات. كل الإعلانات تنتهي بالموقع</div>
+                <div style="margin-top:10px; font-size:0.85rem; color:var(--purple);"><i class="fas fa-bullseye"></i> الشراء والتحويل</div>
+            </div>
+            <div class="platform-card" style="--plat-accent:var(--rose);">
+                <div class="platform-icon"><i class="fas fa-mobile-alt"></i></div>
+                <div class="platform-title">تطبيقات الهاتف</div>
+                <div class="platform-desc">البنوك، التوصيل، التسوق — يزيد تكرار الاستخدام</div>
+                <div style="margin-top:10px; font-size:0.85rem; color:var(--rose);"><i class="fas fa-bullseye"></i> ولاء العملاء</div>
+            </div>
+            <div class="platform-card" style="--plat-accent:var(--blue);">
+                <div class="platform-icon"><i class="fas fa-video"></i></div>
+                <div class="platform-title">منصات الفيديو</div>
+                <div class="platform-desc">YouTube, TikTok, Instagram Reels</div>
+                <div style="margin-top:10px; font-size:0.85rem; color:var(--blue);"><i class="fas fa-bullseye"></i> أقوى وسائل التسويق</div>
+            </div>
+        </div>
+        <div class="example-box animate-on-scroll" style="margin-top:30px;">
+            <div class="example-box-title"><i class="fas fa-question-circle"></i> كيف تختار المنصة المناسبة؟</div>
+            <div class="example-box-text">
+                <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:15px; margin-top:15px;">
+                    <div style="text-align:center; padding:15px; background:rgba(255,255,255,0.05); border-radius:12px;">
+                        <div style="font-size:1.5rem; color:var(--gold); margin-bottom:8px;"><i class="fas fa-users"></i></div>
+                        <div style="font-weight:700; font-size:0.95rem;">مكان وجود جمهورك</div>
+                    </div>
+                    <div style="text-align:center; padding:15px; background:rgba(255,255,255,0.05); border-radius:12px;">
+                        <div style="font-size:1.5rem; color:var(--gold); margin-bottom:8px;"><i class="fas fa-birthday-cake"></i></div>
+                        <div style="font-weight:700; font-size:0.95rem;">عمر الجمهور</div>
+                    </div>
+                    <div style="text-align:center; padding:15px; background:rgba(255,255,255,0.05); border-radius:12px;">
+                        <div style="font-size:1.5rem; color:var(--gold); margin-bottom:8px;"><i class="fas fa-wallet"></i></div>
+                        <div style="font-weight:700; font-size:0.95rem;">ميزانيتك</div>
+                    </div>
+                    <div style="text-align:center; padding:15px; background:rgba(255,255,255,0.05); border-radius:12px;">
+                        <div style="font-size:1.5rem; color:var(--gold); margin-bottom:8px;"><i class="fas fa-box"></i></div>
+                        <div style="font-weight:700; font-size:0.95rem;">نوع المنتج</div>
+                    </div>
+                    <div style="text-align:center; padding:15px; background:rgba(255,255,255,0.05); border-radius:12px;">
+                        <div style="font-size:1.5rem; color:var(--gold); margin-bottom:8px;"><i class="fas fa-bullseye"></i></div>
+                        <div style="font-weight:700; font-size:0.95rem;">الهدف التسويقي</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="two-col animate-on-scroll" style="margin-top:30px;">
+            <div class="content-card" style="--card-accent:var(--gold);">
+                <div class="card-icon"><i class="fas fa-child"></i></div>
+                <div class="card-title">بيع ألعاب أطفال</div>
+                <div class="card-text">الأفضل: Facebook, Instagram, TikTok</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--accent);">
+                <div class="card-icon"><i class="fas fa-briefcase"></i></div>
+                <div class="card-title">خدمات للشركات</div>
+                <div class="card-text">الأفضل: LinkedIn, Email, Google</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="slide" id="slide-4">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background:linear-gradient(135deg, var(--secondary), var(--gold));"><i class="fas fa-ad"></i></div>
+            <h2 class="section-title-text">ثالثاً: أنواع الإعلانات</h2>
+        </div>
+        <div class="quote-box animate-on-scroll">
+            <p class="quote-text">الإعلانات الرقمية كثيرة. لكل نوع هدف مختلف. الهدف يحدد نوع الإعلان.</p>
+        </div>
+        <div class="ad-type-grid animate-on-scroll">
+            <div class="ad-type-card" style="--ad-accent:var(--gold);">
+                <div class="ad-type-icon"><i class="fas fa-search"></i></div>
+                <div class="ad-type-title">إعلانات البحث (Search Ads)</div>
+                <div class="ad-type-desc">تظهر عندما يبحث العميل. تستهدف من لديه نية شراء. معدل التحويل مرتفع.</div>
+            </div>
+            <div class="ad-type-card" style="--ad-accent:var(--accent);">
+                <div class="ad-type-icon"><i class="fas fa-image"></i></div>
+                <div class="ad-type-title">الإعلانات المصورة (Display Ads)</div>
+                <div class="ad-type-desc">صور تظهر داخل المواقع. هدفها نشر العلامة التجارية والتذكير.</div>
+            </div>
+            <div class="ad-type-card" style="--ad-accent:var(--secondary);">
+                <div class="ad-type-icon"><i class="fas fa-video"></i></div>
+                <div class="ad-type-title">إعلانات الفيديو</div>
+                <div class="ad-type-desc">مثل إعلان قبل فيديو YouTube. تُستخدم في شرح المنتج وبناء الثقة.</div>
+            </div>
+            <div class="ad-type-card" style="--ad-accent:var(--purple);">
+                <div class="ad-type-icon"><i class="fas fa-share-alt"></i></div>
+                <div class="ad-type-title">إعلانات السوشيال ميديا</div>
+                <div class="ad-type-desc">تظهر داخل Facebook, Instagram, TikTok, Snapchat. استهداف دقيق للغاية.</div>
+            </div>
+            <div class="ad-type-card" style="--ad-accent:var(--rose);">
+                <div class="ad-type-icon"><i class="fas fa-redo"></i></div>
+                <div class="ad-type-title">إعادة الاستهداف (Remarketing)</div>
+                <div class="ad-type-desc">إذا دخل شخص متجرك ولم يشترِ، يبدأ الإعلان في الظهور له مرة أخرى.</div>
+            </div>
+            <div class="ad-type-card" style="--ad-accent:var(--blue);">
+                <div class="ad-type-icon"><i class="fas fa-mobile-alt"></i></div>
+                <div class="ad-type-title">إعلانات التطبيقات</div>
+                <div class="ad-type-desc">هدفها تحميل التطبيق أو زيادة الاستخدام.</div>
+            </div>
+            <div class="ad-type-card" style="--ad-accent:var(--teal);">
+                <div class="ad-type-icon"><i class="fas fa-newspaper"></i></div>
+                <div class="ad-type-title">الإعلانات الأصلية (Native Ads)</div>
+                <div class="ad-type-desc">تظهر وكأنها جزء طبيعي من المحتوى وليست إعلانًا مباشرًا.</div>
+            </div>
+            <div class="ad-type-card" style="--ad-accent:var(--gold);">
+                <div class="ad-type-icon"><i class="fas fa-question-circle"></i></div>
+                <div class="ad-type-title">كيف تختار؟</div>
+                <div class="ad-type-desc">هل تريد مبيعات؟ زيارات؟ مشاهدات؟ تحميل تطبيق؟ نشر العلامة؟</div>
+            </div>
+        </div>
+        <div class="content-card animate-on-scroll" style="--card-accent:var(--gold); margin-top:30px;">
+            <div class="card-icon"><i class="fas fa-bullseye"></i></div>
+            <div class="card-title">استهداف إعلانات السوشيال ميديا</div>
+            <div class="card-text">
+                <div class="targeting-grid" style="margin-top:15px;">
+                    <div class="targeting-item"><i class="fas fa-birthday-cake"></i> العمر</div>
+                    <div class="targeting-item"><i class="fas fa-map-marker-alt"></i> المدينة</div>
+                    <div class="targeting-item"><i class="fas fa-heart"></i> الاهتمامات</div>
+                    <div class="targeting-item"><i class="fas fa-venus-mars"></i> الجنس</div>
+                    <div class="targeting-item"><i class="fas fa-briefcase"></i> الوظيفة</div>
+                    <div class="targeting-item"><i class="fas fa-chart-line"></i> السلوك</div>
+                </div>
+                <div class="example-box" style="margin-top:20px;">
+                    <div class="example-box-title"><i class="fas fa-running"></i> مثال: بيع أدوات رياضية</div>
+                    <div class="example-box-text">يمكن عرض الإعلان فقط للأشخاص: عمرهم 18-35، يهتمون بالرياضة، يعيشون في القاهرة.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="slide" id="slide-5">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background:linear-gradient(135deg, var(--rose), var(--purple));"><i class="fas fa-route"></i></div>
+            <h2 class="section-title-text">رابعاً: مسار العميل الرقمي</h2>
+        </div>
+        <div class="quote-box animate-on-scroll">
+            <p class="quote-text">كل عميل يمر بعدة مراحل قبل الشراء. إذا فهمت هذه الرحلة ستعرف ماذا تقدم له في كل خطوة.</p>
+        </div>
+        <div class="journey-timeline animate-on-scroll">
+            <div class="journey-item">
+                <div class="journey-badge" style="background:linear-gradient(135deg, var(--gold), var(--secondary));"><i class="fas fa-eye"></i></div>
+                <div class="journey-content" style="--journey-color:var(--gold);">
+                    <div class="journey-content-title"><i class="fas fa-eye"></i> الوعي (Awareness)</div>
+                    <div class="journey-content-text">العميل لا يعرفك. يكتشفك من خلال إعلان، فيديو، منشور، أو نتيجة بحث.<br><span style="color:var(--gold);">مثال:</span> شخص يشاهد فيديو عن أحذية الجري لأول مرة.</div>
+                </div>
+            </div>
+            <div class="journey-item">
+                <div class="journey-badge" style="background:linear-gradient(135deg, var(--accent), var(--teal));"><i class="fas fa-heart"></i></div>
+                <div class="journey-content" style="--journey-color:var(--accent);">
+                    <div class="journey-content-title"><i class="fas fa-heart"></i> الاهتمام (Interest)</div>
+                    <div class="journey-content-text">يعجبه المنتج ويبدأ في معرفة المزيد. يشاهد فيديوهات، مراجعات، صور، موقع الشركة.</div>
+                </div>
+            </div>
+            <div class="journey-item">
+                <div class="journey-badge" style="background:linear-gradient(135deg, var(--purple), var(--blue));"><i class="fas fa-balance-scale"></i></div>
+                <div class="journey-content" style="--journey-color:var(--purple);">
+                    <div class="journey-content-title"><i class="fas fa-balance-scale"></i> التفكير والمقارنة (Consideration)</div>
+                    <div class="journey-content-text">يقارن بين عدة شركات. يهتم بالسعر، الجودة، التقييمات، والضمان.</div>
+                </div>
+            </div>
+            <div class="journey-item">
+                <div class="journey-badge" style="background:linear-gradient(135deg, var(--secondary), var(--gold));"><i class="fas fa-shopping-cart"></i></div>
+                <div class="journey-content" style="--journey-color:var(--secondary);">
+                    <div class="journey-content-title"><i class="fas fa-shopping-cart"></i> النية (Intent)</div>
+                    <div class="journey-content-text">يضيف المنتج إلى السلة أو يطلب عرض سعر، لكنه لم يُكمل الشراء بعد.</div>
+                </div>
+            </div>
+            <div class="journey-item">
+                <div class="journey-badge" style="background:linear-gradient(135deg, var(--rose), #fb7185);"><i class="fas fa-credit-card"></i></div>
+                <div class="journey-content" style="--journey-color:var(--rose);">
+                    <div class="journey-content-title"><i class="fas fa-credit-card"></i> الشراء (Purchase)</div>
+                    <div class="journey-content-text">يُتم عملية الدفع ويصبح عميلًا. هذه هي اللحظة الحاسمة!</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="slide" id="slide-6">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background:linear-gradient(135deg, var(--accent), var(--teal));"><i class="fas fa-route"></i></div>
+            <h2 class="section-title-text">مسار العميل الرقمي (تكملة)</h2>
+        </div>
+        <div class="journey-timeline animate-on-scroll">
+            <div class="journey-item">
+                <div class="journey-badge" style="background:linear-gradient(135deg, var(--cyan), var(--blue));"><i class="fas fa-user-check"></i></div>
+                <div class="journey-content" style="--journey-color:var(--cyan);">
+                    <div class="journey-content-title"><i class="fas fa-user-check"></i> الاحتفاظ بالعميل (Retention)</div>
+                    <div class="journey-content-text">بعد البيع تستمر العلاقة من خلال رسائل البريد الإلكتروني، العروض الخاصة، خدمة العملاء، وبرامج الولاء.</div>
+                </div>
+            </div>
+            <div class="journey-item">
+                <div class="journey-badge" style="background:linear-gradient(135deg, var(--gold), var(--accent));"><i class="fas fa-crown"></i></div>
+                <div class="journey-content" style="--journey-color:var(--gold);">
+                    <div class="journey-content-title"><i class="fas fa-crown"></i> الولاء والتوصية (Loyalty & Advocacy)</div>
+                    <div class="journey-content-text">إذا كانت تجربته ممتازة فيشتري مرة أخرى، يرشح المنتج لأصدقائه، يترك تقييمًا إيجابيًا، وينشر تجربته.</div>
+                </div>
+            </div>
+        </div>
+        <div class="section-header animate-on-scroll" style="margin-top:50px;">
+            <div class="section-number" style="background:linear-gradient(135deg, var(--gold), var(--accent)); width:60px; height:60px; font-size:1.5rem;"><i class="fas fa-clock"></i></div>
+            <h2 class="section-title-text" style="font-size:1.8rem;">مثال عملي كامل: متجر ساعات</h2>
+        </div>
+        <div class="flow-container animate-on-scroll">
+            <div class="flow-step">
+                <div class="flow-number">1</div>
+                <div class="flow-text">يرى محمد إعلانًا على Instagram عن ساعة جديدة <span style="color:var(--gold);">(وعي)</span></div>
+            </div>
+            <div class="flow-step">
+                <div class="flow-number">2</div>
+                <div class="flow-text">يزور الموقع ويقرأ المواصفات <span style="color:var(--accent);">(اهتمام)</span></div>
+            </div>
+            <div class="flow-step">
+                <div class="flow-number">3</div>
+                <div class="flow-text">يقارنها بساعات أخرى ويقرأ التقييمات <span style="color:var(--purple);">(تفكير)</span></div>
+            </div>
+            <div class="flow-step">
+                <div class="flow-number">4</div>
+                <div class="flow-text">يضيفها إلى سلة التسوق <span style="color:var(--secondary);">(نية)</span></div>
+            </div>
+            <div class="flow-step">
+                <div class="flow-number">5</div>
+                <div class="flow-text">يُكمل الدفع ويشتري الساعة <span style="color:var(--rose);">(شراء)</span></div>
+            </div>
+            <div class="flow-step">
+                <div class="flow-number">6</div>
+                <div class="flow-text">ترسل له رسالة شكر وكوبون خصم للطلب التالي <span style="color:var(--cyan);">(احتفاظ)</span></div>
+            </div>
+            <div class="flow-step">
+                <div class="flow-number" style="background:linear-gradient(135deg, var(--gold), var(--accent));"><i class="fas fa-crown"></i></div>
+                <div class="flow-text" style="border-color:var(--gold); font-weight:700;">يكتب تقييمًا ويخبر أصدقاءه عن المتجر <span style="color:var(--gold);">(ولاء وتوصية)</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="slide" id="slide-7">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background:linear-gradient(135deg, var(--gold), var(--accent));"><i class="fas fa-star"></i></div>
+            <h2 class="section-title-text">أهم الدروس المستفادة</h2>
+        </div>
+        <div class="quote-box animate-on-scroll">
+            <p class="quote-text">أفضل المسوقين لا يركزون على البيع فقط، بل على بناء تجربة متكاملة تجعل العميل يعود للشراء مرات متعددة ويصبح سفيرًا للعلامة التجارية.</p>
+        </div>
+        <div class="content-grid animate-on-scroll">
+            <div class="content-card" style="--card-accent:var(--gold);">
+                <div class="card-icon"><i class="fas fa-network-wired"></i></div>
+                <div class="card-title">البنية التحتية</div>
+                <div class="card-text">الإنترنت هو البنية الأساسية التي يعمل عليها التسويق الرقمي. فهمها ضروري لكل مسوق.</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--accent);">
+                <div class="card-icon"><i class="fas fa-th-large"></i></div>
+                <div class="card-title">اختيار المنصة</div>
+                <div class="card-text">المنصات الرقمية تختلف في جمهورها وأهدافها. اختر المنصة المناسبة للجمهور والهدف.</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--secondary);">
+                <div class="card-icon"><i class="fas fa-ad"></i></div>
+                <div class="card-title">اختيار نوع الإعلان</div>
+                <div class="card-text">لا يوجد نوع إعلان واحد يناسب جميع الأهداف. الهدف يحدد نوع الإعلان.</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--purple);">
+                <div class="card-icon"><i class="fas fa-route"></i></div>
+                <div class="card-title">فهم رحلة العميل</div>
+                <div class="card-text">نجاح التسويق الرقمي يعتمد على فهم رحلة العميل من الوعي حتى الولاء.</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--rose);">
+                <div class="card-icon"><i class="fas fa-heart"></i></div>
+                <div class="card-title">البناء قبل البيع</div>
+                <div class="card-text">بناء العلاقة والثقة أهم من البيع المباشر. العميل المخلص يعود ويوصي.</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--blue);">
+                <div class="card-icon"><i class="fas fa-gem"></i></div>
+                <div class="card-title">التجربة المتكاملة</div>
+                <div class="card-text">حوّل العميل إلى سفير للعلامة من خلال تجربة شراء استثنائية.</div>
+            </div>
+        </div>
+        <div class="content-card animate-on-scroll" style="--card-accent:var(--gold); margin-top:30px;">
+            <div class="card-icon"><i class="fas fa-lightbulb"></i></div>
+            <div class="card-title">خلاصة الفصل</div>
+            <div class="card-text" style="font-size:1.1rem; line-height:2.2;">
+                التسويق الرقمي ليس مجرد إعلانات على الإنترنت، بل هو <span class="value-highlight">فن بناء علاقة</span> بين العلامة التجارية والعميل.
+                <br><br>
+                يبدأ بـ <span class="value-highlight">فهم الإنترنت</span> كبنية تحتية، ثم <span class="value-highlight">اختيار المنصة المناسبة</span> لجمهورك، ثم <span class="value-highlight">نوع الإعلان المناسب</span> لهدفك، ثم <span class="value-highlight">متابعة رحلة العميل</span> في كل مرحلة.
+                <br><br>
+                النجاح الحقيقي يكمن في تحويل العميل من مجرد <span class="value-highlight">زائر</span> إلى <span class="value-highlight">مشتري</span> ثم إلى <span class="value-highlight">عميل مخلص</span> يوصي بعلامتك للآخرين.
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<script>
+let currentSlide = 0;
+const totalSlides = 8;
+const slides = document.querySelectorAll('.slide');
+const navProgress = document.getElementById('navProgress');
+
+function initNavDots() {
+    navProgress.innerHTML = '';
+    for (let i = 0; i < totalSlides; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'nav-dot' + (i === currentSlide ? ' active' : '');
+        dot.onclick = () => goToSlide(i);
+        navProgress.appendChild(dot);
+    }
+}
+
+function updateNavDots() {
+    const dots = document.querySelectorAll('.nav-dot');
+    dots.forEach((dot, i) => {
+        dot.classList.toggle('active', i === currentSlide);
+    });
+}
+
+function goToSlide(n) {
+    if (n < 0 || n >= totalSlides) return;
+    currentSlide = n;
+    slides.forEach((slide, i) => {
+        slide.classList.toggle('active', i === n);
+    });
+    updateNavDots();
+    animateVisibleElements();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function nextSlide() { goToSlide(currentSlide + 1); }
+function prevSlide() { goToSlide(currentSlide - 1); }
+
+function animateVisibleElements() {
+    const visibleSlide = document.querySelector('.slide.active');
+    if (!visibleSlide) return;
+    const elements = visibleSlide.querySelectorAll('.animate-on-scroll');
+    elements.forEach((el, i) => {
+        setTimeout(() => el.classList.add('visible'), i * 150);
+    });
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft') nextSlide();
+    if (e.key === 'ArrowRight') prevSlide();
+});
+
+goToSlide(0);
+initNavDots();
+</script>
+<div class="site-floatnav"><a href="ch8.html"><i class="fas fa-chevron-right"></i><span class="label">السابق</span></a><a href="dashboard.html"><i class="fas fa-house"></i><span class="label">لوحتي</span></a><a class="quiz-link" href="quiz.html?ch=9"><i class="fas fa-clipboard-check"></i><span class="label">الاختبار</span></a><a class="disabled"><span class="label">التالي</span><i class="fas fa-chevron-left"></i></a></div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/progress.js"></script>
+<script src="js/trial.js"></script>
+<script src="js/protect-content.js"></script>
+<script>
+const CHAPTER_NUM = 9;
+const _origGoToSlide = goToSlide;
+goToSlide = function(target){
+  _origGoToSlide(target);
+  if (window.LMSProgress) LMSProgress.trackSlide(CHAPTER_NUM, currentSlide, totalSlides);
+};
+(function(){
+  var params = new URLSearchParams(location.search);
+  var urlSlide = parseInt(params.get('slide'));
+  var savedSlide = window.LMSProgress ? LMSProgress.getLastSlide(CHAPTER_NUM) : null;
+  var target = urlSlide || savedSlide;
+  if (target && target > 1 && target <= totalSlides) {
+    setTimeout(function(){ goToSlide(target); }, 350);
+  } else if (window.LMSProgress) {
+    LMSProgress.trackSlide(CHAPTER_NUM, 1, totalSlides);
+  }
+})();
+</script>
+<script>document.addEventListener("DOMContentLoaded", function(){ if(window.LMSTrial) LMSTrial.mountBadgeAndGuard(); });</script>
+<script src="js/mentor.js"></script>
+<script>document.addEventListener("DOMContentLoaded", function(){ if(window.LMSMentor) LMSMentor.mount(CHAPTER_NUM); });</script>
+<script src="js/sw-register.js"></script>
+</body>
+</html>

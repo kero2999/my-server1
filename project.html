@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-protected="true">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مشروع التخرج — منصة التسويق التعليمية</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d1b2a">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="css/shared.css">
+<style>
+.proj-wrap{max-width:720px;margin:0 auto;padding:40px 24px 90px;position:relative;z-index:5;}
+.proj-header{text-align:center;margin-bottom:30px;}
+.proj-header .badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(255,215,0,0.1);border:1px solid rgba(255,215,0,0.3);
+  padding:6px 16px;border-radius:20px;font-size:0.8rem;color:var(--gold);font-weight:700;margin-bottom:14px;
+}
+.proj-header h1{font-size:1.5rem;font-weight:900;margin-bottom:8px;}
+.proj-header p{color:var(--text-faint);font-size:0.92rem;line-height:1.8;}
+
+.brief-card{padding:24px 26px;border-radius:20px;margin-bottom:22px;}
+.brief-card h3{font-size:1rem;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.brief-card h3 i{color:var(--gold);}
+.brief-card ul{padding-inline-start:20px;display:flex;flex-direction:column;gap:8px;font-size:0.9rem;color:var(--text-dim);line-height:1.7;}
+
+.locked-box{text-align:center;padding:70px 30px;border-radius:24px;}
+.locked-box i{font-size:3rem;color:var(--text-faint);margin-bottom:18px;}
+.locked-box h2{font-size:1.3rem;font-weight:800;margin-bottom:10px;}
+.locked-box p{color:var(--text-faint);margin-bottom:24px;}
+
+.submitted-box{text-align:center;padding:50px 30px;border-radius:24px;}
+.submitted-box i{font-size:2.6rem;color:var(--success);margin-bottom:16px;display:block;}
+.submitted-box h2{font-size:1.25rem;font-weight:900;margin-bottom:10px;}
+.submitted-box p{color:var(--text-faint);font-size:0.9rem;margin-bottom:22px;}
+.submitted-preview{
+  text-align:right;background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;padding:18px;font-size:0.88rem;line-height:1.8;color:var(--text-dim);
+  margin-bottom:22px;white-space:pre-wrap;max-height:220px;overflow-y:auto;
+}
+
+.proj-form textarea{
+  width:100%;min-height:260px;padding:18px;border-radius:16px;
+  background:var(--surface);border:1px solid var(--border);color:var(--text);
+  font-size:0.95rem;font-family:'Tajawal',sans-serif;line-height:1.8;resize:vertical;outline:none;
+}
+.proj-form textarea:focus{border-color:var(--gold);}
+.char-count{font-size:0.78rem;color:var(--text-faint);margin-top:8px;text-align:left;}
+.proj-error{color:var(--danger);font-size:0.85rem;margin-top:10px;}
+.proj-actions{margin-top:18px;display:flex;gap:12px;justify-content:center;}
+</style>
+</head>
+<body>
+
+<div class="geo-bg">
+  <div class="geo-shape geo-circle" style="width:200px;height:200px;top:6%;left:4%;"></div>
+</div>
+
+<nav class="topbar">
+  <a href="dashboard.html" class="icon-btn" title="العودة للوحة"><i class="fas fa-arrow-right"></i></a>
+  <div class="brand"><i class="fas fa-flag-checkered"></i> <span class="full">مشروع التخرج</span></div>
+  <div class="spacer"></div>
+  <button class="icon-btn" onclick="LMSTheme.toggleTheme()"><i class="fas fa-moon" data-theme-icon></i></button>
+  <div id="userChipHolder"></div>
+</nav>
+
+<div class="proj-wrap">
+
+  <div class="locked-box surface-card" id="lockedBox" style="display:none;">
+    <i class="fas fa-lock"></i>
+    <h2>مشروع التخرج غير متاح بعد</h2>
+    <p id="lockedSub">أكمل جميع الفصول التسعة واجتز اختباراتها أولاً، وبعدها يفتح مشروع التخرج.</p>
+    <a class="btn btn-primary" href="dashboard.html"><i class="fas fa-house"></i> العودة للوحة</a>
+  </div>
+
+  <div id="mainContent" style="display:none;">
+    <div class="proj-header">
+      <div class="badge"><i class="fas fa-graduation-cap"></i> الخطوة الأخيرة قبل شهادتك</div>
+      <h1>مشروع التخرج</h1>
+      <p>طبّق كل اللي اتعلمته في الكورس على مشروع أو منتج حقيقي (حتى لو فكرة بسيطة)، واكتبه هنا. ده اللي هيثبت إنك فعلاً فاهم المادة، مش بس عدّيت الاختبارات.</p>
+    </div>
+
+    <div class="brief-card surface-card">
+      <h3><i class="fas fa-clipboard-list"></i> المطلوب في مشروعك</h3>
+      <ul>
+        <li>اختر منتج أو خدمة أو فكرة مشروع (حتى لو خيالية أو مشروع صغير عندك فعلاً)</li>
+        <li>حدد <strong>العميل المثالي</strong> ليه ونقطة الألم الأساسية اللي بيحلها</li>
+        <li>طبّق <strong>المزيج التسويقي (4Ps)</strong>: المنتج، السعر، مكان التوزيع، الترويج</li>
+        <li>اكتب <strong>رحلة عميل مختصرة</strong> من أول ما يسمع عن المنتج لحد ما يشتري</li>
+        <li>اكتب <strong>إعلان أو منشور واحد</strong> بأسلوب AIDA للترويج للمنتج</li>
+      </ul>
+    </div>
+
+    <div id="submittedBox" class="submitted-box surface-card" style="display:none;">
+      <i class="fas fa-circle-check"></i>
+      <h2>تم تسليم مشروعك بنجاح 🎉</h2>
+      <p>شهادتك جاهزة دلوقتي.</p>
+      <div class="submitted-preview" id="submittedPreview"></div>
+      <div class="proj-actions">
+        <a class="btn btn-primary" href="certificate.html"><i class="fas fa-award"></i> شوف شهادتك</a>
+      </div>
+    </div>
+
+    <div id="formBox" class="proj-form">
+      <textarea id="projectText" placeholder="اكتب مشروعك هنا بالتفصيل..."></textarea>
+      <div class="char-count"><span id="charCount">0</span> حرف</div>
+      <div class="proj-error" id="projError"></div>
+      <div class="proj-actions">
+        <button class="btn btn-primary" onclick="submitProject()"><i class="fas fa-paper-plane"></i> تسليم المشروع</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="js/theme.js"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/progress.js"></script>
+<script src="js/ui.js"></script>
+<script>
+function init() {
+  LMSUi.renderUserChip(document.getElementById('userChipHolder'));
+
+  if (!LMSProgress.allChaptersPassed()) {
+    document.getElementById('lockedBox').style.display = 'block';
+    const done = LMSProgress.getCompletedCount();
+    document.getElementById('lockedSub').textContent = 'أكملت ' + done + ' من 9 فصول حتى الآن. أكمل الباقي واجتز اختباراته أولاً.';
+    return;
+  }
+
+  document.getElementById('mainContent').style.display = 'block';
+
+  const existing = LMSProgress.getProjectSubmission();
+  if (existing) {
+    document.getElementById('submittedBox').style.display = 'block';
+    document.getElementById('formBox').style.display = 'none';
+    document.getElementById('submittedPreview').textContent = existing.text;
+  }
+
+  const textarea = document.getElementById('projectText');
+  textarea.addEventListener('input', function () {
+    document.getElementById('charCount').textContent = textarea.value.trim().length;
+  });
+}
+
+function submitProject() {
+  const text = document.getElementById('projectText').value;
+  const res = LMSProgress.submitProject(text);
+  const errEl = document.getElementById('projError');
+  if (!res.ok) {
+    errEl.textContent = res.error;
+    return;
+  }
+  errEl.textContent = '';
+  document.getElementById('submittedBox').style.display = 'block';
+  document.getElementById('formBox').style.display = 'none';
+  document.getElementById('submittedPreview').textContent = text.trim();
+  LMSUi.showToast('تم تسليم مشروعك بنجاح 🎉');
+}
+
+init();
+</script>
+<script src="js/sw-register.js"></script>
+</body>
+</html>

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-protected="true">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة الطالب — منصة التسويق التعليمية</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d1b2a">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="css/shared.css">
+<style>
+.hero{
+  position:relative;z-index:5;
+  padding:38px 30px;max-width:1200px;margin:0 auto;
+}
+.hero-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:20px;margin-bottom:26px;}
+.hero-title{font-size:1.7rem;font-weight:900;}
+.hero-title span{color:var(--gold);}
+.hero-sub{color:var(--text-faint);font-size:0.92rem;margin-top:4px;}
+
+.overall-card{
+  display:flex;align-items:center;gap:24px;
+  padding:22px 26px;border-radius:20px;
+  flex-wrap:wrap;
+}
+.overall-ring{
+  width:78px;height:78px;border-radius:50%;flex-shrink:0;
+  background:conic-gradient(var(--gold) calc(var(--pct,0)*1%), var(--surface-strong) 0);
+  display:flex;align-items:center;justify-content:center;position:relative;
+}
+.overall-ring::before{
+  content:'';position:absolute;inset:7px;border-radius:50%;background:var(--bg);
+}
+.overall-ring span{position:relative;z-index:2;font-weight:900;font-size:1.05rem;}
+.overall-text{flex:1;min-width:180px;}
+.overall-text .lbl{font-weight:800;margin-bottom:4px;}
+.overall-text .sub{font-size:0.82rem;color:var(--text-faint);}
+
+.continue-card{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  padding:20px 24px;border-radius:20px;margin-top:16px;
+  background:linear-gradient(120deg, rgba(255,215,0,0.08), rgba(255,111,0,0.05));
+  border:1px solid rgba(255,215,0,0.25);
+}
+.continue-card .cc-left{display:flex;align-items:center;gap:16px;}
+.continue-card .cc-icon{
+  width:50px;height:50px;border-radius:14px;
+  background:linear-gradient(135deg,var(--gold),var(--secondary));
+  display:flex;align-items:center;justify-content:center;color:var(--dark);font-size:1.2rem;flex-shrink:0;
+}
+.continue-card .cc-title{font-weight:800;font-size:1rem;}
+.continue-card .cc-sub{font-size:0.8rem;color:var(--text-faint);margin-top:3px;}
+
+.section-lbl{
+  max-width:1200px;margin:38px auto 18px;padding:0 30px;
+  font-size:1.05rem;font-weight:800;display:flex;align-items:center;gap:10px;
+}
+.section-lbl i{color:var(--gold);}
+
+.container{max-width:1200px;margin:0 auto;padding:0 30px 80px;}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px;}
+
+.chapter-card{
+  position:relative;border-radius:20px;padding:26px;
+  display:flex;flex-direction:column;gap:14px;
+  transition:transform .3s, border-color .3s;
+}
+.chapter-card:hover{transform:translateY(-5px);border-color:var(--gold);}
+.chapter-top{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.chapter-num{
+  width:48px;height:48px;border-radius:14px;
+  background:linear-gradient(135deg,var(--gold),var(--secondary));
+  display:flex;align-items:center;justify-content:center;
+  font-weight:900;color:var(--dark);font-size:1.1rem;flex-shrink:0;
+}
+.status-badge{
+  font-size:0.72rem;font-weight:800;padding:5px 12px;border-radius:20px;
+  display:flex;align-items:center;gap:5px;
+}
+.status-badge.completed{background:rgba(0,200,150,0.15);color:var(--success);}
+.status-badge.in-progress{background:rgba(255,215,0,0.15);color:var(--gold);}
+.status-badge.not-started{background:var(--surface-strong);color:var(--text-faint);}
+.status-badge.locked{background:rgba(255,82,82,0.12);color:var(--danger);}
+
+.chapter-title{font-weight:800;font-size:1.05rem;line-height:1.5;min-height:2.6em;}
+.chapter-actions{display:flex;gap:10px;margin-top:auto;}
+.chapter-actions .btn{flex:1;}
+
+.cert-card{
+  margin-top:40px;padding:34px;border-radius:24px;
+  text-align:center;
+  background:linear-gradient(135deg, rgba(255,215,0,0.08), rgba(0,191,165,0.05));
+  border:1px solid rgba(255,215,0,0.3);
+}
+.cert-card i.fa-award{font-size:2.4rem;color:var(--gold);margin-bottom:14px;}
+.cert-card h3{font-size:1.25rem;font-weight:900;margin-bottom:8px;}
+.cert-card p{color:var(--text-faint);font-size:0.88rem;margin-bottom:20px;}
+</style>
+</head>
+<body>
+
+<div class="geo-bg">
+  <div class="geo-shape geo-circle" style="width:220px;height:220px;top:8%;left:4%;"></div>
+  <div class="geo-shape geo-square" style="width:110px;height:110px;top:60%;right:6%;animation-delay:2s;"></div>
+</div>
+
+<nav class="topbar">
+  <div class="brand"><i class="fas fa-graduation-cap"></i> <span class="full">منصة التسويق</span></div>
+  <div class="search-wrap">
+    <input type="text" class="search-input" id="searchInput" placeholder="ابحث داخل الكورس...">
+    <i class="fas fa-magnifying-glass"></i>
+    <div class="search-results" id="searchResults"></div>
+  </div>
+  <div class="spacer"></div>
+  <button class="icon-btn" onclick="LMSTheme.toggleTheme()" title="الوضع الليلي/النهاري"><i class="fas fa-moon" data-theme-icon></i></button>
+  <div id="userChipHolder"></div>
+</nav>
+
+<div class="hero">
+  <div class="hero-top">
+    <div>
+      <div class="hero-title">أهلاً <span id="studentFirstName">بك</span> 👋</div>
+      <div class="hero-sub">تابع مسيرتك التعليمية في مقرر التسويق والتسويق الرقمي</div>
+    </div>
+  </div>
+
+  <div class="overall-card surface-card" id="overallCard">
+    <div class="overall-ring" id="overallRing"><span id="overallPct">0%</span></div>
+    <div class="overall-text">
+      <div class="lbl">التقدّم الإجمالي في الكورس</div>
+      <div class="sub" id="overallSub">لم تبدأ بعد — اختر فصلاً وابدأ رحلتك التعليمية</div>
+    </div>
+  </div>
+
+  <div class="continue-card" id="continueCard" style="display:none;">
+    <div class="cc-left">
+      <div class="cc-icon"><i class="fas fa-play"></i></div>
+      <div>
+        <div class="cc-title" id="continueTitle">تابع من حيث توقفت</div>
+        <div class="cc-sub" id="continueSub"></div>
+      </div>
+    </div>
+    <a class="btn btn-primary" id="continueBtn" href="#">متابعة <i class="fas fa-arrow-left"></i></a>
+  </div>
+</div>
+
+<div class="section-lbl"><i class="fas fa-book-open"></i> فصول الكورس (٩)</div>
+
+<div class="container">
+  <div class="grid" id="chaptersGrid"></div>
+
+  <div class="cert-card" id="certCard">
+    <i class="fas fa-award"></i>
+    <h3>شهادة إتمام الكورس</h3>
+    <p id="certSub">أكمل جميع الفصول التسعة، اجتز اختباراتها، وسلّم مشروع التخرج للحصول على شهادتك.</p>
+    <a class="btn btn-outline btn-disabled" id="certBtn" href="certificate.html">
+      <i class="fas fa-certificate"></i> عرض الشهادة
+    </a>
+  </div>
+</div>
+
+<script src="js/theme.js"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/progress.js"></script>
+<script src="js/search-data.js"></script>
+<script src="js/quiz-data.js"></script>
+<script src="js/ui.js"></script>
+<script>
+const CHAPTERS = [
+  {n:1, icon:"fa-bullseye"},
+  {n:2, icon:"fa-route"},
+  {n:3, icon:"fa-users"},
+  {n:4, icon:"fa-brain"},
+  {n:5, icon:"fa-lightbulb"},
+  {n:6, icon:"fa-layer-group"},
+  {n:7, icon:"fa-crown"},
+  {n:8, icon:"fa-pen-fancy"},
+  {n:9, icon:"fa-rocket"},
+];
+const ARABIC_NUM = ["","١","٢","٣","٤","٥","٦","٧","٨","٩"];
+
+const STATUS_LABEL = {
+  "completed": '<i class="fas fa-circle-check"></i> مكتمل',
+  "in-progress": '<i class="fas fa-spinner"></i> قيد التقدّم',
+  "not-started": '<i class="fas fa-lock-open"></i> لم يبدأ',
+  "locked": '<i class="fas fa-lock"></i> مقفول',
+};
+
+function init() {
+  const user = LMSAuth.currentUser();
+  document.getElementById('studentFirstName').textContent = user.fullName.split(' ')[0];
+  LMSUi.renderUserChip(document.getElementById('userChipHolder'));
+  LMSUi.initSearch(document.getElementById('searchInput'), document.getElementById('searchResults'));
+
+  renderOverall();
+  renderContinue();
+  renderChapters();
+  renderCertificateCta();
+  checkLockedRedirect();
+}
+
+function checkLockedRedirect() {
+  const params = new URLSearchParams(location.search);
+  const locked = params.get('locked');
+  if (locked) {
+    LMSUi.showToast('لازم تخلّص الفصل ' + (Number(locked) - 1) + ' وتجتاز اختباره الأول قبل ما تدخل الفصل ' + locked, 4000);
+    history.replaceState(null, '', 'dashboard.html');
+  }
+}
+
+function renderOverall() {
+  const pct = LMSProgress.getOverallPercent();
+  document.getElementById('overallPct').textContent = pct + '%';
+  document.getElementById('overallRing').style.setProperty('--pct', pct);
+  const done = LMSProgress.getCompletedCount();
+  document.getElementById('overallSub').textContent =
+    done === 0 ? 'لم تبدأ بعد — اختر فصلاً وابدأ رحلتك التعليمية' :
+    done === 9 ? 'أكملت جميع الفصول! يمكنك الآن الحصول على شهادتك 🎉' :
+    'أكملت ' + done + ' من 9 فصول — استمر بنفس الحماس!';
+}
+
+function renderContinue() {
+  const last = LMSProgress.getLastLesson();
+  if (!last) return;
+  const card = document.getElementById('continueCard');
+  card.style.display = 'flex';
+  const meta = QUIZ_DATA[last.chapter];
+  document.getElementById('continueTitle').textContent = 'تابع: الفصل ' + last.chapter + ' — ' + (meta ? meta.title : '');
+  document.getElementById('continueSub').textContent = 'آخر شريحة وصلت لها: ' + last.slide;
+  document.getElementById('continueBtn').href = 'ch' + last.chapter + '.html?slide=' + last.slide;
+}
+
+function renderChapters() {
+  const grid = document.getElementById('chaptersGrid');
+  grid.innerHTML = CHAPTERS.map(function (c) {
+    const unlocked = LMSProgress.isChapterUnlocked(c.n);
+    const status = unlocked ? LMSProgress.getChapterStatus(c.n) : 'locked';
+    const pct = unlocked ? LMSProgress.getChapterPercent(c.n) : 0;
+    const title = QUIZ_DATA[c.n] ? QUIZ_DATA[c.n].title : '';
+    const quizResult = unlocked ? LMSProgress.getQuizResult(c.n) : null;
+
+    let actionsHtml;
+    if (!unlocked) {
+      actionsHtml =
+        '<div class="chapter-actions">' +
+          '<button class="btn btn-ghost btn-sm btn-disabled" disabled><i class="fas fa-lock"></i> أكمل الفصل ' + (c.n - 1) + ' أولاً</button>' +
+        '</div>';
+    } else {
+      let primaryLabel = 'ابدأ الفصل', primaryHref = 'ch' + c.n + '.html';
+      if (status === 'in-progress') primaryLabel = 'متابعة';
+      if (status === 'completed') primaryLabel = 'مراجعة';
+      actionsHtml =
+        '<div class="chapter-actions">' +
+          '<a class="btn btn-primary btn-sm" href="' + primaryHref + '">' + primaryLabel + '</a>' +
+          '<a class="btn btn-ghost btn-sm" href="quiz.html?ch=' + c.n + '"><i class="fas fa-clipboard-check"></i> الاختبار</a>' +
+        '</div>';
+    }
+
+    return (
+      '<div class="chapter-card surface-card" style="' + (!unlocked ? 'opacity:0.6;' : '') + '">' +
+        '<div class="chapter-top">' +
+          '<div class="chapter-num">' + ARABIC_NUM[c.n] + '</div>' +
+          '<span class="status-badge ' + status + '">' + STATUS_LABEL[status] + '</span>' +
+        '</div>' +
+        '<div class="chapter-title"><i class="fas ' + c.icon + '" style="color:var(--gold);margin-inline-end:8px;"></i>' + title + '</div>' +
+        '<div class="progress-track"><div class="progress-fill" style="width:' + pct + '%;"></div></div>' +
+        (quizResult ? '<div style="font-size:0.78rem;color:var(--text-faint);">نتيجة الاختبار: ' + quizResult.bestScore + '%' + (quizResult.passed ? ' ✅' : ' — حاول مرة أخرى') + '</div>' : '') +
+        actionsHtml +
+      '</div>'
+    );
+  }).join('');
+}
+
+function renderCertificateCta() {
+  const btn = document.getElementById('certBtn');
+  const sub = document.getElementById('certSub');
+  if (LMSProgress.canGetCertificate()) {
+    btn.classList.remove('btn-disabled');
+    btn.href = 'certificate.html';
+    btn.innerHTML = '<i class="fas fa-certificate"></i> عرض الشهادة';
+    sub.textContent = 'مبروك! أنجزت كل الفصول والاختبارات ومشروع التخرج. شهادتك جاهزة الآن.';
+  } else if (LMSProgress.allChaptersPassed()) {
+    btn.classList.remove('btn-disabled');
+    btn.href = 'project.html';
+    btn.innerHTML = '<i class="fas fa-flag-checkered"></i> اذهب لمشروع التخرج';
+    sub.textContent = 'أكملت كل الفصول والاختبارات 🎉 باقي مشروع التخرج عشان تفتح شهادتك.';
+  }
+}
+
+init();
+</script>
+<script src="js/mentor.js"></script>
+<script>document.addEventListener("DOMContentLoaded", function(){ if(window.LMSMentor) LMSMentor.mount(null); });</script>
+<script src="js/sw-register.js"></script>
+</body>
+</html>

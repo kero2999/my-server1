@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-protected="true">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الفصل الثاني: رحلة العميل (Customer Journey)</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root {
+    --gold: #ffd700;
+    --dark: #0d1b2a;
+    --secondary: #ff6f00;
+    --accent: #00bfa5;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'Tajawal', sans-serif;
+    background: var(--dark);
+    color: #fff;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+}
+.geo-bg {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 0; overflow: hidden;
+}
+.geo-shape {
+    position: absolute; opacity: 0.08;
+    animation: float 20s infinite ease-in-out;
+}
+.geo-circle { border-radius: 50%; border: 3px solid var(--gold); }
+.geo-triangle {
+    width: 0; height: 0;
+    border-left: 60px solid transparent;
+    border-right: 60px solid transparent;
+    border-bottom: 100px solid var(--secondary);
+}
+.geo-square { border: 3px solid var(--accent); transform: rotate(45deg); }
+.geo-hexagon {
+    width: 100px; height: 55px;
+    background: var(--secondary); position: relative;
+}
+.geo-hexagon:before, .geo-hexagon:after {
+    content: ""; position: absolute; width: 0;
+    border-left: 50px solid transparent;
+    border-right: 50px solid transparent;
+}
+.geo-hexagon:before { bottom: 100%; border-bottom: 27.5px solid var(--secondary); }
+.geo-hexagon:after { top: 100%; border-top: 27.5px solid var(--secondary); }
+@keyframes float {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-30px) rotate(180deg); }
+}
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.1); opacity: 1; }
+}
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+@keyframes shine {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+@keyframes slideInRight {
+    from { transform: translateX(100px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+@keyframes fadeInUp {
+    from { transform: translateY(50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+}
+.nav-bar {
+    position: fixed; top: 0; width: 100%;
+    background: rgba(13, 27, 42, 0.95);
+    backdrop-filter: blur(10px);
+    z-index: 1000;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--gold);
+}
+.nav-logo {
+    font-size: 1.2rem; font-weight: 800; color: var(--gold);
+    display: flex; align-items: center; gap: 10px;
+}
+.nav-progress { display: flex; gap: 5px; align-items: center; }
+.nav-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    cursor: pointer; transition: all 0.3s;
+}
+.nav-dot.active { background: var(--gold); transform: scale(1.3); }
+.nav-controls { display: flex; gap: 15px; }
+.nav-btn {
+    background: transparent; border: 2px solid var(--gold);
+    color: var(--gold); padding: 8px 20px;
+    border-radius: 25px; cursor: pointer;
+    font-family: 'Tajawal', sans-serif; font-weight: 700;
+    transition: all 0.3s;
+}
+.nav-btn:hover { background: var(--gold); color: var(--dark); }
+.slides-container { position: relative; width: 100%; }
+.slide {
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 100px 40px 60px;
+    position: relative; overflow: hidden;
+}
+.slide-content {
+    max-width: 1200px; width: 100%;
+    position: relative; z-index: 10;
+}
+.section-header {
+    display: flex; align-items: center; gap: 20px; margin-bottom: 40px;
+}
+.section-number {
+    width: 80px; height: 80px; border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.5rem; font-weight: 900; color: #fff;
+    flex-shrink: 0; position: relative; overflow: hidden;
+}
+.section-number::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%);
+    animation: shine 3s infinite;
+}
+.section-title-text { font-size: 2.5rem; font-weight: 800; }
+.content-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px; margin-top: 30px;
+}
+.content-card {
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(10px);
+    border-radius: 20px; padding: 30px;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: all 0.4s; position: relative; overflow: hidden;
+}
+.content-card::before {
+    content: ''; position: absolute; top: 0; left: 0;
+    width: 100%; height: 4px;
+    background: var(--card-accent, var(--gold));
+}
+.content-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    border-color: var(--card-accent, var(--gold));
+}
+.card-icon { font-size: 3rem; margin-bottom: 15px; color: var(--card-accent, var(--gold)); }
+.card-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 15px; color: #fff; }
+.card-text { font-size: 1.1rem; line-height: 2; color: rgba(255,255,255,0.85); }
+.quote-box {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 111, 0, 0.1));
+    border-right: 5px solid var(--gold);
+    border-radius: 0 20px 20px 0;
+    padding: 40px; margin: 30px 0; position: relative;
+}
+.quote-box::before {
+    content: '"'; font-size: 6rem; color: var(--gold); opacity: 0.3;
+    position: absolute; top: -10px; right: 20px; line-height: 1;
+}
+.quote-text { font-size: 1.4rem; font-weight: 700; line-height: 2; color: #fff; }
+.two-col {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 40px; align-items: center;
+}
+.title-card {
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(20px);
+    border-radius: 30px; padding: 60px;
+    border: 2px solid rgba(255,255,255,0.2);
+    text-align: center; position: relative; overflow: hidden;
+}
+.title-card::before {
+    content: ''; position: absolute; top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: conic-gradient(transparent, var(--gold), transparent 30%);
+    animation: rotate 4s linear infinite;
+}
+.title-card-inner {
+    position: relative; z-index: 1;
+    background: rgba(13, 27, 42, 0.9);
+    border-radius: 25px; padding: 50px;
+}
+.title-main {
+    font-size: 4rem; font-weight: 900; color: var(--gold);
+    margin-bottom: 20px;
+    text-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+}
+.title-sub { font-size: 1.8rem; color: #fff; margin-bottom: 30px; }
+.title-icon {
+    font-size: 5rem; color: var(--gold); margin-bottom: 20px;
+    animation: pulse 2s infinite;
+}
+.golden-rule {
+    background: linear-gradient(90deg, var(--gold), #ff8c00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-size: 1.4rem; font-weight: 700; margin-top: 20px;
+}
+.value-highlight {
+    background: linear-gradient(90deg, var(--gold), #ff8c00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+}
+.animate-on-scroll {
+    opacity: 0; transform: translateY(30px);
+    transition: all 0.8s ease-out;
+}
+.animate-on-scroll.visible { opacity: 1; transform: translateY(0); }
+
+/* Funnel Styles */
+.funnel-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    margin: 40px 0;
+    position: relative;
+}
+.funnel-stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 40px;
+    border-radius: 15px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #fff;
+    position: relative;
+    transition: all 0.4s;
+    cursor: pointer;
+    text-align: center;
+}
+.funnel-stage:hover {
+    transform: scale(1.05);
+    filter: brightness(1.2);
+}
+.funnel-stage .stage-num {
+    position: absolute;
+    right: -50px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: 900;
+    background: var(--gold);
+    color: var(--dark);
+}
+.funnel-stage .stage-icon {
+    margin-left: 15px;
+    font-size: 1.5rem;
+}
+.stage-1 { width: 90%; background: linear-gradient(135deg, #e91e63, #f06292); }
+.stage-2 { width: 80%; background: linear-gradient(135deg, #ff9800, #ffc107); }
+.stage-3 { width: 70%; background: linear-gradient(135deg, #ffeb3b, #fff176); color: #333; }
+.stage-4 { width: 60%; background: linear-gradient(135deg, #4caf50, #8bc34a); }
+.stage-5 { width: 50%; background: linear-gradient(135deg, #2196f3, #03a9f4); }
+.stage-6 { width: 40%; background: linear-gradient(135deg, #9c27b0, #ce93d8); }
+.stage-7 { width: 30%; background: linear-gradient(135deg, #00bcd4, #00e5ff); }
+.stage-8 { width: 25%; background: linear-gradient(135deg, #ffd700, #ff8c00); }
+
+/* Journey Card */
+.journey-card {
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(10px);
+    border-radius: 25px;
+    padding: 40px;
+    border: 2px solid rgba(255,255,255,0.1);
+    margin-bottom: 30px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.4s;
+}
+.journey-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--journey-accent, var(--gold));
+    box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+}
+.journey-card::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 6px; height: 100%;
+    background: var(--journey-accent, var(--gold));
+}
+.journey-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+.journey-icon {
+    width: 70px; height: 70px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: #fff;
+    flex-shrink: 0;
+}
+.journey-title {
+    font-size: 1.8rem;
+    font-weight: 800;
+}
+.journey-subtitle {
+    font-size: 1.1rem;
+    color: rgba(255,255,255,0.7);
+    margin-top: 5px;
+}
+.journey-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-top: 25px;
+}
+.journey-section h4 {
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.journey-section ul {
+    list-style: none;
+    padding: 0;
+}
+.journey-section ul li {
+    padding: 8px 0;
+    font-size: 1.05rem;
+    line-height: 1.8;
+    color: rgba(255,255,255,0.85);
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+.journey-section ul li i {
+    margin-top: 5px;
+    flex-shrink: 0;
+}
+.example-box {
+    background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,111,0,0.05));
+    border: 1px solid rgba(255,215,0,0.3);
+    border-radius: 15px;
+    padding: 25px;
+    margin-top: 20px;
+    grid-column: 1 / -1;
+}
+.example-box h4 {
+    color: var(--gold);
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.example-box p {
+    font-size: 1.1rem;
+    line-height: 2;
+    color: rgba(255,255,255,0.9);
+}
+
+/* Progress Bar */
+.progress-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 40px 0;
+    position: relative;
+}
+.progress-line {
+    position: absolute;
+    top: 25px;
+    left: 5%;
+    right: 5%;
+    height: 4px;
+    background: linear-gradient(to right, #e91e63, #ff9800, #4caf50, #2196f3, #9c27b0, #00bcd4, #ffd700);
+    border-radius: 2px;
+    z-index: 0;
+}
+.progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+    flex: 1;
+}
+.progress-dot {
+    width: 50px; height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: #fff;
+    border: 4px solid var(--dark);
+    margin-bottom: 10px;
+    transition: all 0.3s;
+}
+.progress-step:hover .progress-dot {
+    transform: scale(1.2);
+}
+.progress-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-align: center;
+    max-width: 80px;
+}
+
+/* Summary Cards */
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin-top: 30px;
+}
+.summary-card {
+    background: rgba(255,255,255,0.05);
+    border-radius: 20px;
+    padding: 30px 20px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: all 0.4s;
+}
+.summary-card:hover {
+    transform: translateY(-10px);
+    background: rgba(255,255,255,0.1);
+}
+.summary-card-icon {
+    font-size: 2.5rem;
+    margin-bottom: 15px;
+}
+.summary-card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+.summary-card-desc {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: rgba(255,255,255,0.7);
+}
+
+/* Final Rule */
+.final-rule {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 111, 0, 0.1));
+    border: 3px solid var(--gold); border-radius: 30px;
+    padding: 50px; text-align: center; margin-top: 40px;
+    position: relative; overflow: hidden;
+}
+.final-rule::before {
+    content: ''; position: absolute; top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: conic-gradient(transparent, var(--gold), transparent 30%);
+    animation: rotate 6s linear infinite;
+}
+.final-rule-inner {
+    position: relative; z-index: 1;
+    background: var(--dark); border-radius: 25px; padding: 40px;
+}
+.final-rule h2 { font-size: 2rem; color: var(--gold); margin-bottom: 20px; }
+.final-rule p { font-size: 1.3rem; line-height: 2; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .title-main { font-size: 2.5rem; }
+    .title-sub { font-size: 1.2rem; }
+    .two-col { grid-template-columns: 1fr; }
+    .journey-content { grid-template-columns: 1fr; }
+    .summary-cards { grid-template-columns: 1fr 1fr; }
+    .slide { padding: 100px 20px 40px; }
+    .section-title-text { font-size: 1.8rem; }
+    .funnel-stage { font-size: 1rem; padding: 15px 20px; }
+    .funnel-stage .stage-num { display: none; }
+    .progress-container { display: none; }
+}
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: var(--dark); }
+::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: #ff8c00; }
+</style>
+<base target="_blank">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d1b2a">
+
+<style>
+.site-floatnav{position:fixed;bottom:22px;left:22px;z-index:2000;display:flex;gap:8px;align-items:center;flex-wrap:wrap;max-width:90vw;}
+.site-floatnav a{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(13,27,42,0.92);backdrop-filter:blur(10px);
+  border:2px solid #ffd700;color:#ffd700;
+  padding:10px 16px;border-radius:25px;
+  font-family:'Tajawal',sans-serif;font-weight:700;font-size:0.85rem;
+  text-decoration:none;transition:all .3s;
+}
+.site-floatnav a:hover{background:#ffd700;color:#0d1b2a;}
+.site-floatnav a.disabled{opacity:0.3;pointer-events:none;}
+.site-floatnav a.quiz-link{border-color:#00bfa5;color:#00bfa5;}
+.site-floatnav a.quiz-link:hover{background:#00bfa5;color:#0d1b2a;}
+@media (max-width:640px){
+  .site-floatnav{left:10px;bottom:10px;gap:6px;}
+  .site-floatnav a{padding:8px 10px;font-size:0.75rem;}
+  .site-floatnav a span.label{display:none;}
+}
+</style>
+</head>
+<body>
+<script>
+(function(){
+  var localSession = localStorage.getItem('lms_session_v1');
+  var remoteToken = localStorage.getItem('lms_token_v1');
+  var remotePaid = false;
+  if (remoteToken) {
+    try {
+      var ru = JSON.parse(localStorage.getItem('lms_remote_user_v1'));
+      remotePaid = ru && String(ru.status || '').trim().toLowerCase() === 'active';
+    } catch(e){}
+  }
+  var trialActive = false;
+  try {
+    var t = JSON.parse(localStorage.getItem('lms_trial_v1'));
+    if (t) { trialActive = ((Date.now() - t.startAt) / 1000) < 600; }
+  } catch(e){}
+
+  var allowed = !!localSession || (!!remoteToken && remotePaid) || trialActive;
+  if(!allowed){
+    location.replace(remoteToken ? 'upgrade.html' : 'index.html');
+    return;
+  }
+
+  // قفل تسلسلي: لازم يجتاز اختبار الفصل رقم 1 قبل الدخول هنا (لا يُطبَّق في وضع المعاينة التجريبية)
+  var isTrialOnly = trialActive && !localSession && !(remoteToken && remotePaid);
+  if (!isTrialOnly) {
+    var uname = localSession || (function(){
+      try {
+        var ru2 = JSON.parse(localStorage.getItem('lms_remote_user_v1'));
+        return ru2 ? ru2.email : null;
+      } catch(e){ return null; }
+    })();
+    if (uname) {
+      try {
+        var progress = JSON.parse(localStorage.getItem('lms_progress_v1_' + uname)) || {};
+        var prevQuiz = progress.quizzes && progress.quizzes[1];
+        if (!prevQuiz || !prevQuiz.passed) {
+          location.replace('dashboard.html?locked=2');
+          return;
+        }
+      } catch(e){}
+    }
+  }
+})();
+</script>
+
+<div class="geo-bg">
+    <div class="geo-shape geo-circle" style="width:200px;height:200px;top:10%;left:5%;animation-delay:0s;"></div>
+    <div class="geo-shape geo-square" style="width:100px;height:100px;top:30%;right:10%;animation-delay:2s;"></div>
+    <div class="geo-shape geo-hexagon" style="top:60%;left:8%;animation-delay:4s;"></div>
+    <div class="geo-shape geo-circle" style="width:150px;height:150px;top:80%;right:5%;animation-delay:1s;"></div>
+    <div class="geo-shape geo-triangle" style="top:45%;left:15%;animation-delay:3s;"></div>
+    <div class="geo-shape geo-square" style="width:80px;height:80px;top:15%;right:20%;animation-delay:5s;"></div>
+</div>
+
+<nav class="nav-bar">
+    <div class="nav-logo"><i class="fas fa-route"></i> رحلة العميل</div>
+    <div class="nav-progress" id="navProgress"></div>
+    <div class="nav-controls">
+        <button class="nav-btn" onclick="prevSlide()"><i class="fas fa-chevron-right"></i> السابق</button>
+        <button class="nav-btn" onclick="nextSlide()">التالي <i class="fas fa-chevron-left"></i></button>
+    </div>
+</nav>
+
+<div class="slides-container" id="slidesContainer">
+
+<!-- SLIDE 1: Title -->
+<section class="slide" id="slide-1" style="background: linear-gradient(135deg, #1a237e 0%, #283593 50%, #1a237e 100%);">
+    <div class="slide-content">
+        <div class="title-card animate-on-scroll">
+            <div class="title-card-inner">
+                <div class="title-icon"><i class="fas fa-route"></i></div>
+                <h1 class="title-main">الفصل الثاني</h1>
+                <h2 class="title-sub">رحلة العميل (Customer Journey)</h2>
+                <div style="width:100px;height:4px;background:var(--gold);margin:20px auto;border-radius:2px;"></div>
+                <p style="font-size:1.2rem;color:rgba(255,255,255,0.8);margin-top:20px;">
+                    فهم رحلة العميل هو العمود الفقري لأي استراتيجية تسويقية ناجحة
+                </p>
+                <div class="golden-rule">
+                    <i class="fas fa-star"></i> العميل لا يستيقظ فجأة ويقرر الشراء
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SLIDE 2: Introduction -->
+<section class="slide" id="slide-2" style="background: linear-gradient(135deg, #1a237e 0%, #3949ab 100%);">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background: linear-gradient(135deg, #667eea, #764ba2);"><i class="fas fa-info-circle"></i></div>
+            <h2 class="section-title-text">مقدمة: قمع المبيعات</h2>
+        </div>
+        <div class="quote-box animate-on-scroll">
+            <p class="quote-text">
+                العميل لا يستيقظ فجأة ويقرر الشراء؛ بل يمر بمراحل نفسية وسلوكية متعددة تُعرف بـ <span class="value-highlight">قمع المبيعات (Sales Funnel)</span>
+            </p>
+        </div>
+        <div class="content-grid animate-on-scroll">
+            <div class="content-card" style="--card-accent: #e91e63;">
+                <div class="card-icon"><i class="fas fa-eye"></i></div>
+                <h3 class="card-title">الوعي</h3>
+                <p class="card-text">العميل لا يعرف عن وجودك أو لا يدرك أن لديه مشكلة</p>
+            </div>
+            <div class="content-card" style="--card-accent: #ff9800;">
+                <div class="card-icon"><i class="fas fa-search"></i></div>
+                <h3 class="card-title">البحث</h3>
+                <p class="card-text">يبدأ بالاعتراف بمشكلته والبحث عن حلول</p>
+            </div>
+            <div class="content-card" style="--card-accent: #4caf50;">
+                <div class="card-icon"><i class="fas fa-balance-scale"></i></div>
+                <h3 class="card-title">التقييم</h3>
+                <p class="card-text">يقارن بين الخيارات المتاحة والمنافسين</p>
+            </div>
+            <div class="content-card" style="--card-accent: #2196f3;">
+                <div class="card-icon"><i class="fas fa-shopping-cart"></i></div>
+                <h3 class="card-title">الشراء</h3>
+                <p class="card-text">يقرر ويضع ثقته وأمواله في مشروعك</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SLIDE 3: The Funnel Overview -->
+<section class="slide" id="slide-3" style="background: linear-gradient(135deg, #4a148c 0%, #7c4dff 100%);">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background: linear-gradient(135deg, #7c4dff, #651fff);"><i class="fas fa-filter"></i></div>
+            <h2 class="section-title-text">نظرة عامة على قمع المبيعات</h2>
+        </div>
+        <p style="text-align:center;font-size:1.2rem;margin-bottom:20px;">المراحل الثمانية لرحلة العميل:</p>
+        <div class="funnel-container animate-on-scroll">
+            <div class="funnel-stage stage-1">
+                <span class="stage-num">1</span>
+                <i class="fas fa-eye stage-icon"></i>
+                الوعي (Awareness)
+            </div>
+            <div class="funnel-stage stage-2">
+                <span class="stage-num">2</span>
+                <i class="fas fa-heart stage-icon"></i>
+                الاهتمام (Interest)
+            </div>
+            <div class="funnel-stage stage-3">
+                <span class="stage-num">3</span>
+                <i class="fas fa-balance-scale stage-icon"></i>
+                التفكير / التقييم (Consideration)
+            </div>
+            <div class="funnel-stage stage-4">
+                <span class="stage-num">4</span>
+                <i class="fas fa-bullseye stage-icon"></i>
+                النية (Intent)
+            </div>
+            <div class="funnel-stage stage-5">
+                <span class="stage-num">5</span>
+                <i class="fas fa-shopping-cart stage-icon"></i>
+                الشراء (Purchase)
+            </div>
+            <div class="funnel-stage stage-6">
+                <span class="stage-num">6</span>
+                <i class="fas fa-redo stage-icon"></i>
+                الاحتفاظ (Retention)
+            </div>
+            <div class="funnel-stage stage-7">
+                <span class="stage-num">7</span>
+                <i class="fas fa-crown stage-icon"></i>
+                الولاء (Loyalty)
+            </div>
+            <div class="funnel-stage stage-8">
+                <span class="stage-num">8</span>
+                <i class="fas fa-bullhorn stage-icon"></i>
+                المدافعة (Advocacy)
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SLIDE 4: Stage 1 - Awareness -->
+<section class="slide" id="slide-4" style="background: linear-gradient(135deg, #880e4f 0%, #e91e63 100%);">
+    <div class="slide-content">
+        <div class="journey-card animate-on-scroll" style="--journey-accent: #e91e63;">
+            <div class="journey-header">
+                <div class="journey-icon" style="background: linear-gradient(135deg, #e91e63, #f06292);">
+                    <i class="fas fa-eye"></i>
+                </div>
+                <div>
+                    <h3 class="journey-title">المرحلة الأولى: الوعي (Awareness)</h3>
+                    <p class="journey-subtitle">لا يعرف العميل عن وجود شركتك أو ربما لا يدرك تماماً أن لديه مشكلة تحتاج إلى حل</p>
+                </div>
+            </div>
+            <div class="journey-content">
+                <div class="journey-section">
+                    <h4 style="color: #f06292;"><i class="fas fa-bullseye"></i> الهدف</h4>
+                    <ul>
+                        <li><i class="fas fa-check" style="color:#f06292;"></i> ليس البيع، بل لفت الانتباه</li>
+                        <li><i class="fas fa-check" style="color:#f06292;"></i> إثارة الوعي بوجود المشكلة</li>
+                        <li><i class="fas fa-check" style="color:#f06292;"></i> إثبات وجودك كحل محتمل</li>
+                    </ul>
+                </div>
+                <div class="journey-section">
+                    <h4 style="color: #f06292;"><i class="fas fa-magic"></i> كيفية جذب العميل</h4>
+                    <ul>
+                        <li><i class="fas fa-check" style="color:#f06292;"></i> إنتاج محتوى تعليمي وتثقيفي (مدونات، فيديوهات قصيرة)</li>
+                        <li><i class="fas fa-check" style="color:#f06292;"></i> حملات إعلانية واسعة الانتشار على منصات التواصل</li>
+                        <li><i class="fas fa-check" style="color:#f06292;"></i> تحسين محركات البحث (SEO) لظهورك عند بحث العميل</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <h4><i class="fas fa-user"></i> مثال توضيحي: "أحمد"</h4>
+                    <p>"أحمد" يشعر بألم مستمر في ظهره بسبب الجلوس الطويل في المكتب. يرى بالصدفة مقطع فيديو على إنستغرام لشركة أثاث مكتبي يتحدث عن <span class="value-highlight">"مخاطر الجلوس الخاطئ على العمود الفقري"</span>. هنا أصبح أحمد في مرحلة الوعي بالمشكلة وبالشركة.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SLIDE 5: Stage 2 - Interest -->
+<section class="slide" id="slide-5" style="background: linear-gradient(135deg, #e65100 0%, #ff9800 100%);">
+    <div class="slide-content">
+        <div class="journey-card animate-on-scroll" style="--journey-accent: #ff9800;">
+            <div class="journey-header">
+                <div class="journey-icon" style="background: linear-gradient(135deg, #ff9800, #ffc107);">
+                    <i class="fas fa-heart"></i>
+                </div>
+                <div>
+                    <h3 class="journey-title">المرحلة الثانية: الاهتمام (Interest)</h3>
+                    <p class="journey-subtitle">يبدأ العميل بالاعتراف بمشكلته ويبدي اهتماماً بنشاط بالبحث عن حلول</p>
+                </div>
+            </div>
+            <div class="journey-content">
+                <div class="journey-section">
+                    <h4 style="color: #ffc107;"><i class="fas fa-bullseye"></i> الهدف</h4>
+                    <ul>
+                        <li><i class="fas fa-check" style="color:#ffc107;"></i> تحويل العميل من عابر سبيل إلى شخص مهتم</li>
+                        <li><i class="fas fa-check" style="color:#ffc107;"></i> جعله يتابع حساباتك أو يزور موقعك</li>
+                        <li><i class="fas fa-check" style="color:#ffc107;"></i> إثبات خبرتك في المجال</li>
+                    </ul>
+                </div>
+                <div class="journey-section">
+                    <h4 style="color: #ffc107;"><i class="fas fa-magic"></i> كيفية جذب العميل</h4>
+                    <ul>
+                        <li><i class="fas fa-check" style="color:#ffc107;"></i> تقديم أدلة مجانية، كتب إلكترونية (E-books)، أو إنفوجرافيك</li>
+                        <li><i class="fas fa-check" style="color:#ffc107;"></i> نشر منشورات متخصصة تُظهر خبرتك في المجال</li>
+                        <li><i class="fas fa-check" style="color:#ffc107;"></i> إنشاء محتوى يجيب على أسئلة العميل المحتملة</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <h4><i class="fas fa-user"></i> مثال توضيحي: "أحمد"</h4>
+                    <p>يدخل "أحمد" إلى موقع الشركة ويقرأ مقالاً بعنوان <span class="value-highlight">"5 مواصفات يجب توافرها في الكرسي الطبي المريح"</span>. هنا تحول أحمد من مجرد عابر سبيل إلى شخص <span class="value-highlight">"مهتم"</span>.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SLIDE 6: Stage 3 - Consideration -->
+<section class="slide" id="slide-6" style="background: linear-gradient(135deg, #f57f17 0%, #ffeb3b 100%);">
+    <div class="slide-content">
+        <div class="journey-card animate-on-scroll" style="--journey-accent: #ffeb3b;">
+            <div class="journey-header">
+                <div class="journey-icon" style="background: linear-gradient(135deg, #ffeb3b, #fff176); color: #333;">
+                    <i class="fas fa-balance-scale"></i>
+                </div>
+                <div>
+                    <h3 class="journey-title" style="color: #333;">المرحلة الثالثة: التفكير / التقييم (Consideration)</h3>
+                    <p class="journey-subtitle" style="color: #555;">يعلم العميل أنك تقدم حلاً، ولكنه يقوم بمقارنتك مع المنافسين</p>
+                </div>
+            </div>
+            <div class="journey-content">
+                <div class="journey-section">
+                    <h4 style="color: #f57f17;"><i class="fas fa-bullseye"></i> الهدف</h4>
+                    <ul>
+                        <li><i class="fas fa-check" style="color:#f57f17;"></i> إظهار مميزاتك مقابل المنافسين</li>
+                        <li><i class="fas fa-check" style="color:#f57f17;"></i> بناء الثقة من خلال الأدلة والأرقام</li>
+                        <li><i class="fas fa-check" style="color:#f57f17;"></i> تسهيل عملية المقارنة للعميل</li>
+                    </ul>
+                </div>
+                <div class="journey-section">
+                    <h4 style="color: #f57f17;"><i class="fas fa-magic"></i> كيفية جذب العميل</h4>
+                    <ul>
+                        <li><i class="fas fa-check" style="color:#f57f17;"></i> توفير جداول مقارنة بين منتجك والمنتجات الأخرى</li>
+                        <li><i class="fas fa-check" style="color:#f57f17;"></i> عرض دراسات حالة (Case Studies) لعملاء نجحوا باستخدام منتجك</li>
+                        <li><i class="fas fa-check" style="color:#f57f17;"></i> تقديم مقاطع فيديو تستعرض المنتج بالتفصيل (Product Demos)</li>
+                    </ul>
+                </div>
+                <div class="example-box" style="border-color: rgba(245,127,23,0.3);">
+                    <h4 style="color: #f57f17;"><i class="fas fa-user"></i> مثال توضيحي: "أحمد"</h4>
+                    <p style="color: #333;">يبدأ "أحمد" بالمقارنة بين <span style="color:#f57f17;font-weight:800;">"الكرسي الطبي"</span> الذي تقدمه شركتك، وكرسي آخر من شركة منافسة من حيث السعر، فترة الضمان، ونوعية الحشو المستخدم.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SLIDE 7: Stage 4 - Intent -->
+<section class="slide" id="slide-7" style="background: linear-gradient(135deg, #1b5e20 0%, #4caf50 100%);">
+    <div class="slide-content">
+        <div class="journey-card animate-on-scroll" style="--journey-accent: #4caf50;">
+            <div class="journey-header">
+                <div class="journey-icon" style="background: linear-gradient(135deg, #4caf50, #8bc34a);">
+                    <i class="fas fa-bullseye"></i>
+                </div>
+                <div>
+                    <h3 class="journey-title">المرحلة الرابعة: النية (Intent)</h3>
+                    <p class="journey-subtitle">يتخذ العميل قراراً مبدئياً بأن منتجك هو الخيار الأفضل له</p>
+                </div>
+            </div>
+            <div class="journey-content">
+                <div class="journey-section">
+                    <h4 style="color: #8bc34a;"><i class="fas fa-bullseye"></i> الهدف</h4>
+                    <ul>
+                        <li><i class="fas fa-check" style="color:#8bc34a;"></i> تحويل النية إلى قرار فعلي</li>
+                        <li><i class="fas fa-check" style="color:#8bc34a;"></i> منع التراجع في اللحظات الأخيرة</li>
+                        <li><i class="fas fa-check" style="color:#8bc34a;"></i> تسهيل عملية الشراء</li>
+                    </ul>
+                </div>
+                <div class="journey-section">
+                    <h4 style="color: #8bc34a;"><i class="fas fa-magic"></i> كيفية جذب العميل</h4>
+                    <ul>
+                        <li><i class="fas fa-check" style="color:#8bc34a;"></i> إرسال رسائل تذكيرية (Retargeting) للسلات المتروكة</li>
+                        <li><i class="fas fa-check" style="color:#8bc34a;"></i> تقديم حوافز سريعة مثل (شحن مجاني، أو خصم 10% لفترة محدودة)</li>
+                        <li><i class="fas fa-check" style="color:#8bc34a;"></i> تسهيل عملية الخروج والدفع (Checkout) وجعلها خالية من التعقيد</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <h4><i class="fas fa-user"></i> مثال توضيحي: "أحمد"</h4>
+                    <p>يضع "أحمد" الكرسي في سلة التسوق على الموقع، لكنه يغلق الموقع لأنه انشغل باتصال هاتفي. تصل إليه رسالة بريد إلكتروني تفيد: <span class="value-highlight">"كادت العربة أن تختفي! أكمل الشراء الآن واحصل على شحن مجاني"</span>.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SLIDE 8: Stage 5 - Purchase -->
+<section class="slide" id="slide-8" style="background: linear-gradient(135deg, #0d47a1 0%, #2196f3 100%);">
+    <div class="slide-content">
+        <div class="journey-card animate-on-scroll" style="--journey-accent: #2196f3;">
+            <div class="journey-header">
+                <div class="journey-icon" style="background: linear-gradient(135deg, #2196f3, #03a9f4);">
+                    <i class="fas fa-shopping-cart"></i>
+                </div>
+                <div>
+                    <h3 class="journey-title">المرحلة الخامسة: الشراء (Purchase)</h3>
+                    <p class="journey-subtitle">اللحظة الحاسمة! العميل يضع ثقته وأمواله في مشروعك ويقوم بعملية الدفع الفعلي</p>
+                </div>
+            </div>
+            <div class="journey-content">
+                <div class="journey-section">
+                    <h4 style="color: #03a9f4;"><i class="fas fa-bullseye"></i> الهدف</h4>
+                    <ul>
+                        <li><i class="fas fa-check" style="color:#03a9f4;"></i> إتمام عملية الشراء بسلاسة وأمان</li>
+                        <li><i class="fas fa-check" style="color:#03a9f4;"></i> تأكيد التجربة الإيجابية للعميل</li>
+                        <li><i class="fas fa-check" style="color:#03a9f4;"></i> إرسال تأكيد فوري ومتابعة الشحنة</li>
+                    </ul>
+                </div>
+                <div class="journey-section">
+                    <h4 style="color: #03a9f4;"><i class="fas fa-magic"></i> كيفية جذب العميل (وتأكيد التجربة)</h4>
+                    <ul>
+                        <li><i class="fas fa-check" style="color:#03a9f4;"></i> توفير خيارات دفع متعددة وآمنة</li>
+                        <li><i class="fas fa-check" style="color:#03a9f4;"></i> إرسال رسالة تأكيد فورية مع تتبع الشحنة</li>
+                        <li><i class="fas fa-check" style="color:#03a9f4;"></i> تقديم تجربة فتح صندوق (Unboxing) مميزة ومبهرة</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <h4><i class="fas fa-user"></i> مثال توضيحي: "أحمد"</h4>
+                    <p>يقوم "أحمد" بإدخال بيانات بطاقته البنكية ويشتري الكرسي. تصله رسالة شكر فوراً على هاتفه <span class="value-highlight">تُحدد موعد التوصيل بدقة</span>.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SLIDE 9: Stage 6 - Retention -->
+<section class="slide" id="slide-9" style="background: linear-gradient(135deg, #4a148c 0%, #9c27b0 100%);">
+    <div class="slide-content">
+        <div class="journey-card animate-on-scroll" style="--journey-accent: #9c27b0;">
+            <div class="journey-header">
+                <div class="journey-icon" style="background: linear-gradient(135deg, #9c27b0, #ce93d8);">
+                    <i class="fas fa-redo"></i>
+                </div>
+                <div>
+                    <h3 class="journey-title">المرحلة السادسة: الاحتفاظ بالعميل (Retention)</h3>
+                    <p class="journey-subtitle">لا تنتهي العلاقة بانتهاء عملية البيع. الهدف هو بناء علاقة قوية لضمان عدم ذهاب العميل للمنافسين</p>
+                </div>
+            </div>
+            <div class="journey-content">
+                <div class="journey-section">
+                    <h4 style="color: #ce93d8;"><i class="fas fa-bullseye"></i> الهدف</h4>
+                    <ul>
+                        <li><i class="fas fa-check" style="color:#ce93d8;"></i> الحفاظ على العميل كعميل نشط</li>
+                        <li><i class="fas fa-check" style="color:#ce93d8;"></i> منع ذهابه للمنافسين في المستقبل</li>
+                        <li><i class="fas fa-check" style="color:#ce93d8;"></i> بناء علاقة طويلة الأمد</li>
+                    </ul>
+                </div>
+                <div class="journey-section">
+                    <h4 style="color: #ce93d8;"><i class="fas fa-magic"></i> كيفية جذب العميل</h4>
+                    <ul>
+                        <li><i class="fas fa-check" style="color:#ce93d8;"></i> خدمة عملاء ممتازة بعد البيع (حل المشكلات بسرعة)</li>
+                        <li><i class="fas fa-check" style="color:#ce93d8;"></i> إرسال نصائح حول كيفية استخدام المنتج والعناية به</li>
+                        <li><i class="fas fa-check" style="color:#ce93d8;"></i> استبيانات لقياس مدى الرضا</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <h4><i class="fas fa-user"></i> مثال توضيحي: "أحمد"</h4>
+                    <p>بعد أسبوع من استلام الكرسي، تتصل خدمة العملاء بـ "أحمد" للتأكد من أن الكرسي مريح ومناسب لطوله، ويرسلون له فيديو يشرح <span class="value-highlight">"الطريقة الصحيحة لضبط زوايا الكرسي"</span> لحماية ظهره.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SLIDE 10: Stage 7 - Loyalty -->
+<section class="slide" id="slide-10" style="background: linear-gradient(135deg, #006064 0%, #00bcd4 100%);">
+    <div class="slide-content">
+        <div class="journey-card animate-on-scroll" style="--journey-accent: #00bcd4;">
+            <div class="journey-header">
+                <div class="journey-icon" style="background: linear-gradient(135deg, #00bcd4, #00e5ff);">
+                    <i class="fas fa-crown"></i>
+                </div>
+                <div>
+                    <h3 class="journey-title">المرحلة السابعة: الولاء (Loyalty)</h3>
+                    <p class="journey-subtitle">يتحول العميل من "مشتري لمرة واحدة" إلى عميل دائم يفضل علامتك التجارية بشكل تلقائي</p>
+                </div>
+            </div>
+            <div class="journey-content">
+                <div class="journey-section">
+                    <h4 style="color: #00e5ff;"><i class="fas fa-bullseye"></i> الهدف</h4>
+                    <ul>
+                        <li><i class="fas fa-check" style="color:#00e5ff;"></i> تحويل العميل إلى عميل دائم</li>
+                        <li><i class="fas fa-check" style="color:#00e5ff;"></i> جعله يفضلك تلقائياً على أي منافس</li>
+                        <li><i class="fas fa-check" style="color:#00e5ff;"></i> زيادة قيمة العميل مدى الحياة (LTV)</li>
+                    </ul>
+                </div>
+                <div class="journey-section">
+                    <h4 style="color: #00e5ff;"><i class="fas fa-magic"></i> كيفية جذب العميل</h4>
+                    <ul>
+                        <li><i class="fas fa-check" style="color:#00e5ff;"></i> إطلاق برامج الولاء (نقاط، مكافآت، خصومات حصرية للعملاء القدامى)</li>
+                        <li><i class="fas fa-check" style="color:#00e5ff;"></i> معايدة العميل في المناسبات الخاصة أو أعياد الميلاد بخصومات مخصصة</li>
+                        <li><i class="fas fa-check" style="color:#00e5ff;"></i> تقديم منتجات جديدة حصرية للعملاء المخلصين</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <h4><i class="fas fa-user"></i> مثال توضيحي: "أحمد"</h4>
+                    <p>بعد ستة أشهر، يقرر "أحمد" شراء مكتب جديد لبيته. يتوجه مباشرة إلى موقع نفس الشركة دون التفكير في البحث عن شركات أخرى، مستفيداً من <span class="value-highlight">"نقاط الولاء"</span> التي جمعها من شرائه السابق.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SLIDE 11: Stage 8 - Advocacy -->
+<section class="slide" id="slide-11" style="background: linear-gradient(135deg, #ff6f00 0%, #ffd700 100%);">
+    <div class="slide-content">
+        <div class="journey-card animate-on-scroll" style="--journey-accent: #ffd700;">
+            <div class="journey-header">
+                <div class="journey-icon" style="background: linear-gradient(135deg, #ffd700, #ff8c00); color: #333;">
+                    <i class="fas fa-bullhorn"></i>
+                </div>
+                <div>
+                    <h3 class="journey-title" style="color: #333;">المرحلة الثامنة: المدافعة / التأييد (Advocacy)</h3>
+                    <p class="journey-subtitle" style="color: #555;">أعلى مراحل رحلة العميل؛ حيث يتحول العميل إلى مسوق مجاني لعلامتك التجارية</p>
+                </div>
+            </div>
+            <div class="journey-content">
+                <div class="journey-section">
+                    <h4 style="color: #ff6f00;"><i class="fas fa-bullseye"></i> الهدف</h4>
+                    <ul>
+                        <li><i class="fas fa-check" style="color:#ff6f00;"></i> تحويل العميل إلى مسوق مجاني</li>
+                        <li><i class="fas fa-check" style="color:#ff6f00;"></i> جعله ينصح الآخرين بك</li>
+                        <li><i class="fas fa-check" style="color:#ff6f00;"></i> توليد عملاء جدد من خلال الإحالات</li>
+                    </ul>
+                </div>
+                <div class="journey-section">
+                    <h4 style="color: #ff6f00;"><i class="fas fa-magic"></i> كيفية جذب العميل وتنشيطه</h4>
+                    <ul>
+                        <li><i class="fas fa-check" style="color:#ff6f00;"></i> توفير برامج "الإحالة" (Referral Programs) مثل: "احصل على خصم لك ولصديقك عندما يشتري من خلالك"</li>
+                        <li><i class="fas fa-check" style="color:#ff6f00;"></i> مشاركة تقييماتهم وتجاربهم الإيجابية على حسابات الشركة الرسمية لتقديرهم</li>
+                        <li><i class="fas fa-check" style="color:#ff6f00;"></i> إنشاء مجتمع للعملاء المخلصين</li>
+                    </ul>
+                </div>
+                <div class="example-box" style="border-color: rgba(255,111,0,0.3);">
+                    <h4 style="color: #ff6f00;"><i class="fas fa-user"></i> مثال توضيحي: "أحمد"</h4>
+                    <p style="color: #333;">يلاحظ زملائه في العمل اختفاء آلام ظهره، فيبدأ "أحمد" بنصحهم بحماس شديد قائلاً: <span style="color:#ff6f00;font-weight:800;">"يجب أن تشتروا من هذه الشركة، كراسيهم غيرت حياتي وخدمتهم ممتازة!"</span>. هنا أصبح أحمد <span style="color:#ff6f00;font-weight:800;">"مدافعاً وسفيراً"</span> للعلامة التجارية.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SLIDE 12: Progress Bar -->
+<section class="slide" id="slide-12" style="background: linear-gradient(135deg, #1a237e 0%, #7c4dff 100%);">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background: linear-gradient(135deg, #7c4dff, #651fff);"><i class="fas fa-route"></i></div>
+            <h2 class="section-title-text">رحلة أحمد الكاملة</h2>
+        </div>
+        <p style="text-align:center;font-size:1.2rem;margin-bottom:30px;">متابعة رحلة "أحمد" عبر جميع المراحل:</p>
+        <div class="progress-container animate-on-scroll">
+            <div class="progress-line"></div>
+            <div class="progress-step">
+                <div class="progress-dot" style="background: linear-gradient(135deg, #e91e63, #f06292);"><i class="fas fa-eye"></i></div>
+                <div class="progress-label">الوعي</div>
+            </div>
+            <div class="progress-step">
+                <div class="progress-dot" style="background: linear-gradient(135deg, #ff9800, #ffc107);"><i class="fas fa-heart"></i></div>
+                <div class="progress-label">الاهتمام</div>
+            </div>
+            <div class="progress-step">
+                <div class="progress-dot" style="background: linear-gradient(135deg, #ffeb3b, #fff176); color: #333;"><i class="fas fa-balance-scale"></i></div>
+                <div class="progress-label">التقييم</div>
+            </div>
+            <div class="progress-step">
+                <div class="progress-dot" style="background: linear-gradient(135deg, #4caf50, #8bc34a);"><i class="fas fa-bullseye"></i></div>
+                <div class="progress-label">النية</div>
+            </div>
+            <div class="progress-step">
+                <div class="progress-dot" style="background: linear-gradient(135deg, #2196f3, #03a9f4);"><i class="fas fa-shopping-cart"></i></div>
+                <div class="progress-label">الشراء</div>
+            </div>
+            <div class="progress-step">
+                <div class="progress-dot" style="background: linear-gradient(135deg, #9c27b0, #ce93d8);"><i class="fas fa-redo"></i></div>
+                <div class="progress-label">الاحتفاظ</div>
+            </div>
+            <div class="progress-step">
+                <div class="progress-dot" style="background: linear-gradient(135deg, #00bcd4, #00e5ff);"><i class="fas fa-crown"></i></div>
+                <div class="progress-label">الولاء</div>
+            </div>
+            <div class="progress-step">
+                <div class="progress-dot" style="background: linear-gradient(135deg, #ffd700, #ff8c00);"><i class="fas fa-bullhorn"></i></div>
+                <div class="progress-label">المدافعة</div>
+            </div>
+        </div>
+        <div class="quote-box animate-on-scroll" style="margin-top:40px;">
+            <p class="quote-text">
+                من مرحلة <span class="value-highlight">"الغريب الذي لا يعلم عنك شيئاً"</span> إلى مرحلة <span class="value-highlight">"المحب والمدافع عنك"</span>
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- SLIDE 13: Summary -->
+<section class="slide" id="slide-13" style="background: linear-gradient(135deg, #1b5e20 0%, #66bb6a 100%);">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background: linear-gradient(135deg, #2e7d32, #66bb6a);"><i class="fas fa-clipboard-check"></i></div>
+            <h2 class="section-title-text">خلاصة الفصل</h2>
+        </div>
+        <div class="quote-box animate-on-scroll">
+            <p class="quote-text">
+                نجاح مشروعك يعتمد على قدرتك على قيادة العميل من مرحلة "الغريب الذي لا يعلم عنك شيئاً" (Awareness)، إلى مرحلة "المحب والمدافع عنك" (Advocacy)، وذلك عبر تقديم <span class="value-highlight">القيمة المناسبة في الوقت المناسب</span> لكل مرحلة.
+            </p>
+        </div>
+        <div class="summary-cards animate-on-scroll">
+            <div class="summary-card">
+                <div class="summary-card-icon" style="color: #e91e63;"><i class="fas fa-eye"></i></div>
+                <div class="summary-card-title">الوعي</div>
+                <div class="summary-card-desc">محتوى تعليمي وإعلانات واسعة</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-card-icon" style="color: #ff9800;"><i class="fas fa-heart"></i></div>
+                <div class="summary-card-title">الاهتمام</div>
+                <div class="summary-card-desc">أدلة مجانية ومحتوى متخصص</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-card-icon" style="color: #ffeb3b;"><i class="fas fa-balance-scale"></i></div>
+                <div class="summary-card-title">التقييم</div>
+                <div class="summary-card-desc">جداول مقارنة ودراسات حالة</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-card-icon" style="color: #4caf50;"><i class="fas fa-bullseye"></i></div>
+                <div class="summary-card-title">النية</div>
+                <div class="summary-card-desc">حوافز سريعة وتذكيرات</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-card-icon" style="color: #2196f3;"><i class="fas fa-shopping-cart"></i></div>
+                <div class="summary-card-title">الشراء</div>
+                <div class="summary-card-desc">دفع آمن وتجربة مميزة</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-card-icon" style="color: #9c27b0;"><i class="fas fa-redo"></i></div>
+                <div class="summary-card-title">الاحتفاظ</div>
+                <div class="summary-card-desc">خدمة عملاء ونصائح</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-card-icon" style="color: #00bcd4;"><i class="fas fa-crown"></i></div>
+                <div class="summary-card-title">الولاء</div>
+                <div class="summary-card-desc">برامج ولاء ومكافآت</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-card-icon" style="color: #ffd700;"><i class="fas fa-bullhorn"></i></div>
+                <div class="summary-card-title">المدافعة</div>
+                <div class="summary-card-desc">برامج إحالة وتقدير</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SLIDE 14: Final -->
+<section class="slide" id="slide-14" style="background: linear-gradient(135deg, #1a237e 0%, #ff6f00 50%, #1a237e 100%);">
+    <div class="slide-content">
+        <div class="title-card animate-on-scroll">
+            <div class="title-card-inner">
+                <div class="title-icon"><i class="fas fa-crown"></i></div>
+                <h1 class="title-main" style="font-size:3rem;">الخلاصة</h1>
+                <div style="width:150px;height:4px;background:var(--gold);margin:30px auto;border-radius:2px;"></div>
+                <p style="font-size:1.6rem;line-height:2.2;font-weight:700;">
+                    القيمة المناسبة في الوقت المناسب لكل مرحلة
+                </p>
+                <p style="font-size:1.2rem;color:rgba(255,255,255,0.85);margin-top:20px;line-height:2;">
+                    كل مرحلة من رحلة العميل تتطلب استراتيجية مختلفة.<br>
+                    فهم هذه المراحل يمنحك القدرة على توجيه مواردك التسويقية بذكاء.<br>
+                    العميل ليس مجرد رقم — إنه <span class="value-highlight">رحلة</span> تبدأ بالوعي وتنتهي بالمدافعة.
+                </p>
+                <div class="golden-rule" style="margin-top:30px;font-size:1.4rem;">
+                    <i class="fas fa-star"></i> من الغريب إلى السفير: رحلة واحدة، قيمة دائمة
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+</div>
+
+<script>
+let currentSlide = 1;
+const totalSlides = 14;
+
+function updateNav() {
+    const progress = document.getElementById('navProgress');
+    progress.innerHTML = '';
+    for (let i = 1; i <= totalSlides; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'nav-dot' + (i === currentSlide ? ' active' : '');
+        dot.onclick = () => goToSlide(i);
+        progress.appendChild(dot);
+    }
+}
+
+function goToSlide(n) {
+    if (n < 1 || n > totalSlides) return;
+    currentSlide = n;
+    const slide = document.getElementById('slide-' + n);
+    if (slide) {
+        slide.scrollIntoView({ behavior: 'smooth' });
+    }
+    updateNav();
+}
+
+function nextSlide() {
+    goToSlide(currentSlide + 1);
+}
+
+function prevSlide() {
+    goToSlide(currentSlide - 1);
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') nextSlide();
+    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') prevSlide();
+});
+
+const observerOptions = {
+    threshold: 0.1,
+    rootMargin: '0px 0px -50px 0px'
+};
+
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+        }
+    });
+}, observerOptions);
+
+document.querySelectorAll('.animate-on-scroll').forEach(el => {
+    observer.observe(el);
+});
+
+const slideObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            const id = entry.target.id;
+            const num = parseInt(id.replace('slide-', ''));
+            if (!isNaN(num)) {
+                currentSlide = num;
+                updateNav();
+            }
+        }
+    });
+}, { threshold: 0.5 });
+
+document.querySelectorAll('.slide').forEach(slide => {
+    slideObserver.observe(slide);
+});
+
+updateNav();
+</script>
+<div class="site-floatnav"><a href="ch1.html"><i class="fas fa-chevron-right"></i><span class="label">السابق</span></a><a href="dashboard.html"><i class="fas fa-house"></i><span class="label">لوحتي</span></a><a class="quiz-link" href="quiz.html?ch=2"><i class="fas fa-clipboard-check"></i><span class="label">الاختبار</span></a><a href="ch3.html"><span class="label">التالي</span><i class="fas fa-chevron-left"></i></a></div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/progress.js"></script>
+<script src="js/trial.js"></script>
+<script src="js/protect-content.js"></script>
+<script>
+const CHAPTER_NUM = 2;
+const _origGoToSlide = goToSlide;
+goToSlide = function(target){
+  _origGoToSlide(target);
+  if (window.LMSProgress) LMSProgress.trackSlide(CHAPTER_NUM, currentSlide, totalSlides);
+};
+(function(){
+  var params = new URLSearchParams(location.search);
+  var urlSlide = parseInt(params.get('slide'));
+  var savedSlide = window.LMSProgress ? LMSProgress.getLastSlide(CHAPTER_NUM) : null;
+  var target = urlSlide || savedSlide;
+  if (target && target > 1 && target <= totalSlides) {
+    setTimeout(function(){ goToSlide(target); }, 350);
+  } else if (window.LMSProgress) {
+    LMSProgress.trackSlide(CHAPTER_NUM, 1, totalSlides);
+  }
+})();
+</script>
+<script>document.addEventListener("DOMContentLoaded", function(){ if(window.LMSTrial) LMSTrial.mountBadgeAndGuard(); });</script>
+<script src="js/mentor.js"></script>
+<script>document.addEventListener("DOMContentLoaded", function(){ if(window.LMSMentor) LMSMentor.mount(CHAPTER_NUM); });</script>
+<script src="js/sw-register.js"></script>
+</body>
+</html>

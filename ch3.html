@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-protected="true">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الفصل الثالث: فهم العميل (Customer Understanding)</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root {
+    --gold: #ffd700;
+    --dark: #0d1b2a;
+    --secondary: #ff6f00;
+    --accent: #00bfa5;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'Tajawal', sans-serif;
+    background: var(--dark);
+    color: #fff;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+}
+.geo-bg {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 0; overflow: hidden;
+}
+.geo-shape {
+    position: absolute; opacity: 0.08;
+    animation: float 20s infinite ease-in-out;
+}
+.geo-circle { border-radius: 50%; border: 3px solid var(--gold); }
+.geo-triangle {
+    width: 0; height: 0;
+    border-left: 60px solid transparent;
+    border-right: 60px solid transparent;
+    border-bottom: 100px solid var(--secondary);
+}
+.geo-square { border: 3px solid var(--accent); transform: rotate(45deg); }
+.geo-hexagon {
+    width: 100px; height: 55px;
+    background: var(--secondary); position: relative;
+}
+.geo-hexagon:before, .geo-hexagon:after {
+    content: ""; position: absolute; width: 0;
+    border-left: 50px solid transparent;
+    border-right: 50px solid transparent;
+}
+.geo-hexagon:before { bottom: 100%; border-bottom: 27.5px solid var(--secondary); }
+.geo-hexagon:after { top: 100%; border-top: 27.5px solid var(--secondary); }
+@keyframes float {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-30px) rotate(180deg); }
+}
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.1); opacity: 1; }
+}
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+@keyframes shine {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+}
+.nav-bar {
+    position: fixed; top: 0; width: 100%;
+    background: rgba(13, 27, 42, 0.95);
+    backdrop-filter: blur(10px);
+    z-index: 1000;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--gold);
+}
+.nav-logo {
+    font-size: 1.2rem; font-weight: 800; color: var(--gold);
+    display: flex; align-items: center; gap: 10px;
+}
+.nav-progress { display: flex; gap: 5px; align-items: center; }
+.nav-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    cursor: pointer; transition: all 0.3s;
+}
+.nav-dot.active { background: var(--gold); transform: scale(1.3); }
+.nav-controls { display: flex; gap: 15px; }
+.nav-btn {
+    background: transparent; border: 2px solid var(--gold);
+    color: var(--gold); padding: 8px 20px;
+    border-radius: 25px; cursor: pointer;
+    font-family: 'Tajawal', sans-serif; font-weight: 700;
+    transition: all 0.3s;
+}
+.nav-btn:hover { background: var(--gold); color: var(--dark); }
+.slides-container { position: relative; width: 100%; }
+.slide {
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 100px 40px 60px;
+    position: relative; overflow: hidden;
+}
+.slide-content {
+    max-width: 1200px; width: 100%;
+    position: relative; z-index: 10;
+}
+.section-header {
+    display: flex; align-items: center; gap: 20px; margin-bottom: 40px;
+}
+.section-number {
+    width: 80px; height: 80px; border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.5rem; font-weight: 900; color: #fff;
+    flex-shrink: 0; position: relative; overflow: hidden;
+}
+.section-number::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%);
+    animation: shine 3s infinite;
+}
+.section-title-text { font-size: 2.5rem; font-weight: 800; }
+.content-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px; margin-top: 30px;
+}
+.content-card {
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(10px);
+    border-radius: 20px; padding: 30px;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: all 0.4s; position: relative; overflow: hidden;
+}
+.content-card::before {
+    content: ''; position: absolute; top: 0; left: 0;
+    width: 100%; height: 4px;
+    background: var(--card-accent, var(--gold));
+}
+.content-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    border-color: var(--card-accent, var(--gold));
+}
+.card-icon { font-size: 3rem; margin-bottom: 15px; color: var(--card-accent, var(--gold)); }
+.card-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 15px; color: #fff; }
+.card-text { font-size: 1.1rem; line-height: 2; color: rgba(255,255,255,0.85); }
+.quote-box {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 111, 0, 0.1));
+    border-right: 5px solid var(--gold);
+    border-radius: 0 20px 20px 0;
+    padding: 40px; margin: 30px 0; position: relative;
+}
+.quote-box::before {
+    content: '"'; font-size: 6rem; color: var(--gold); opacity: 0.3;
+    position: absolute; top: -10px; right: 20px; line-height: 1;
+}
+.quote-text { font-size: 1.4rem; font-weight: 700; line-height: 2; color: #fff; }
+.two-col {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 40px; align-items: center;
+}
+.title-card {
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(20px);
+    border-radius: 30px; padding: 60px;
+    border: 2px solid rgba(255,255,255,0.2);
+    text-align: center; position: relative; overflow: hidden;
+}
+.title-card::before {
+    content: ''; position: absolute; top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: conic-gradient(transparent, var(--gold), transparent 30%);
+    animation: rotate 4s linear infinite;
+}
+.title-card-inner {
+    position: relative; z-index: 1;
+    background: rgba(13, 27, 42, 0.9);
+    border-radius: 25px; padding: 50px;
+}
+.title-main {
+    font-size: 4rem; font-weight: 900; color: var(--gold);
+    margin-bottom: 20px;
+    text-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+}
+.title-sub { font-size: 1.8rem; color: #fff; margin-bottom: 30px; }
+.title-icon {
+    font-size: 5rem; color: var(--gold); margin-bottom: 20px;
+    animation: pulse 2s infinite;
+}
+.golden-rule {
+    background: linear-gradient(90deg, var(--gold), #ff8c00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-size: 1.4rem; font-weight: 700; margin-top: 20px;
+}
+.value-highlight {
+    background: linear-gradient(90deg, var(--gold), #ff8c00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+}
+.animate-on-scroll {
+    opacity: 0; transform: translateY(30px);
+    transition: all 0.8s ease-out;
+}
+.animate-on-scroll.visible { opacity: 1; transform: translateY(0); }
+
+/* Persona Card */
+.persona-card {
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(10px);
+    border-radius: 25px;
+    padding: 40px;
+    border: 2px solid rgba(255,255,255,0.1);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.4s;
+}
+.persona-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--persona-accent, var(--gold));
+    box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+}
+.persona-card::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 6px; height: 100%;
+    background: var(--persona-accent, var(--gold));
+}
+.persona-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 25px;
+}
+.persona-avatar {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    color: #fff;
+    flex-shrink: 0;
+}
+.persona-name {
+    font-size: 1.8rem;
+    font-weight: 800;
+}
+.persona-role {
+    font-size: 1rem;
+    color: rgba(255,255,255,0.7);
+    margin-top: 5px;
+}
+.persona-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+.persona-section h4 {
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.persona-section ul {
+    list-style: none;
+    padding: 0;
+}
+.persona-section ul li {
+    padding: 6px 0;
+    font-size: 1rem;
+    color: rgba(255,255,255,0.85);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+.persona-section ul li i {
+    margin-top: 5px;
+    flex-shrink: 0;
+}
+
+/* Pain Points Grid */
+.pain-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-top: 30px;
+}
+.pain-card {
+    background: rgba(255,255,255,0.05);
+    border-radius: 20px;
+    padding: 30px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: all 0.4s;
+}
+.pain-card:hover {
+    transform: translateY(-10px);
+    background: rgba(255,255,255,0.1);
+}
+.pain-icon {
+    font-size: 2.5rem;
+    margin-bottom: 15px;
+}
+.pain-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+.pain-desc {
+    font-size: 0.95rem;
+    line-height: 1.8;
+    color: rgba(255,255,255,0.8);
+}
+
+/* Question Cards */
+.question-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    margin-top: 30px;
+}
+.question-card {
+    background: rgba(255,255,255,0.05);
+    border-radius: 20px;
+    padding: 25px;
+    border: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: all 0.3s;
+}
+.question-card:hover {
+    transform: translateX(-10px);
+    background: rgba(255,255,255,0.1);
+    border-color: var(--gold);
+}
+.question-num {
+    width: 45px; height: 45px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: #fff;
+    flex-shrink: 0;
+}
+.question-text {
+    font-size: 1.1rem;
+    line-height: 1.6;
+}
+
+/* Example Box */
+.example-box {
+    background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,111,0,0.05));
+    border: 1px solid rgba(255,215,0,0.3);
+    border-radius: 15px;
+    padding: 25px;
+    margin-top: 20px;
+}
+.example-box h4 {
+    color: var(--gold);
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.example-box p {
+    font-size: 1.1rem;
+    line-height: 2;
+    color: rgba(255,255,255,0.9);
+}
+
+/* Final Rule */
+.final-rule {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 111, 0, 0.1));
+    border: 3px solid var(--gold); border-radius: 30px;
+    padding: 50px; text-align: center; margin-top: 40px;
+    position: relative; overflow: hidden;
+}
+.final-rule::before {
+    content: ''; position: absolute; top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: conic-gradient(transparent, var(--gold), transparent 30%);
+    animation: rotate 6s linear infinite;
+}
+.final-rule-inner {
+    position: relative; z-index: 1;
+    background: var(--dark); border-radius: 25px; padding: 40px;
+}
+.final-rule h2 { font-size: 2rem; color: var(--gold); margin-bottom: 20px; }
+.final-rule p { font-size: 1.3rem; line-height: 2; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .title-main { font-size: 2.5rem; }
+    .title-sub { font-size: 1.2rem; }
+    .two-col { grid-template-columns: 1fr; }
+    .persona-grid { grid-template-columns: 1fr; }
+    .pain-grid { grid-template-columns: 1fr; }
+    .question-cards { grid-template-columns: 1fr; }
+    .slide { padding: 100px 20px 40px; }
+    .section-title-text { font-size: 1.8rem; }
+}
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: var(--dark); }
+::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: #ff8c00; }
+</style>
+<base target="_blank">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d1b2a">
+
+<style>
+.site-floatnav{position:fixed;bottom:22px;left:22px;z-index:2000;display:flex;gap:8px;align-items:center;flex-wrap:wrap;max-width:90vw;}
+.site-floatnav a{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(13,27,42,0.92);backdrop-filter:blur(10px);
+  border:2px solid #ffd700;color:#ffd700;
+  padding:10px 16px;border-radius:25px;
+  font-family:'Tajawal',sans-serif;font-weight:700;font-size:0.85rem;
+  text-decoration:none;transition:all .3s;
+}
+.site-floatnav a:hover{background:#ffd700;color:#0d1b2a;}
+.site-floatnav a.disabled{opacity:0.3;pointer-events:none;}
+.site-floatnav a.quiz-link{border-color:#00bfa5;color:#00bfa5;}
+.site-floatnav a.quiz-link:hover{background:#00bfa5;color:#0d1b2a;}
+@media (max-width:640px){
+  .site-floatnav{left:10px;bottom:10px;gap:6px;}
+  .site-floatnav a{padding:8px 10px;font-size:0.75rem;}
+  .site-floatnav a span.label{display:none;}
+}
+</style>
+</head>
+<body>
+<script>
+(function(){
+  var localSession = localStorage.getItem('lms_session_v1');
+  var remoteToken = localStorage.getItem('lms_token_v1');
+  var remotePaid = false;
+  if (remoteToken) {
+    try {
+      var ru = JSON.parse(localStorage.getItem('lms_remote_user_v1'));
+      remotePaid = ru && String(ru.status || '').trim().toLowerCase() === 'active';
+    } catch(e){}
+  }
+  var trialActive = false;
+  try {
+    var t = JSON.parse(localStorage.getItem('lms_trial_v1'));
+    if (t) { trialActive = ((Date.now() - t.startAt) / 1000) < 600; }
+  } catch(e){}
+
+  var allowed = !!localSession || (!!remoteToken && remotePaid) || trialActive;
+  if(!allowed){
+    location.replace(remoteToken ? 'upgrade.html' : 'index.html');
+    return;
+  }
+
+  // قفل تسلسلي: لازم يجتاز اختبار الفصل رقم 2 قبل الدخول هنا (لا يُطبَّق في وضع المعاينة التجريبية)
+  var isTrialOnly = trialActive && !localSession && !(remoteToken && remotePaid);
+  if (!isTrialOnly) {
+    var uname = localSession || (function(){
+      try {
+        var ru2 = JSON.parse(localStorage.getItem('lms_remote_user_v1'));
+        return ru2 ? ru2.email : null;
+      } catch(e){ return null; }
+    })();
+    if (uname) {
+      try {
+        var progress = JSON.parse(localStorage.getItem('lms_progress_v1_' + uname)) || {};
+        var prevQuiz = progress.quizzes && progress.quizzes[2];
+        if (!prevQuiz || !prevQuiz.passed) {
+          location.replace('dashboard.html?locked=3');
+          return;
+        }
+      } catch(e){}
+    }
+  }
+})();
+</script>
+
+<div class="geo-bg">
+    <div class="geo-shape geo-circle" style="width:200px;height:200px;top:10%;left:5%;animation-delay:0s;"></div>
+    <div class="geo-shape geo-square" style="width:100px;height:100px;top:30%;right:10%;animation-delay:2s;"></div>
+    <div class="geo-shape geo-hexagon" style="top:60%;left:8%;animation-delay:4s;"></div>
+    <div class="geo-shape geo-circle" style="width:150px;height:150px;top:80%;right:5%;animation-delay:1s;"></div>
+    <div class="geo-shape geo-triangle" style="top:45%;left:15%;animation-delay:3s;"></div>
+    <div class="geo-shape geo-square" style="width:80px;height:80px;top:15%;right:20%;animation-delay:5s;"></div>
+</div>
+
+<nav class="nav-bar">
+    <div class="nav-logo"><i class="fas fa-user-check"></i> فهم العميل</div>
+    <div class="nav-progress" id="navProgress"></div>
+    <div class="nav-controls">
+        <button class="nav-btn" onclick="prevSlide()"><i class="fas fa-chevron-right"></i> السابق</button>
+        <button class="nav-btn" onclick="nextSlide()">التالي <i class="fas fa-chevron-left"></i></button>
+    </div>
+</nav>
+
+<div class="slides-container" id="slidesContainer">
+
+<!-- SLIDE 1: Title -->
+<section class="slide" id="slide-1" style="background: linear-gradient(135deg, #1a237e 0%, #283593 50%, #1a237e 100%);">
+    <div class="slide-content">
+        <div class="title-card animate-on-scroll">
+            <div class="title-card-inner">
+                <div class="title-icon"><i class="fas fa-user-check"></i></div>
+                <h1 class="title-main">الفصل الثالث</h1>
+                <h2 class="title-sub">فهم العميل (Customer Understanding)</h2>
+                <div style="width:100px;height:4px;background:var(--gold);margin:20px auto;border-radius:2px;"></div>
+                <p style="font-size:1.2rem;color:rgba(255,255,255,0.8);margin-top:20px;">
+                    التسويق الناجح يبدأ من سؤال واحد: "من هو الشخص الذي أبيع له؟"
+                </p>
+                <div class="golden-rule">
+                    <i class="fas fa-star"></i> إذا فهمت العميل، فقد أنجزت أكثر من نصف عملية البيع
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SLIDE 2: Introduction -->
+<section class="slide" id="slide-2" style="background: linear-gradient(135deg, #1a237e 0%, #3949ab 100%);">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background: linear-gradient(135deg, #667eea, #764ba2);"><i class="fas fa-info-circle"></i></div>
+            <h2 class="section-title-text">مقدمة الفصل</h2>
+        </div>
+        <div class="quote-box animate-on-scroll">
+            <p class="quote-text">
+                يعتقد كثير من المسوقين أن نجاحهم يعتمد على جودة المنتج أو حجم الميزانية الإعلانية، لكن الواقع مختلف تمامًا. فقد يمتلك شخص منتجًا ممتازًا ويفشل في بيعه، بينما يحقق شخص آخر مبيعات كبيرة بمنتج أقل جودة.
+            </p>
+        </div>
+        <div class="content-grid animate-on-scroll">
+            <div class="content-card" style="--card-accent: #e91e63;">
+                <div class="card-icon"><i class="fas fa-brain"></i></div>
+                <h3 class="card-title">السبب الرئيسي</h3>
+                <p class="card-text">فهم العميل هو الفارق بين النجاح والفشل في التسويق</p>
+            </div>
+            <div class="content-card" style="--card-accent: #ff9800;">
+                <div class="card-icon"><i class="fas fa-lightbulb"></i></div>
+                <h3 class="card-title">السؤال الأساسي</h3>
+                <p class="card-text">"من هو الشخص الذي أبيع له؟"</p>
+            </div>
+            <div class="content-card" style="--card-accent: #4caf50;">
+                <div class="card-icon"><i class="fas fa-key"></i></div>
+                <h3 class="card-title">المفتاح الذهبي</h3>
+                <p class="card-text">إذا استطعت أن تعرف كيف يفكر العميل، وما الذي يزعجه، وما الذي يحلم به، فستعرف ماذا تقول له، ومتى تقوله، وكيف تعرض عليه منتجك</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SLIDE 3: Who is the Customer -->
+<section class="slide" id="slide-3" style="background: linear-gradient(135deg, #880e4f 0%, #e91e63 100%);">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background: linear-gradient(135deg, #e91e63, #f06292);">01</div>
+            <h2 class="section-title-text">من هو العميل؟</h2>
+        </div>
+        <div class="quote-box animate-on-scroll">
+            <p class="quote-text">
+                العميل هو: أي شخص لديه مشكلة أو حاجة أو رغبة، ويبحث عن شخص أو شركة تساعده على تحقيق هدف أو حل مشكلة مقابل قيمة يدفعها.
+            </p>
+        </div>
+        <div class="content-grid animate-on-scroll">
+            <div class="content-card" style="--card-accent: #f06292;">
+                <div class="card-icon"><i class="fas fa-hand-holding-heart"></i></div>
+                <h3 class="card-title">لا تبيع منتجًا فقط</h3>
+                <p class="card-text">بل تقدم <span class="value-highlight">حلاً</span>. فالإنسان لا يشتري الأشياء لذاتها، بل لما تمنحه له من فوائد ومشاعر ونتائج</p>
+            </div>
+            <div class="content-card" style="--card-accent: #ff9800;">
+                <div class="card-icon"><i class="fas fa-snowflake"></i></div>
+                <h3 class="card-title">مثال: شركة تبيع مكيفات</h3>
+                <p class="card-text">العميل لا يريد المكيف، بل يريد: التخلص من حرارة الصيف، نومًا هادئًا، راحة لأسرته، بيئة مريحة للعمل</p>
+            </div>
+            <div class="content-card" style="--card-accent: #4caf50;">
+                <div class="card-icon"><i class="fas fa-clock"></i></div>
+                <h3 class="card-title">مثال: رجل اشترى ساعة فاخرة</h3>
+                <p class="card-text">لم يشترِها لمعرفة الوقت! بل اشترى: مظهرًا راقيًا، شعورًا بالنجاح، مكانة اجتماعية، ثقة بالنفس</p>
+            </div>
+        </div>
+        <div class="example-box animate-on-scroll">
+            <h4><i class="fas fa-dumbbell"></i> تمرين: السبب الحقيقي</h4>
+            <p>اختر منتجًا تعرفه، واسأل نفسك خمس مرات: "لماذا يشتريه العميل؟"<br><br>
+            <strong>مثال:</strong> هاتف ذكي.<br>
+            لماذا؟ للتواصل.<br>
+            ولماذا؟ للبقاء قريبًا من العائلة.<br>
+            ولماذو؟ لأنه يشعر بالأمان عندما يستطيع التواصل معهم.<br>
+            <span class="value-highlight">وصلت الآن للدافع الحقيقي.</span></p>
+        </div>
+    </div>
+</section>
+
+<!-- SLIDE 4: Customer Buys Results -->
+<section class="slide" id="slide-4" style="background: linear-gradient(135deg, #e65100 0%, #ff9800 100%);">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background: linear-gradient(135deg, #ff9800, #ffc107);">02</div>
+            <h2 class="section-title-text">العميل لا يشتري المنتج... بل يشتري النتيجة</h2>
+        </div>
+        <div class="quote-box animate-on-scroll" style="border-right-color: #ff9800;">
+            <p class="quote-text">هذه من أهم القواعد في التسويق</p>
+        </div>
+        <div class="content-grid animate-on-scroll">
+            <div class="content-card" style="--card-accent: #e91e63;">
+                <div class="card-icon"><i class="fas fa-spray-can"></i></div>
+                <h3 class="card-title">شخص يشتري عطرًا</h3>
+                <p class="card-text">لا يريد زجاجة العطر، بل يريد:<br>
+                <i class="fas fa-check" style="color:#f06292;"></i> أن تكون رائحته جميلة<br>
+                <i class="fas fa-check" style="color:#f06292;"></i> أن يلفت الانتباه<br>
+                <i class="fas fa-check" style="color:#f06292;"></i> أن يشعر بالثقة</p>
+            </div>
+            <div class="content-card" style="--card-accent: #ff9800;">
+                <div class="card-icon"><i class="fas fa-dumbbell"></i></div>
+                <h3 class="card-title">شخص يشتري اشتراكًا في الجيم</h3>
+                <p class="card-text">لا يريد الأجهزة الرياضية، بل يريد:<br>
+                <i class="fas fa-check" style="color:#ffc107;"></i> جسمًا أفضل<br>
+                <i class="fas fa-check" style="color:#ffc107;"></i> صحة أفضل<br>
+                <i class="fas fa-check" style="color:#ffc107;"></i> إعجاب الآخرين<br>
+                <i class="fas fa-check" style="color:#ffc107;"></i> ثقة أكبر بنفسه</p>
+            </div>
+            <div class="content-card" style="--card-accent: #4caf50;">
+                <div class="card-icon"><i class="fas fa-camera"></i></div>
+                <h3 class="card-title">شخص يشتري كاميرا</h3>
+                <p class="card-text">لا يريد الكاميرا، بل يريد:<br>
+                <i class="fas fa-check" style="color:#8bc34a;"></i> تصوير ذكرياته<br>
+                <i class="fas fa-check" style="color:#8bc34a;"></i> إنتاج محتوى<br>
+                <i class="fas fa-check" style="color:#8bc34a;"></i> زيادة دخله<br>
+                <i class="fas fa-check" style="color:#8bc34a;"></i> الاحتفاظ بلحظات حياته</p>
+            </div>
+        </div>
+        <div class="final-rule animate-on-scroll" style="margin-top:30px;">
+            <div class="final-rule-inner">
+                <h2><i class="fas fa-star"></i> القاعدة الذهبية</h2>
+                <p>اسأل دائمًا: <span class="value-highlight">"ماذا سيصبح العميل بعد استخدام المنتج؟"</span><br>
+                وليس: "ما مواصفات المنتج؟"</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SLIDE 5: Ideal Customer -->
+<section class="slide" id="slide-5" style="background: linear-gradient(135deg, #00695c 0%, #00bfa5 100%);">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background: linear-gradient(135deg, #00bfa5, #00e5ff);">03</div>
+            <h2 class="section-title-text">من هو العميل المثالي؟</h2>
+        </div>
+        <div class="quote-box animate-on-scroll" style="border-right-color: #00e5ff;">
+            <p class="quote-text">من الأخطاء القاتلة في التسويق أن تعتقد أن الجميع يمكن أن يكونوا عملاءك. الحقيقة أن كل منتج يناسب فئة معينة فقط.</p>
+        </div>
+        <div class="content-grid animate-on-scroll">
+            <div class="content-card" style="--card-accent: #00e5ff;">
+                <div class="card-icon"><i class="fas fa-user-check"></i></div>
+                <h3 class="card-title">العميل المثالي هو:</h3>
+                <p class="card-text">
+                <i class="fas fa-check" style="color:#00e5ff;"></i> يحتاج منتجك<br>
+                <i class="fas fa-check" style="color:#00e5ff;"></i> يستطيع دفع ثمنه<br>
+                <i class="fas fa-check" style="color:#00e5ff;"></i> مستعد لاتخاذ قرار الشراء<br>
+                <i class="fas fa-check" style="color:#00e5ff;"></i> سيستفيد منه فعلًا</p>
+            </div>
+            <div class="content-card" style="--card-accent: #ff9800;">
+                <div class="card-icon"><i class="fas fa-bullhorn"></i></div>
+                <h3 class="card-title">لماذا لا نستهدف الجميع؟</h3>
+                <p class="card-text">تخيل أنك تصرخ في ملعب فيه 50 ألف شخص: "هل يريد أحد شراء كرسي متحرك؟" لن يهتم أغلبهم. لكن إذا دخلت مركزًا للعلاج الطبيعي، فستجد نسبة كبيرة من الأشخاص المهتمين. المنتج نفسه لم يتغير. <span class="value-highlight">الذي تغير هو الجمهور.</span></p>
+            </div>
+            <div class="content-card" style="--card-accent: #e91e63;">
+                <div class="card-icon"><i class="fas fa-gamepad"></i></div>
+                <h3 class="card-title">مثال: لعب أطفال</h3>
+                <p class="card-text">هل تستهدف: طالب الجامعة؟ رجلًا أعزب؟ سيدة عمرها 70 سنة؟ غالبًا لا.<br><br>
+                بل تستهدف: <span class="value-highlight">الآباء والأمهات، المقبلين على الإنجاب، الأجداد، الحضانات</span></p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SLIDE 6: Buyer Persona -->
+<section class="slide" id="slide-6" style="background: linear-gradient(135deg, #4a148c 0%, #7c4dff 100%);">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background: linear-gradient(135deg, #7c4dff, #651fff);">04</div>
+            <h2 class="section-title-text">شخصية العميل (Buyer Persona)</h2>
+        </div>
+        <div class="quote-box animate-on-scroll" style="border-right-color: #7c4dff;">
+            <p class="quote-text">تخيل أنك ستكتب رسالة لصديق تعرفه جيدًا. ستعرف كيف تتحدث معه، وما الكلمات التي يحبها، وما الذي يزعجه. أما إذا كنت لا تعرفه، فستكتب كلامًا عامًا قد لا يؤثر فيه.</p>
+        </div>
+        <p style="text-align:center;font-size:1.2rem;margin-bottom:20px;">Buyer Persona هو وصف تفصيلي لعميل افتراضي يمثل شريحة كبيرة من العملاء</p>
+        <div class="persona-card animate-on-scroll" style="--persona-accent: #7c4dff;">
+            <div class="persona-header">
+                <div class="persona-avatar" style="background: linear-gradient(135deg, #7c4dff, #651fff);">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div>
+                    <div class="persona-name">محمد</div>
+                    <div class="persona-role">موظف بنك | 31 سنة | متزوج ولديه طفل</div>
+                </div>
+            </div>
+            <div class="persona-grid">
+                <div class="persona-section">
+                    <h4 style="color: #7c4dff;"><i class="fas fa-info-circle"></i> المعلومات الأساسية</h4>
+                    <ul>
+                        <li><i class="fas fa-check" style="color:#7c4dff;"></i> العمر: 31 سنة</li>
+                        <li><i class="fas fa-check" style="color:#7c4dff;"></i> الوظيفة: موظف بنك</li>
+                        <li><i class="fas fa-check" style="color:#7c4dff;"></i> الدخل: متوسط</li>
+                        <li><i class="fas fa-check" style="color:#7c4dff;"></i> الحالة: متزاج ولديه طفل</li>
+                    </ul>
+                </div>
+                <div class="persona-section">
+                    <h4 style="color: #4caf50;"><i class="fas fa-bullseye"></i> أهدافه</h4>
+                    <ul>
+                        <li><i class="fas fa-check" style="color:#4caf50;"></i> زيادة دخله</li>
+                        <li><i class="fas fa-check" style="color:#4caf50;"></i> شراء شقة</li>
+                        <li><i class="fas fa-check" style="color:#4caf50;"></i> تحسين مستقبله</li>
+                    </ul>
+                </div>
+                <div class="persona-section">
+                    <h4 style="color: #f44336;"><i class="fas fa-exclamation-triangle"></i> مشكلاته</h4>
+                    <ul>
+                        <li><i class="fas fa-check" style="color:#f44336;"></i> ضغط العمل</li>
+                        <li><i class="fas fa-check" style="color:#f44336;"></i> لا يملك وقتًا كافيًا</li>
+                        <li><i class="fas fa-check" style="color:#f44336;"></i> يخاف من المخاطرة</li>
+                    </ul>
+                </div>
+                <div class="persona-section">
+                    <h4 style="color: #ff9800;"><i class="fas fa-clock"></i> أين يقضي وقته؟</h4>
+                    <ul>
+                        <li><i class="fas fa-check" style="color:#ff9800;"></i> فيسبوك</li>
+                        <li><i class="fas fa-check" style="color:#ff9800;"></i> يوتيوب</li>
+                        <li><i class="fas fa-check" style="color:#ff9800;"></i> تيك توك مساءً</li>
+                    </ul>
+                </div>
+                <div class="persona-section">
+                    <h4 style="color: #00bcd4;"><i class="fas fa-shopping-cart"></i> كيف يشتري؟</h4>
+                    <ul>
+                        <li><i class="fas fa-check" style="color:#00bcd4;"></i> يقرأ التقييمات</li>
+                        <li><i class="fas fa-check" style="color:#00bcd4;"></i> يقارن الأسعار</li>
+                        <li><i class="fas fa-check" style="color:#00bcd4;"></i> يسأل أصدقاءه</li>
+                        <li><i class="fas fa-check" style="color:#00bcd4;"></i> لا يشتري بسرعة</li>
+                    </ul>
+                </div>
+                <div class="persona-section" style="grid-column: 1 / -1;">
+                    <h4 style="color: var(--gold);"><i class="fas fa-lightbulb"></i> النتيجة</h4>
+                    <p style="font-size:1.1rem;line-height:2;color:rgba(255,255,255,0.9);">أصبحت الآن تعرف كيف تتحدث معه. ستستخدم كلمات تتحدث عن الأمان والاستقرار والمستقبل، وتظهر على فيسبوك ويوتيوب، وتقدم تقييمات وتفاصيل مقارنة.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SLIDE 7: Customer Needs -->
+<section class="slide" id="slide-7" style="background: linear-gradient(135deg, #f57f17 0%, #ffeb3b 100%);">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background: linear-gradient(135deg, #ffeb3b, #fff176); color: #333;">05</div>
+            <h2 class="section-title-text" style="color: #333;">احتياجات العميل</h2>
+        </div>
+        <div class="quote-box animate-on-scroll" style="border-right-color: #f57f17; background: linear-gradient(135deg, rgba(245,127,23,0.1), rgba(255,235,59,0.05));">
+            <p class="quote-text" style="color: #333;">الاحتياج هو شيء لا يستطيع الإنسان الاستغناء عنه لتحقيق هدف أو حل مشكلة. قسم عالم النفس Abraham Maslow الاحتياجات الإنسانية في هرم مشهور يبدأ بالاحتياجات الأساسية وينتهي بتحقيق الذات.</p>
+        </div>
+        <p style="text-align:center;font-size:1.2rem;margin-bottom:20px;color:#333;">في التسويق، حاول معرفة أي احتياج يلبيه منتجك:</p>
+        <div class="content-grid animate-on-scroll">
+            <div class="content-card" style="--card-accent: #f44336;">
+                <div class="card-icon"><i class="fas fa-shield-alt"></i></div>
+                <h3 class="card-title">الأمان</h3>
+                <p class="card-text">تأمين، كاميرات مراقبة، أجهزة أمان</p>
+            </div>
+            <div class="content-card" style="--card-accent: #ff9800;">
+                <div class="card-icon"><i class="fas fa-couch"></i></div>
+                <h3 class="card-title">الراحة</h3>
+                <p class="card-text">أجهزة توفر الوقت والجهد، خدمات توصيل</p>
+            </div>
+            <div class="content-card" style="--card-accent: #4caf50;">
+                <div class="card-icon"><i class="fas fa-graduation-cap"></i></div>
+                <h3 class="card-title">التعلم</h3>
+                <p class="card-text">دورات، كتب، منصات تعليمية</p>
+            </div>
+            <div class="content-card" style="--card-accent: #2196f3;">
+                <div class="card-icon"><i class="fas fa-heartbeat"></i></div>
+                <h3 class="card-title">الصحة</h3>
+                <p class="card-text">مكملات غذائية، أجهزة رياضية، تأمين صحي</p>
+            </div>
+            <div class="content-card" style="--card-accent: #9c27b0;">
+                <div class="card-icon"><i class="fas fa-clock"></i></div>
+                <h3 class="card-title">توفير الوقت</h3>
+                <p class="card-text">خدمات سريعة، أتمتة، تطبيقات</p>
+            </div>
+            <div class="content-card" style="--card-accent: #00bcd4;">
+                <div class="card-icon"><i class="fas fa-coins"></i></div>
+                <h3 class="card-title">توفير المال</h3>
+                <p class="card-text">عروض، خصومات، منتجات اقتصادية</p>
+            </div>
+            <div class="content-card" style="--card-accent: #e91e63;">
+                <div class="card-icon"><i class="fas fa-trophy"></i></div>
+                <h3 class="card-title">النجاح</h3>
+                <p class="card-text">دورات تطوير، كتب، استشارات</p>
+            </div>
+            <div class="content-card" style="--card-accent: #ff6f00;">
+                <div class="card-icon"><i class="fas fa-users"></i></div>
+                <h3 class="card-title">الانتماء</h3>
+                <p class="card-text">نوادي، مجتمعات، منتجات تعكس الهوية</p>
+            </div>
+            <div class="content-card" style="--card-accent: #ffd700;">
+                <div class="card-icon"><i class="fas fa-star"></i></div>
+                <h3 class="card-title">التقدير</h3>
+                <p class="card-text">برامج ولاء، شهادات تقدير، هدايا</p>
+            </div>
+        </div>
+        <div class="final-rule animate-on-scroll" style="margin-top:30px; border-color: #f57f17;">
+            <div class="final-rule-inner">
+                <h2 style="color: #f57f17;"><i class="fas fa-star"></i> القاعدة</h2>
+                <p style="color: #333;">كل منتج ناجح يشبع <span style="color:#f57f17;font-weight:800;">احتياجًا واضحًا</span></p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SLIDE 8: Pain Points -->
+<section class="slide" id="slide-8" style="background: linear-gradient(135deg, #b71c1c 0%, #ef5350 100%);">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background: linear-gradient(135deg, #c62828, #ef5350);">06</div>
+            <h2 class="section-title-text">تحليل المشكلات (Pain Points)</h2>
+        </div>
+        <div class="quote-box animate-on-scroll" style="border-right-color: #ef5350;">
+            <p class="quote-text">كل عملية شراء تبدأ غالبًا بمشكلة. كلما كانت المشكلة مؤلمة، زادت رغبة العميل في دفع المال لحلها. <span class="value-highlight">الناس يشترون لإزالة الألم أكثر مما يشترون للحصول على المتعة.</span></p>
+        </div>
+        <div class="pain-grid animate-on-scroll">
+            <div class="pain-card">
+                <div class="pain-icon" style="color: #f44336;"><i class="fas fa-wallet"></i></div>
+                <div class="pain-title" style="color: #f44336;">مشكلات مالية</div>
+                <div class="pain-desc">راتبي قليل، المنتج غالٍ، أريد تقسيطًا</div>
+            </div>
+            <div class="pain-card">
+                <div class="pain-icon" style="color: #ff9800;"><i class="fas fa-clock"></i></div>
+                <div class="pain-title" style="color: #ff9800;">مشكلات الوقت</div>
+                <div class="pain-desc">ليس لدي وقت، العمل يأخذ يومي كله</div>
+            </div>
+            <div class="pain-card">
+                <div class="pain-icon" style="color: #9c27b0;"><i class="fas fa-brain"></i></div>
+                <div class="pain-title" style="color: #9c27b0;">مشكلات نفسية</div>
+                <div class="pain-desc">أخاف من الفشل، أخاف من رأي الناس</div>
+            </div>
+            <div class="pain-card">
+                <div class="pain-icon" style="color: #4caf50;"><i class="fas fa-heartbeat"></i></div>
+                <div class="pain-title" style="color: #4caf50;">مشكلات صحية</div>
+                <div class="pain-desc">السمنة، آلام الظهر، ضعف النظر</div>
+            </div>
+            <div class="pain-card">
+                <div class="pain-icon" style="color: #2196f3;"><i class="fas fa-user-friends"></i></div>
+                <div class="pain-title" style="color: #2196f3;">مشكلات اجتماعية</div>
+                <div class="pain-desc">قلة الثقة بالنفس، ضعف التواصل، صعوبة تكوين العلاقات</div>
+            </div>
+            <div class="pain-card">
+                <div class="pain-icon" style="color: #ff6f00;"><i class="fas fa-lightbulb"></i></div>
+                <div class="pain-title" style="color: #ff6f00;">مثال تطبيقي</div>
+                <div class="pain-desc">دورة إنجليزية: فقدان فرصة عمل، الخجل من التحدث، ضعف الثقة، عدم القدرة على السفر</div>
+            </div>
+        </div>
+        <div class="quote-box animate-on-scroll" style="margin-top:30px;">
+            <p class="quote-text">كلما اكتشفت المشكلة الحقيقية، استطعت كتابة إعلان أكثر <span class="value-highlight">تأثيرًا</span></p>
+        </div>
+    </div>
+</section>
+
+<!-- SLIDE 9: Desires -->
+<section class="slide" id="slide-9" style="background: linear-gradient(135deg, #4a148c 0%, #9c27b0 100%);">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background: linear-gradient(135deg, #9c27b0, #ce93d8);">07</div>
+            <h2 class="section-title-text">تحليل الرغبات</h2>
+        </div>
+        <div class="quote-box animate-on-scroll" style="border-right-color: #ce93d8;">
+            <p class="quote-text">الرغبة هي الصورة التي يريد العميل أن يصبح عليها في المستقبل. الناس لا يشترون فقط لإزالة الألم، بل أيضًا لتحقيق الأحلام.</p>
+        </div>
+        <div class="content-grid animate-on-scroll">
+            <div class="content-card" style="--card-accent: #ce93d8;">
+                <div class="card-icon"><i class="fas fa-question-circle"></i></div>
+                <h3 class="card-title">الأسئلة الأساسية</h3>
+                <p class="card-text">
+                <i class="fas fa-check" style="color:#ce93d8;"></i> ماذا يريد أن يصبح؟<br>
+                <i class="fas fa-check" style="color:#ce93d8;"></i> كيف يريد أن يراه الناس؟<br>
+                <i class="fas fa-check" style="color:#ce93d8;"></i> ما الحياة التي يحلم بها؟</p>
+            </div>
+            <div class="content-card" style="--card-accent: #ff9800;">
+                <div class="card-icon"><i class="fas fa-laptop-code"></i></div>
+                <h3 class="card-title">مثال: شاب يريد تعلم البرمجة</h3>
+                <p class="card-text">الرغبة ليست تعلم الأكواد فقط، بل يريد:<br>
+                <i class="fas fa-check" style="color:#ffc107;"></i> العمل في شركة عالمية<br>
+                <i class="fas fa-check" style="color:#ffc107;"></i> السفر<br>
+                <i class="fas fa-check" style="color:#ffc107;"></i> دخلًا مرتفعًا<br>
+                <i class="fas fa-check" style="color:#ffc107;"></i> حياة أفضل</p>
+            </div>
+        </div>
+        <div class="final-rule animate-on-scroll" style="margin-top:30px;">
+            <div class="final-rule-inner">
+                <h2><i class="fas fa-star"></i> القاعدة</h2>
+                <p>الرغبة هي <span class="value-highlight">الصورة المستقبلية</span> التي يحلم بها العميل</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SLIDE 10: Fears -->
+<section class="slide" id="slide-10" style="background: linear-gradient(135deg, #37474f 0%, #90a4ae 100%);">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background: linear-gradient(135deg, #607d8b, #90a4ae);">08</div>
+            <h2 class="section-title-text">تحليل المخاوف</h2>
+        </div>
+        <div class="quote-box animate-on-scroll" style="border-right-color: #90a4ae;">
+            <p class="quote-text">المخاوف هي أكبر عدو للبيع. قد يكون العميل مقتنعًا بالمنتج، لكنه لا يشتري بسبب خوف واحد فقط.</p>
+        </div>
+        <div class="content-grid animate-on-scroll">
+            <div class="content-card" style="--card-accent: #f44336;">
+                <div class="card-icon"><i class="fas fa-money-bill-wave"></i></div>
+                <h3 class="card-title">خسارة المال</h3>
+                <p class="card-text">"ماذا لو لم يكن المنتج يستحق السعر؟"</p>
+            </div>
+            <div class="content-card" style="--card-accent: #ff9800;">
+                <div class="card-icon"><i class="fas fa-mask"></i></div>
+                <h3 class="card-title">التعرض للخداع</h3>
+                <p class="card-text">"هل هذه الشركة موثوقة؟"</p>
+            </div>
+            <div class="content-card" style="--card-accent: #9c27b0;">
+                <div class="card-icon"><i class="fas fa-times-circle"></i></div>
+                <h3 class="card-title">عدم الحصول على النتيجة</h3>
+                <p class="card-text">"ماذا لو لم يعمل المنتج كما وُعد؟"</p>
+            </div>
+            <div class="content-card" style="--card-accent: #2196f3;">
+                <div class="card-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <h3 class="card-title">ضعف الجودة</h3>
+                <p class="card-text">"هل هذا المنتج سيتحمل الاستخدام؟"</p>
+            </div>
+            <div class="content-card" style="--card-accent: #4caf50;">
+                <div class="card-icon"><i class="fas fa-cogs"></i></div>
+                <h3 class="card-title">صعوبة الاستخدام</h3>
+                <p class="card-text">"هل أستطيع استخدامه بسهولة؟"</p>
+            </div>
+            <div class="content-card" style="--card-accent: #ff6f00;">
+                <div class="card-icon"><i class="fas fa-headset"></i></div>
+                <h3 class="card-title">عدم وجود دعم بعد البيع</h3>
+                <p class="card-text">"ماذا لو احتجت مساعدة لاحقًا؟"</p>
+            </div>
+        </div>
+        <div class="content-grid animate-on-scroll" style="margin-top:30px;">
+            <div class="content-card" style="--card-accent: #4caf50;">
+                <div class="card-icon"><i class="fas fa-shield-alt"></i></div>
+                <h3 class="card-title">كيف تقلل المخاوف؟</h3>
+                <p class="card-text">
+                <i class="fas fa-check" style="color:#4caf50;"></i> الضمان<br>
+                <i class="fas fa-check" style="color:#4caf50;"></i> التجربة المجانية<br>
+                <i class="fas fa-check" style="color:#4caf50;"></i> سياسة الاسترجاع<br>
+                <i class="fas fa-check" style="color:#4caf50;"></i> شهادات العملاء<br>
+                <i class="fas fa-check" style="color:#4caf50;"></i> عرض النتائج الحقيقية<br>
+                <i class="fas fa-check" style="color:#4caf50;"></i> الشفافية الكاملة</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SLIDE 11: Psychological Motivations -->
+<section class="slide" id="slide-11" style="background: linear-gradient(135deg, #006064 0%, #00bcd4 100%);">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background: linear-gradient(135deg, #00bcd4, #00e5ff);">09</div>
+            <h2 class="section-title-text">الدوافع النفسية للشراء</h2>
+        </div>
+        <div class="quote-box animate-on-scroll" style="border-right-color: #00e5ff;">
+            <p class="quote-text">القرار الشرائي ليس منطقيًا بالكامل، بل تلعب العواطف دورًا كبيرًا، ثم يأتي العقل ليبرر القرار.</p>
+        </div>
+        <div class="content-grid animate-on-scroll">
+            <div class="content-card" style="--card-accent: #f44336;">
+                <div class="card-icon"><i class="fas fa-shield-alt"></i></div>
+                <h3 class="card-title">الأمان</h3>
+                <p class="card-text">شراء تأمين أو كاميرات مراقبة أو أجهزة أمان</p>
+            </div>
+            <div class="content-card" style="--card-accent: #ff9800;">
+                <div class="card-icon"><i class="fas fa-couch"></i></div>
+                <h3 class="card-title">الراحة</h3>
+                <p class="card-text">شراء أجهزة توفر الوقت والجهد، خدمات توصيل</p>
+            </div>
+            <div class="content-card" style="--card-accent: #4caf50;">
+                <div class="card-icon"><i class="fas fa-trophy"></i></div>
+                <h3 class="card-title">النجاح</h3>
+                <p class="card-text">شراء دورة أو كتاب لتطوير المهارات</p>
+            </div>
+            <div class="content-card" style="--card-accent: #2196f3;">
+                <div class="card-icon"><i class="fas fa-gem"></i></div>
+                <h3 class="card-title">المكانة الاجتماعية</h3>
+                <p class="card-text">شراء منتجات فاخرة تعكس النجاح</p>
+            </div>
+            <div class="content-card" style="--card-accent: #9c27b0;">
+                <div class="card-icon"><i class="fas fa-users"></i></div>
+                <h3 class="card-title">الانتماء</h3>
+                <p class="card-text">الانضمام إلى نادٍ أو مجتمع أو فريق</p>
+            </div>
+            <div class="content-card" style="--card-accent: #e91e63;">
+                <div class="card-icon"><i class="fas fa-heart"></i></div>
+                <h3 class="card-title">الحب والاهتمام</h3>
+                <p class="card-text">شراء هدية أو منتج للعائلة</p>
+            </div>
+            <div class="content-card" style="--card-accent: #ff6f00;">
+                <div class="card-icon"><i class="fas fa-band-aid"></i></div>
+                <h3 class="card-title">تجنب الألم</h3>
+                <p class="card-text">شراء علاج أو كرسي طبي أو مرتبة مريحة</p>
+            </div>
+            <div class="content-card" style="--card-accent: #ffd700;">
+                <div class="card-icon"><i class="fas fa-star"></i></div>
+                <h3 class="card-title">تحقيق الذات</h3>
+                <p class="card-text">تعلم مهارة جديدة أو بدء مشروع خاص</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SLIDE 12: Golden Rule -->
+<section class="slide" id="slide-12" style="background: linear-gradient(135deg, #1a237e 0%, #ff6f00 50%, #1a237e 100%);">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background: linear-gradient(135deg, #ffd700, #ff8c00);"><i class="fas fa-crown"></i></div>
+            <h2 class="section-title-text">القاعدة الذهبية في فهم العميل</h2>
+        </div>
+        <p style="text-align:center;font-size:1.3rem;margin-bottom:30px;">قبل أن تكتب إعلانًا أو تطلق حملة تسويقية، أجب عن هذه الأسئلة العشرة:</p>
+        <div class="question-cards animate-on-scroll">
+            <div class="question-card">
+                <div class="question-num" style="background: linear-gradient(135deg, #e91e63, #f06292);">1</div>
+                <div class="question-text">من هو العميل؟</div>
+            </div>
+            <div class="question-card">
+                <div class="question-num" style="background: linear-gradient(135deg, #ff9800, #ffc107);">2</div>
+                <div class="question-text">ما عمره وجنسه ووظيفته؟</div>
+            </div>
+            <div class="question-card">
+                <div class="question-num" style="background: linear-gradient(135deg, #4caf50, #8bc34a);">3</div>
+                <div class="question-text">ماذا يريد أن يحقق؟</div>
+            </div>
+            <div class="question-card">
+                <div class="question-num" style="background: linear-gradient(135deg, #2196f3, #03a9f4);">4</div>
+                <div class="question-text">ما أكبر مشكلة يعاني منها؟</div>
+            </div>
+            <div class="question-card">
+                <div class="question-num" style="background: linear-gradient(135deg, #9c27b0, #ce93d8);">5</div>
+                <div class="question-text">ما الذي يخيفه؟</div>
+            </div>
+            <div class="question-card">
+                <div class="question-num" style="background: linear-gradient(135deg, #00bcd4, #00e5ff);">6</div>
+                <div class="question-text">ما الذي يمنعه من الشراء؟</div>
+            </div>
+            <div class="question-card">
+                <div class="question-num" style="background: linear-gradient(135deg, #ff6f00, #ff8c00);">7</div>
+                <div class="question-text">ما الذي يحفزه لاتخاذ القرار؟</div>
+            </div>
+            <div class="question-card">
+                <div class="question-num" style="background: linear-gradient(135deg, #e91e63, #f06292);">8</div>
+                <div class="question-text">ما الذي يثق به؟</div>
+            </div>
+            <div class="question-card">
+                <div class="question-num" style="background: linear-gradient(135deg, #4caf50, #8bc34a);">9</div>
+                <div class="question-text">أين يقضي وقته؟</div>
+            </div>
+            <div class="question-card">
+                <div class="question-num" style="background: linear-gradient(135deg, #ffd700, #ff8c00);">10</div>
+                <div class="question-text">كيف يجعل منتجك حياته أفضل؟</div>
+            </div>
+        </div>
+        <div class="final-rule animate-on-scroll" style="margin-top:40px;">
+            <div class="final-rule-inner">
+                <h2><i class="fas fa-star"></i> النتيجة</h2>
+                <p>إذا استطعت الإجابة عن هذه الأسئلة بدقة، فستكون رسائلك التسويقية أكثر <span class="value-highlight">إقناعًا</span>، وسيشعر العميل أن منتجك صُمم <span class="value-highlight">خصيصًا له</span>، وهو أحد أهم أسرار نجاح التسويق.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+</div>
+
+<script>
+let currentSlide = 1;
+const totalSlides = 12;
+
+function updateNav() {
+    const progress = document.getElementById('navProgress');
+    progress.innerHTML = '';
+    for (let i = 1; i <= totalSlides; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'nav-dot' + (i === currentSlide ? ' active' : '');
+        dot.onclick = () => goToSlide(i);
+        progress.appendChild(dot);
+    }
+}
+
+function goToSlide(n) {
+    if (n < 1 || n > totalSlides) return;
+    currentSlide = n;
+    const slide = document.getElementById('slide-' + n);
+    if (slide) {
+        slide.scrollIntoView({ behavior: 'smooth' });
+    }
+    updateNav();
+}
+
+function nextSlide() {
+    goToSlide(currentSlide + 1);
+}
+
+function prevSlide() {
+    goToSlide(currentSlide - 1);
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') nextSlide();
+    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') prevSlide();
+});
+
+const observerOptions = {
+    threshold: 0.1,
+    rootMargin: '0px 0px -50px 0px'
+};
+
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+        }
+    });
+}, observerOptions);
+
+document.querySelectorAll('.animate-on-scroll').forEach(el => {
+    observer.observe(el);
+});
+
+const slideObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            const id = entry.target.id;
+            const num = parseInt(id.replace('slide-', ''));
+            if (!isNaN(num)) {
+                currentSlide = num;
+                updateNav();
+            }
+        }
+    });
+}, { threshold: 0.5 });
+
+document.querySelectorAll('.slide').forEach(slide => {
+    slideObserver.observe(slide);
+});
+
+updateNav();
+</script>
+<div class="site-floatnav"><a href="ch2.html"><i class="fas fa-chevron-right"></i><span class="label">السابق</span></a><a href="dashboard.html"><i class="fas fa-house"></i><span class="label">لوحتي</span></a><a class="quiz-link" href="quiz.html?ch=3"><i class="fas fa-clipboard-check"></i><span class="label">الاختبار</span></a><a href="ch4.html"><span class="label">التالي</span><i class="fas fa-chevron-left"></i></a></div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/progress.js"></script>
+<script src="js/trial.js"></script>
+<script src="js/protect-content.js"></script>
+<script>
+const CHAPTER_NUM = 3;
+const _origGoToSlide = goToSlide;
+goToSlide = function(target){
+  _origGoToSlide(target);
+  if (window.LMSProgress) LMSProgress.trackSlide(CHAPTER_NUM, currentSlide, totalSlides);
+};
+(function(){
+  var params = new URLSearchParams(location.search);
+  var urlSlide = parseInt(params.get('slide'));
+  var savedSlide = window.LMSProgress ? LMSProgress.getLastSlide(CHAPTER_NUM) : null;
+  var target = urlSlide || savedSlide;
+  if (target && target > 1 && target <= totalSlides) {
+    setTimeout(function(){ goToSlide(target); }, 350);
+  } else if (window.LMSProgress) {
+    LMSProgress.trackSlide(CHAPTER_NUM, 1, totalSlides);
+  }
+})();
+</script>
+<script>document.addEventListener("DOMContentLoaded", function(){ if(window.LMSTrial) LMSTrial.mountBadgeAndGuard(); });</script>
+<script src="js/mentor.js"></script>
+<script>document.addEventListener("DOMContentLoaded", function(){ if(window.LMSMentor) LMSMentor.mount(CHAPTER_NUM); });</script>
+<script src="js/sw-register.js"></script>
+</body>
+</html>

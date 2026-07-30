@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-protected="true">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الفصل الثامن: أساسيات كتابة المحتوى (Content Writing Basics)</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root {
+    --gold: #ffd700;
+    --dark: #0d1b2a;
+    --secondary: #ff6f00;
+    --accent: #00bfa5;
+    --purple: #7c3aed;
+    --rose: #e11d48;
+    --blue: #3b82f6;
+    --teal: #14b8a6;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'Tajawal', sans-serif;
+    background: var(--dark);
+    color: #fff;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+}
+.geo-bg {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 0; overflow: hidden;
+}
+.geo-shape {
+    position: absolute; opacity: 0.06;
+    animation: float 25s infinite ease-in-out;
+}
+.geo-circle { border-radius: 50%; border: 3px solid var(--gold); }
+.geo-triangle {
+    width: 0; height: 0;
+    border-left: 60px solid transparent;
+    border-right: 60px solid transparent;
+    border-bottom: 100px solid var(--secondary);
+}
+.geo-square { border: 3px solid var(--accent); transform: rotate(45deg); }
+@keyframes float {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-30px) rotate(180deg); }
+}
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.1); opacity: 1; }
+}
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+@keyframes shine {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+.nav-bar {
+    position: fixed; top: 0; width: 100%;
+    background: rgba(13, 27, 42, 0.95);
+    backdrop-filter: blur(10px);
+    z-index: 1000;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--gold);
+}
+.nav-logo {
+    font-size: 1.2rem; font-weight: 800; color: var(--gold);
+    display: flex; align-items: center; gap: 10px;
+}
+.nav-progress { display: flex; gap: 5px; align-items: center; }
+.nav-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    cursor: pointer; transition: all 0.3s;
+}
+.nav-dot.active { background: var(--gold); transform: scale(1.3); }
+.nav-controls { display: flex; gap: 15px; }
+.nav-btn {
+    background: transparent; border: 2px solid var(--gold);
+    color: var(--gold); padding: 8px 20px;
+    border-radius: 25px; cursor: pointer;
+    font-family: 'Tajawal', sans-serif; font-weight: 700;
+    transition: all 0.3s;
+}
+.nav-btn:hover { background: var(--gold); color: var(--dark); }
+.slides-container { position: relative; width: 100%; }
+.slide {
+    min-height: 100vh;
+    display: none;
+    align-items: center; justify-content: center;
+    padding: 100px 40px 60px;
+    position: relative; overflow: hidden;
+}
+.slide.active { display: flex; }
+.slide-content {
+    max-width: 1200px; width: 100%;
+    position: relative; z-index: 10;
+}
+.section-header {
+    display: flex; align-items: center; gap: 20px; margin-bottom: 40px;
+}
+.section-number {
+    width: 80px; height: 80px; border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.5rem; font-weight: 900; color: #fff;
+    flex-shrink: 0; position: relative; overflow: hidden;
+}
+.section-number::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%);
+    animation: shine 3s infinite;
+}
+.section-title-text { font-size: 2.5rem; font-weight: 800; }
+.content-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 25px; margin-top: 30px;
+}
+.content-card {
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(10px);
+    border-radius: 20px; padding: 30px;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: all 0.4s; position: relative; overflow: hidden;
+}
+.content-card::before {
+    content: ''; position: absolute; top: 0; left: 0;
+    width: 100%; height: 4px;
+    background: var(--card-accent, var(--gold));
+}
+.content-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    border-color: var(--card-accent, var(--gold));
+}
+.card-icon { font-size: 2.5rem; margin-bottom: 15px; color: var(--card-accent, var(--gold)); }
+.card-title { font-size: 1.3rem; font-weight: 700; margin-bottom: 12px; color: #fff; }
+.card-text { font-size: 1.05rem; line-height: 1.9; color: rgba(255,255,255,0.85); }
+.quote-box {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 111, 0, 0.1));
+    border-right: 5px solid var(--gold);
+    border-radius: 0 20px 20px 0;
+    padding: 35px; margin: 30px 0; position: relative;
+}
+.quote-box::before {
+    content: ''"''; font-size: 5rem; color: var(--gold); opacity: 0.3;
+    position: absolute; top: -10px; right: 20px; line-height: 1;
+}
+.quote-text { font-size: 1.3rem; font-weight: 700; line-height: 2; color: #fff; }
+.two-col {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 40px; align-items: start;
+}
+.title-card {
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(20px);
+    border-radius: 30px; padding: 60px;
+    border: 2px solid rgba(255,255,255,0.2);
+    text-align: center; position: relative; overflow: hidden;
+}
+.title-card::before {
+    content: ''; position: absolute; top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: conic-gradient(transparent, var(--gold), transparent 30%);
+    animation: rotate 4s linear infinite;
+}
+.title-card-inner {
+    position: relative; z-index: 1;
+    background: rgba(13, 27, 42, 0.9);
+    border-radius: 25px; padding: 50px;
+}
+.title-main {
+    font-size: 3.5rem; font-weight: 900; color: var(--gold);
+    margin-bottom: 20px;
+    text-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+}
+.title-sub { font-size: 1.6rem; color: #fff; margin-bottom: 30px; }
+.title-icon {
+    font-size: 4rem; color: var(--gold); margin-bottom: 20px;
+    animation: pulse 2s infinite;
+}
+.golden-rule {
+    background: linear-gradient(90deg, var(--gold), #ff8c00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-size: 1.3rem; font-weight: 700; margin-top: 20px;
+}
+.value-highlight {
+    background: linear-gradient(90deg, var(--gold), #ff8c00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+}
+.animate-on-scroll {
+    opacity: 0; transform: translateY(30px);
+    transition: all 0.8s ease-out;
+}
+.animate-on-scroll.visible { opacity: 1; transform: translateY(0); }
+.journey-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 30px;
+    position: relative;
+}
+.journey-container::before {
+    content: '';
+    position: absolute;
+    right: 28px;
+    top: 20px;
+    bottom: 20px;
+    width: 3px;
+    background: linear-gradient(to bottom, var(--gold), var(--accent));
+    border-radius: 3px;
+}
+.journey-step {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 15px 0;
+    position: relative;
+}
+.journey-number {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold), var(--secondary));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; font-weight: 900; color: var(--dark);
+    flex-shrink: 0;
+    z-index: 2;
+    box-shadow: 0 0 20px rgba(255,215,0,0.3);
+}
+.journey-text {
+    font-size: 1.15rem;
+    background: rgba(255,255,255,0.05);
+    padding: 15px 25px;
+    border-radius: 15px;
+    flex: 1;
+    border-right: 3px solid var(--gold);
+}
+.type-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-top: 30px;
+}
+.type-card {
+    background: rgba(255,255,255,0.05);
+    border-radius: 20px;
+    padding: 25px;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: all 0.4s;
+    position: relative;
+    overflow: hidden;
+}
+.type-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 4px;
+    background: var(--type-accent, var(--gold));
+}
+.type-card:hover {
+    transform: translateY(-8px);
+    border-color: var(--type-accent, var(--gold));
+}
+.type-icon {
+    font-size: 2.2rem;
+    margin-bottom: 12px;
+    color: var(--type-accent, var(--gold));
+}
+.type-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+.type-desc {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: rgba(255,255,255,0.8);
+}
+.post-component {
+    background: rgba(255,255,255,0.05);
+    border-radius: 20px;
+    padding: 30px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: all 0.3s;
+    position: relative;
+}
+.post-component:hover {
+    border-color: var(--gold);
+    transform: translateX(-5px);
+}
+.post-component-number {
+    position: absolute;
+    top: -15px;
+    right: 25px;
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--gold);
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 1.1rem;
+}
+.post-component-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--gold);
+    margin-bottom: 12px;
+    margin-top: 10px;
+}
+.post-component-text {
+    font-size: 1.05rem;
+    line-height: 1.9;
+    color: rgba(255,255,255,0.85);
+}
+.hook-list {
+    list-style: none;
+    margin-top: 15px;
+}
+.hook-list li {
+    padding: 10px 15px;
+    margin-bottom: 8px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+    border-right: 3px solid var(--gold);
+    font-size: 1rem;
+    transition: all 0.3s;
+}
+.hook-list li:hover {
+    background: rgba(255,255,255,0.1);
+    transform: translateX(-5px);
+}
+.aida-container {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-top: 30px;
+}
+.aida-card {
+    background: rgba(255,255,255,0.05);
+    border-radius: 20px;
+    padding: 25px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: all 0.4s;
+    position: relative;
+    overflow: hidden;
+}
+.aida-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 4px;
+    background: var(--aida-accent, var(--gold));
+}
+.aida-card:hover {
+    transform: translateY(-8px);
+    border-color: var(--aida-accent, var(--gold));
+}
+.aida-letter {
+    font-size: 3rem;
+    font-weight: 900;
+    color: var(--aida-accent, var(--gold));
+    margin-bottom: 10px;
+}
+.aida-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+.aida-desc {
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.8);
+    line-height: 1.6;
+}
+.cta-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-top: 30px;
+}
+.cta-item {
+    background: rgba(255,255,255,0.05);
+    border-radius: 15px;
+    padding: 20px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: all 0.3s;
+    font-size: 1rem;
+    font-weight: 600;
+}
+.cta-item:hover {
+    transform: scale(1.05);
+    border-color: var(--gold);
+    background: rgba(255,215,0,0.1);
+}
+.cta-item i {
+    display: block;
+    font-size: 1.5rem;
+    color: var(--gold);
+    margin-bottom: 8px;
+}
+.story-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-top: 30px;
+}
+.story-card {
+    background: rgba(255,255,255,0.05);
+    border-radius: 20px;
+    padding: 25px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: all 0.4s;
+}
+.story-card:hover {
+    transform: translateY(-8px);
+    border-color: var(--gold);
+}
+.story-icon {
+    font-size: 2.5rem;
+    color: var(--gold);
+    margin-bottom: 12px;
+}
+.story-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+.story-desc {
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.8);
+    line-height: 1.6;
+}
+.mistakes-list {
+    list-style: none;
+    margin-top: 20px;
+}
+.mistakes-list li {
+    padding: 12px 20px;
+    margin-bottom: 10px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
+    border-right: 4px solid var(--rose);
+    font-size: 1.05rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.3s;
+}
+.mistakes-list li:hover {
+    background: rgba(255,255,255,0.1);
+    transform: translateX(-5px);
+}
+.mistakes-list li i {
+    color: var(--rose);
+    font-size: 1.2rem;
+}
+.example-box {
+    background: linear-gradient(135deg, rgba(0,191,165,0.1), rgba(0,191,165,0.05));
+    border: 2px solid rgba(0,191,165,0.3);
+    border-radius: 20px;
+    padding: 30px;
+    margin-top: 20px;
+}
+.example-box-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.example-box-text {
+    font-size: 1.1rem;
+    line-height: 2;
+    color: rgba(255,255,255,0.9);
+}
+.comparison-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 30px;
+}
+.comparison-card {
+    border-radius: 20px;
+    padding: 30px;
+    position: relative;
+    overflow: hidden;
+}
+.comparison-card.weak {
+    background: rgba(225, 29, 72, 0.1);
+    border: 2px solid rgba(225, 29, 72, 0.3);
+}
+.comparison-card.strong {
+    background: rgba(0, 191, 165, 0.1);
+    border: 2px solid rgba(0, 191, 165, 0.3);
+}
+.comparison-label {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.comparison-label.weak-label { color: var(--rose); }
+.comparison-label.strong-label { color: var(--accent); }
+.comparison-text {
+    font-size: 1.1rem;
+    line-height: 1.9;
+}
+@media (max-width: 768px) {
+    .type-grid, .aida-container, .story-grid, .cta-grid { grid-template-columns: 1fr; }
+    .two-col, .comparison-grid { grid-template-columns: 1fr; }
+    .title-main { font-size: 2.5rem; }
+    .section-title-text { font-size: 1.8rem; }
+    .nav-bar { padding: 10px 15px; }
+    .slide { padding: 80px 20px 40px; }
+    .journey-container::before { right: 23px; }
+    .journey-number { width: 50px; height: 50px; font-size: 1.1rem; }
+}
+</style>
+<base target="_blank">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d1b2a">
+
+<style>
+.site-floatnav{position:fixed;bottom:22px;left:22px;z-index:2000;display:flex;gap:8px;align-items:center;flex-wrap:wrap;max-width:90vw;}
+.site-floatnav a{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(13,27,42,0.92);backdrop-filter:blur(10px);
+  border:2px solid #ffd700;color:#ffd700;
+  padding:10px 16px;border-radius:25px;
+  font-family:'Tajawal',sans-serif;font-weight:700;font-size:0.85rem;
+  text-decoration:none;transition:all .3s;
+}
+.site-floatnav a:hover{background:#ffd700;color:#0d1b2a;}
+.site-floatnav a.disabled{opacity:0.3;pointer-events:none;}
+.site-floatnav a.quiz-link{border-color:#00bfa5;color:#00bfa5;}
+.site-floatnav a.quiz-link:hover{background:#00bfa5;color:#0d1b2a;}
+@media (max-width:640px){
+  .site-floatnav{left:10px;bottom:10px;gap:6px;}
+  .site-floatnav a{padding:8px 10px;font-size:0.75rem;}
+  .site-floatnav a span.label{display:none;}
+}
+</style>
+</head>
+<body>
+<script>
+(function(){
+  var localSession = localStorage.getItem('lms_session_v1');
+  var remoteToken = localStorage.getItem('lms_token_v1');
+  var remotePaid = false;
+  if (remoteToken) {
+    try {
+      var ru = JSON.parse(localStorage.getItem('lms_remote_user_v1'));
+      remotePaid = ru && String(ru.status || '').trim().toLowerCase() === 'active';
+    } catch(e){}
+  }
+  var trialActive = false;
+  try {
+    var t = JSON.parse(localStorage.getItem('lms_trial_v1'));
+    if (t) { trialActive = ((Date.now() - t.startAt) / 1000) < 600; }
+  } catch(e){}
+
+  var allowed = !!localSession || (!!remoteToken && remotePaid) || trialActive;
+  if(!allowed){
+    location.replace(remoteToken ? 'upgrade.html' : 'index.html');
+    return;
+  }
+
+  // قفل تسلسلي: لازم يجتاز اختبار الفصل رقم 7 قبل الدخول هنا (لا يُطبَّق في وضع المعاينة التجريبية)
+  var isTrialOnly = trialActive && !localSession && !(remoteToken && remotePaid);
+  if (!isTrialOnly) {
+    var uname = localSession || (function(){
+      try {
+        var ru2 = JSON.parse(localStorage.getItem('lms_remote_user_v1'));
+        return ru2 ? ru2.email : null;
+      } catch(e){ return null; }
+    })();
+    if (uname) {
+      try {
+        var progress = JSON.parse(localStorage.getItem('lms_progress_v1_' + uname)) || {};
+        var prevQuiz = progress.quizzes && progress.quizzes[7];
+        if (!prevQuiz || !prevQuiz.passed) {
+          location.replace('dashboard.html?locked=8');
+          return;
+        }
+      } catch(e){}
+    }
+  }
+})();
+</script>
+
+
+<div class="geo-bg">
+    <div class="geo-shape geo-circle" style="width:300px;height:300px;top:10%;left:5%;"></div>
+    <div class="geo-shape geo-square" style="width:150px;height:150px;top:60%;right:10%;animation-delay:-5s;"></div>
+    <div class="geo-shape geo-circle" style="width:200px;height:200px;bottom:20%;left:20%;animation-delay:-10s;"></div>
+    <div class="geo-shape geo-triangle" style="top:30%;right:20%;animation-delay:-15s;"></div>
+    <div class="geo-shape geo-square" style="width:100px;height:100px;bottom:10%;right:30%;animation-delay:-8s;"></div>
+</div>
+
+<nav class="nav-bar">
+    <div class="nav-logo"><i class="fas fa-pen-nib"></i> الفصل الثامن</div>
+    <div class="nav-progress" id="navProgress"></div>
+    <div class="nav-controls">
+        <button class="nav-btn" onclick="prevSlide()"><i class="fas fa-chevron-right"></i> السابق</button>
+        <button class="nav-btn" onclick="nextSlide()">التالي <i class="fas fa-chevron-left"></i></button>
+    </div>
+</nav>
+
+<div class="slides-container">
+
+<div class="slide active" id="slide-0">
+    <div class="slide-content" style="text-align:center;">
+        <div class="title-card animate-on-scroll">
+            <div class="title-card-inner">
+                <div class="title-icon"><i class="fas fa-pen-fancy"></i></div>
+                <h1 class="title-main">الفصل الثامن</h1>
+                <p class="title-sub">أساسيات كتابة المحتوى</p>
+                <p style="font-size:1.3rem; color:var(--gold); margin-bottom:20px;">Content Writing Basics</p>
+                <div style="width:100px; height:3px; background:var(--gold); margin:20px auto; border-radius:2px;"></div>
+                <p style="font-size:1.1rem; color:rgba(255,255,255,0.7); line-height:2;">
+                    فن تحويل الأفكار إلى رسائل تقنع، تؤثر، وتدفع العميل لاتخاذ إجراء معين.
+                </p>
+                <p class="golden-rule" style="margin-top:30px;"><i class="fas fa-quote-left"></i> المحتوى هو صوت البراند</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="slide" id="slide-1">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background:linear-gradient(135deg, var(--gold), var(--secondary));"><i class="fas fa-question-circle"></i></div>
+            <h2 class="section-title-text">أولاً: ما هو المحتوى؟</h2>
+        </div>
+        <div class="quote-box animate-on-scroll">
+            <p class="quote-text">المحتوى هو أي معلومة أو رسالة يتم تقديمها للجمهور بهدف معين. أي شيء يستهلكه العميل ويستفيد منه يسمى محتوى.</p>
+        </div>
+        <div class="content-grid animate-on-scroll">
+            <div class="content-card" style="--card-accent:var(--gold);">
+                <div class="card-icon"><i class="fas fa-file-alt"></i></div>
+                <div class="card-title">نص</div>
+                <div class="card-text">مقالات، منشورات، إعلانات، بريد إلكتروني</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--accent);">
+                <div class="card-icon"><i class="fas fa-image"></i></div>
+                <div class="card-title">صورة</div>
+                <div class="card-text">تصاميم، إنفوجرافيك، صور منتجات</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--secondary);">
+                <div class="card-icon"><i class="fas fa-video"></i></div>
+                <div class="card-title">فيديو</div>
+                <div class="card-text">فيديوهات تعليمية، ترفيهية، ترويجية</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--purple);">
+                <div class="card-icon"><i class="fas fa-podcast"></i></div>
+                <div class="card-title">بودكاست</div>
+                <div class="card-text">محتوى صوتي، مقابلات، نصائح</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--rose);">
+                <div class="card-icon"><i class="fas fa-paint-brush"></i></div>
+                <div class="card-title">تصميم</div>
+                <div class="card-text">جرافيك، موشن جرافيك، تصميمات تفاعلية</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--blue);">
+                <div class="card-icon"><i class="fas fa-book-open"></i></div>
+                <div class="card-title">قصة</div>
+                <div class="card-text">سرد قصص العملاء، قصص النجاح</div>
+            </div>
+        </div>
+        <div class="example-box animate-on-scroll" style="margin-top:30px;">
+            <div class="example-box-title"><i class="fas fa-coffee"></i> مثال عملي</div>
+            <div class="example-box-text">
+                شركة قهوة تنشر صورة لكوب قهوة مع عبارة: <span class="value-highlight">"ابدأ يومك بطاقة جديدة."</span>
+                <br>فيديو يشرح طريقة تحضير القهوة. بريد إلكتروني يحتوي على خصم.
+                <br>كلها <span class="value-highlight">محتوى</span> يخدم هدفاً مختلفاً.
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="slide" id="slide-2">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background:linear-gradient(135deg, var(--accent), var(--teal));"><i class="fas fa-heart"></i></div>
+            <h2 class="section-title-text">لماذا المحتوى مهم؟</h2>
+        </div>
+        <div class="content-grid animate-on-scroll">
+            <div class="content-card" style="--card-accent:var(--gold);">
+                <div class="card-icon"><i class="fas fa-magnet"></i></div>
+                <div class="card-title">يجذب العملاء</div>
+                <div class="card-text">المحتوى الجيد يجذب الانتباه ويولد اهتماماً بالعلامة</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--accent);">
+                <div class="card-icon"><i class="fas fa-handshake"></i></div>
+                <div class="card-title">يبني الثقة</div>
+                <div class="card-text">المحتوى المفيد يبني علاقة ثقة مع الجمهور</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--secondary);">
+                <div class="card-icon"><i class="fas fa-info-circle"></i></div>
+                <div class="card-title">يشرح المنتج</div>
+                <div class="card-text">يُوضح قيمة المنتج وكيفية استخدامه</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--purple);">
+                <div class="card-icon"><i class="fas fa-comments"></i></div>
+                <div class="card-title">يجيب عن الأسئلة</div>
+                <div class="card-text">يُزيل الشكوك ويُجيب على استفسارات العملاء</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--rose);">
+                <div class="card-icon"><i class="fas fa-bullhorn"></i></div>
+                <div class="card-title">يقنع العميل</div>
+                <div class="card-text">يُحوّل المهتم إلى مشتري محتمل</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--blue);">
+                <div class="card-icon"><i class="fas fa-sync-alt"></i></div>
+                <div class="card-title">يُحوّل المتابع لعميل دائم</div>
+                <div class="card-text">المحتوى المستمر يبني ولاءً طويل المدى</div>
+            </div>
+        </div>
+        <div class="section-header animate-on-scroll" style="margin-top:50px;">
+            <div class="section-number" style="background:linear-gradient(135deg, var(--purple), var(--rose)); width:60px; height:60px; font-size:1.5rem;"><i class="fas fa-route"></i></div>
+            <h2 class="section-title-text" style="font-size:1.8rem;">رحلة العميل مع المحتوى</h2>
+        </div>
+        <div class="journey-container animate-on-scroll">
+            <div class="journey-step">
+                <div class="journey-number">1</div>
+                <div class="journey-text">شخص لا يعرف علامتك التجارية <i class="fas fa-arrow-down" style="color:var(--gold); margin:0 10px;"></i> يرى منشوراً</div>
+            </div>
+            <div class="journey-step">
+                <div class="journey-number">2</div>
+                <div class="journey-text">يعجبه المحتوى <i class="fas fa-arrow-down" style="color:var(--gold); margin:0 10px;"></i> يتابع الصفحة</div>
+            </div>
+            <div class="journey-step">
+                <div class="journey-number">3</div>
+                <div class="journey-text">يشاهد فيديوهات أكثر <i class="fas fa-arrow-down" style="color:var(--gold); margin:0 10px;"></i> يثق بك</div>
+            </div>
+            <div class="journey-step">
+                <div class="journey-number">4</div>
+                <div class="journey-text">يشتري <i class="fas fa-arrow-down" style="color:var(--gold); margin:0 10px;"></i> ينصح الآخرين بك</div>
+            </div>
+            <div class="journey-step">
+                <div class="journey-number" style="background:var(--accent);"><i class="fas fa-check"></i></div>
+                <div class="journey-text" style="border-color:var(--accent); font-weight:700;">كل هذه الرحلة تمت بسبب المحتوى!</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="slide" id="slide-3">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background:linear-gradient(135deg, var(--rose), var(--purple));"><i class="fas fa-bullseye"></i></div>
+            <h2 class="section-title-text">أهداف كتابة المحتوى</h2>
+        </div>
+        <div class="quote-box animate-on-scroll">
+            <p class="quote-text">ليس كل محتوى هدفه البيع. هناك أهداف متعددة لكتابة المحتوى الناجح.</p>
+        </div>
+        <div class="content-grid animate-on-scroll">
+            <div class="content-card" style="--card-accent:var(--gold);">
+                <div class="card-icon"><i class="fas fa-graduation-cap"></i></div>
+                <div class="card-title">التعليم</div>
+                <div class="card-text">تعليم الجمهور شيئاً جديداً يُضيف قيمة لحياتهم</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--accent);">
+                <div class="card-icon"><i class="fas fa-laugh-beam"></i></div>
+                <div class="card-title">الترفيه</div>
+                <div class="card-text">جذب الانتباه وإمتاع الجمهور بمحتوى ممتع</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--secondary);">
+                <div class="card-icon"><i class="fas fa-handshake"></i></div>
+                <div class="card-title">بناء الثقة</div>
+                <div class="card-text">إظهار الخبرة والمصداقية في المجال</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--purple);">
+                <div class="card-icon"><i class="fas fa-wrench"></i></div>
+                <div class="card-title">حل مشكلة</div>
+                <div class="card-text">تقديم حلول عملية لمشاكل الجمهور</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--rose);">
+                <div class="card-icon"><i class="fas fa-thumbs-up"></i></div>
+                <div class="card-title">زيادة التفاعل</div>
+                <div class="card-text">تشجيع الجمهور على التعليق والمشاركة</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--blue);">
+                <div class="card-icon"><i class="fas fa-database"></i></div>
+                <div class="card-title">جمع بيانات العملاء</div>
+                <div class="card-text">بناء قاعدة بيانات للتواصل المستقبلي</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--teal);">
+                <div class="card-icon"><i class="fas fa-eye"></i></div>
+                <div class="card-title">زيادة الوعي</div>
+                <div class="card-text">تعريف الجمهور بالعلامة التجارية</div>
+            </div>
+            <div class="content-card" style="--card-accent:var(--gold);">
+                <div class="card-icon"><i class="fas fa-shopping-cart"></i></div>
+                <div class="card-title">البيع</div>
+                <div class="card-text">تحويل الاهتمام إلى عملية شراء فعلية</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="slide" id="slide-4">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background:linear-gradient(135deg, var(--blue), var(--purple));"><i class="fas fa-layer-group"></i></div>
+            <h2 class="section-title-text">أنواع المحتوى (Content Types)</h2>
+        </div>
+        <div class="type-grid animate-on-scroll">
+            <div class="type-card" style="--type-accent:var(--gold);">
+                <div class="type-icon"><i class="fas fa-graduation-cap"></i></div>
+                <div class="type-title">التعليمي</div>
+                <div class="type-desc">يقدم معلومة أو يعلم الجمهور شيئاً جديداً. يجعل العميل يشعر أنك تساعده قبل أن تبيع له.</div>
+            </div>
+            <div class="type-card" style="--type-accent:var(--accent);">
+                <div class="type-icon"><i class="fas fa-laugh"></i></div>
+                <div class="type-title">الترفيهي</div>
+                <div class="type-desc">الميمز، الفيديوهات المضحكة، التحديات، المواقف اليومية. هدفه جذب الانتباه وإمتاع الجمهور.</div>
+            </div>
+            <div class="type-card" style="--type-accent:var(--secondary);">
+                <div class="type-icon"><i class="fas fa-fire"></i></div>
+                <div class="type-title">التحفيزي</div>
+                <div class="type-desc">يحفز الناس ويمنحهم الطاقة. مثال: "كل تمرين تقوم به اليوم هو استثمار في صحتك غداً."</div>
+            </div>
+            <div class="type-card" style="--type-accent:var(--purple);">
+                <div class="type-icon"><i class="fas fa-lightbulb"></i></div>
+                <div class="type-title">التوعوي</div>
+                <div class="type-desc">يعرف الناس بمشكلة قد لا يدركونها. مثال: "نزيف اللثة ليس أمراً طبيعياً."</div>
+            </div>
+            <div class="type-card" style="--type-accent:var(--rose);">
+                <div class="type-icon"><i class="fas fa-tag"></i></div>
+                <div class="type-title">البيعي (Promotional)</div>
+                <div class="type-desc">هدفه البيع المباشر. مثال: "خصم 30% لمدة 48 ساعة فقط."</div>
+            </div>
+            <div class="type-card" style="--type-accent:var(--blue);">
+                <div class="type-icon"><i class="fas fa-shield-alt"></i></div>
+                <div class="type-title">بناء الثقة</div>
+                <div class="type-desc">آراء العملاء، صور قبل وبعد، قصص النجاح، الشهادات، الإنجازات.</div>
+            </div>
+            <div class="type-card" style="--type-accent:var(--teal);">
+                <div class="type-icon"><i class="fas fa-poll"></i></div>
+                <div class="type-title">التفاعلي</div>
+                <div class="type-desc">استطلاع رأي، سؤال، مسابقة، Quiz. يجعل الجمهور يشارك بشكل فعّال.</div>
+            </div>
+            <div class="type-card" style="--type-accent:var(--gold);">
+                <div class="type-icon"><i class="fas fa-video"></i></div>
+                <div class="type-title">خلف الكواليس</div>
+                <div class="type-desc">يُظهر ما يحدث داخل الشركة: مراحل التصنيع، تجهيز الطلبات.</div>
+            </div>
+            <div class="type-card" style="--type-accent:var(--accent);">
+                <div class="type-icon"><i class="fas fa-users"></i></div>
+                <div class="type-title">محتوى المستخدمين</div>
+                <div class="type-desc">صور العملاء، تقييماتهم، فيديوهاتهم. يزيد الثقة بشكل كبير.</div>
+            </div>
+        </div>
+        <div class="quote-box animate-on-scroll" style="margin-top:30px;">
+            <p class="quote-text" style="font-size:1.1rem;"><i class="fas fa-question-circle" style="color:var(--gold);"></i> كيف تختار نوع المحتوى؟ اسأل نفسك: هل أريد جذب عملاء جدد؟ زيادة التفاعل؟ البيع؟ بناء الثقة؟ الإجابة تحدد نوع المحتوى المناسب.</p>
+        </div>
+    </div>
+</div>
+
+<div class="slide" id="slide-5">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background:linear-gradient(135deg, var(--secondary), var(--gold));"><i class="fas fa-share-alt"></i></div>
+            <h2 class="section-title-text">كتابة منشورات السوشيال ميديا</h2>
+        </div>
+        <div class="quote-box animate-on-scroll">
+            <p class="quote-text">المنشور الناجح ليس الطويل، بل الذي يجذب الانتباه ويحقق هدفه.</p>
+        </div>
+        <h3 style="font-size:1.3rem; color:var(--gold); margin:30px 0 20px;"><i class="fas fa-puzzle-piece"></i> مكونات المنشور الناجح</h3>
+        <div class="post-component animate-on-scroll">
+            <div class="post-component-number">1</div>
+            <div class="post-component-title">Hook (الخطاف)</div>
+            <div class="post-component-text">أول سطر يجب أن يجذب الانتباه. إذا لم يكن قوياً، قد يتجاهل القارئ المنشور.</div>
+            <ul class="hook-list">
+                <li>هل ترتكب هذا الخطأ يوميًا؟</li>
+                <li>السر الذي لا يخبرك به أحد</li>
+                <li>توقف عن فعل هذا الآن</li>
+                <li>3 أخطاء تدمر نتائجك</li>
+                <li>هل تعلم أن...؟</li>
+            </ul>
+        </div>
+        <div class="post-component animate-on-scroll">
+            <div class="post-component-number">2</div>
+            <div class="post-component-title">المشكلة</div>
+            <div class="post-component-text">اجعل القارئ يشعر أنك تفهم ما يمر به. مثال: "الكثير من أصحاب المشاريع ينشرون يوميًا، لكن لا يحصلون على أي مبيعات."</div>
+        </div>
+        <div class="post-component animate-on-scroll">
+            <div class="post-component-number">3</div>
+            <div class="post-component-title">الحل</div>
+            <div class="post-component-text">قدم الحل بطريقة بسيطة وواضحة. مثال: "السبب هو أن المحتوى يركز على المنتج، بينما العميل يهتم بحل مشكلته."</div>
+        </div>
+        <div class="post-component animate-on-scroll">
+            <div class="post-component-number">4</div>
+            <div class="post-component-title">القيمة</div>
+            <div class="post-component-text">أعطِ القارئ معلومة أو نصيحة يستفيد منها فوراً.</div>
+        </div>
+        <div class="post-component animate-on-scroll">
+            <div class="post-component-number">5</div>
+            <div class="post-component-title">CTA (دعوة لاتخاذ إجراء)</div>
+            <div class="post-component-text">اختم المنشور بطلب واضح: اكتب رأيك في التعليقات، شارك المنشور مع صديق، احفظه للرجوع إليه.</div>
+        </div>
+    </div>
+</div>
+
+<div class="slide" id="slide-6">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background:linear-gradient(135deg, var(--gold), var(--accent));"><i class="fas fa-file-alt"></i></div>
+            <h2 class="section-title-text">مثال لمنشور كامل + كتابة الإعلانات</h2>
+        </div>
+        <div class="content-card animate-on-scroll" style="--card-accent:var(--gold); margin-bottom:30px;">
+            <div class="card-icon"><i class="fas fa-newspaper"></i></div>
+            <div class="card-title">منشور نموذجي كامل</div>
+            <div class="card-text" style="background:rgba(255,255,255,0.05); padding:20px; border-radius:15px; margin-top:15px;">
+                <p style="color:var(--gold); font-weight:700; margin-bottom:10px;"><i class="fas fa-heading"></i> العنوان (Hook):</p>
+                <p>هل تعلم أن العميل يقرر خلال أول 3 ثوانٍ إذا كان سيكمل قراءة منشورك أم لا؟</p>
+                <p style="color:var(--rose); font-weight:700; margin:15px 0 10px;"><i class="fas fa-exclamation-circle"></i> المشكلة:</p>
+                <p>إذا بدأت منشورك بجملة مملة، فغالبًا سيتجاهله الجمهور.</p>
+                <p style="color:var(--accent); font-weight:700; margin:15px 0 10px;"><i class="fas fa-check-circle"></i> الحل:</p>
+                <p>ابدأ دائمًا بسؤال، أو رقم، أو حقيقة صادمة، أو وعد بفائدة.</p>
+                <p style="color:var(--purple); font-weight:700; margin:15px 0 10px;"><i class="fas fa-hand-point-left"></i> CTA:</p>
+                <p>احفظ هذا المنشور وطبقه في منشورك القادم.</p>
+            </div>
+        </div>
+        <div class="section-header animate-on-scroll" style="margin-top:40px;">
+            <div class="section-number" style="background:linear-gradient(135deg, var(--secondary), var(--rose)); width:60px; height:60px; font-size:1.5rem;"><i class="fas fa-ad"></i></div>
+            <h2 class="section-title-text" style="font-size:1.8rem;">كتابة الإعلانات (Copywriting)</h2>
+        </div>
+        <div class="quote-box animate-on-scroll">
+            <p class="quote-text">الإعلان الجيد لا يركز على المنتج فقط، بل على الفائدة التي سيحصل عليها العميل.</p>
+        </div>
+        <div class="comparison-grid animate-on-scroll">
+            <div class="comparison-card weak">
+                <div class="comparison-label weak-label"><i class="fas fa-times-circle"></i> مثال ضعيف</div>
+                <div class="comparison-text">"لدينا سماعات لاسلكية جديدة."</div>
+                <p style="margin-top:15px; color:var(--rose); font-size:0.95rem;"><i class="fas fa-info-circle"></i> هذا يخبر، لكنه لا يقنع.</p>
+            </div>
+            <div class="comparison-card strong">
+                <div class="comparison-label strong-label"><i class="fas fa-check-circle"></i> مثال قوي</div>
+                <div class="comparison-text">"استمتع بصوت نقي وعمر بطارية يصل إلى 30 ساعة، دون الحاجة إلى شحن متكرر."</div>
+                <p style="margin-top:15px; color:var(--accent); font-size:0.95rem;"><i class="fas fa-star"></i> هنا تم التركيز على الفائدة.</p>
+            </div>
+        </div>
+        <div class="content-card animate-on-scroll" style="--card-accent:var(--gold); margin-top:30px;">
+            <div class="card-icon"><i class="fas fa-list-check"></i></div>
+            <div class="card-title">عناصر الإعلان الناجح</div>
+            <div class="card-text">
+                <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:15px; margin-top:15px;">
+                    <div style="text-align:center; padding:15px; background:rgba(255,255,255,0.05); border-radius:12px;">
+                        <div style="font-size:1.8rem; color:var(--gold); margin-bottom:8px;">1</div>
+                        <div style="font-weight:700;">عنوان جذاب</div>
+                    </div>
+                    <div style="text-align:center; padding:15px; background:rgba(255,255,255,0.05); border-radius:12px;">
+                        <div style="font-size:1.8rem; color:var(--gold); margin-bottom:8px;">2</div>
+                        <div style="font-weight:700;">تحديد المشكلة</div>
+                    </div>
+                    <div style="text-align:center; padding:15px; background:rgba(255,255,255,0.05); border-radius:12px;">
+                        <div style="font-size:1.8rem; color:var(--gold); margin-bottom:8px;">3</div>
+                        <div style="font-weight:700;">تقديم الحل</div>
+                    </div>
+                    <div style="text-align:center; padding:15px; background:rgba(255,255,255,0.05); border-radius:12px;">
+                        <div style="font-size:1.8rem; color:var(--gold); margin-bottom:8px;">4</div>
+                        <div style="font-weight:700;">المميزات والفوائد</div>
+                    </div>
+                    <div style="text-align:center; padding:15px; background:rgba(255,255,255,0.05); border-radius:12px;">
+                        <div style="font-size:1.8rem; color:var(--gold); margin-bottom:8px;">5</div>
+                        <div style="font-weight:700;">بناء الثقة</div>
+                    </div>
+                    <div style="text-align:center; padding:15px; background:rgba(255,255,255,0.05); border-radius:12px;">
+                        <div style="font-size:1.8rem; color:var(--gold); margin-bottom:8px;">6</div>
+                        <div style="font-weight:700;">CTA واضح</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="slide" id="slide-7">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background:linear-gradient(135deg, var(--purple), var(--blue));"><i class="fas fa-filter"></i></div>
+            <h2 class="section-title-text">نموذج AIDA في كتابة الإعلانات</h2>
+        </div>
+        <div class="quote-box animate-on-scroll">
+            <p class="quote-text">نموذج AIDA هو إطار عملي لكتابة إعلانات مقنعة تمر بأربع مراحل أساسية.</p>
+        </div>
+        <div class="aida-container animate-on-scroll">
+            <div class="aida-card" style="--aida-accent:var(--gold);">
+                <div class="aida-letter">A</div>
+                <div class="aida-title">Attention</div>
+                <div class="aida-desc">اجذب انتباه العميل بعنوان قوي أو سؤال مثير</div>
+            </div>
+            <div class="aida-card" style="--aida-accent:var(--accent);">
+                <div class="aida-letter">I</div>
+                <div class="aida-title">Interest</div>
+                <div class="aida-desc">اجعله مهتمًا بتقديم معلومة مثيرة أو فائدة واضحة</div>
+            </div>
+            <div class="aida-card" style="--aida-accent:var(--secondary);">
+                <div class="aida-letter">D</div>
+                <div class="aida-title">Desire</div>
+                <div class="aida-desc">اجعله يتمنى امتلاك المنتج من خلال الفوائد والمميزات</div>
+            </div>
+            <div class="aida-card" style="--aida-accent:var(--purple);">
+                <div class="aida-letter">A</div>
+                <div class="aida-title">Action</div>
+                <div class="aida-desc">اطلب منه تنفيذ خطوة مثل الشراء أو التواصل</div>
+            </div>
+        </div>
+        <div class="example-box animate-on-scroll" style="margin-top:40px;">
+            <div class="example-box-title"><i class="fas fa-mobile-alt"></i> مثال تطبيقي على AIDA</div>
+            <div class="example-box-text">
+                <p><span style="color:var(--gold); font-weight:700;">Attention:</span> هل تتعب من نفاد بطارية هاتفك سريعًا؟</p>
+                <p><span style="color:var(--accent); font-weight:700;">Interest:</span> باور بانك بسعة 20,000mAh يشحن هاتفك عدة مرات.</p>
+                <p><span style="color:var(--secondary); font-weight:700;">Desire:</span> تصميم خفيف، شحن سريع، وضمان لمدة سنة.</p>
+                <p><span style="color:var(--purple); font-weight:700;">Action:</span> اطلبه الآن قبل انتهاء العرض!</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="slide" id="slide-8">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background:linear-gradient(135deg, var(--rose), var(--gold));"><i class="fas fa-hand-point-up"></i></div>
+            <h2 class="section-title-text">CTA + Storytelling</h2>
+        </div>
+        <div class="two-col">
+            <div>
+                <div class="quote-box animate-on-scroll">
+                    <p class="quote-text" style="font-size:1.1rem;">CTA = دعوة لاتخاذ إجراء. بدون CTA قد يعجب العميل بالمحتوى لكنه لا يعرف الخطوة التالية.</p>
+                </div>
+                <h3 style="font-size:1.2rem; color:var(--gold); margin:20px 0 15px;"><i class="fas fa-list"></i> أمثلة على CTA</h3>
+                <div class="cta-grid animate-on-scroll">
+                    <div class="cta-item"><i class="fas fa-shopping-cart"></i> اطلب الآن</div>
+                    <div class="cta-item"><i class="fas fa-envelope"></i> تواصل معنا</div>
+                    <div class="cta-item"><i class="fas fa-user-plus"></i> سجّل مجانًا</div>
+                    <div class="cta-item"><i class="fas fa-calendar-check"></i> احجز مكانك</div>
+                    <div class="cta-item"><i class="fas fa-paper-plane"></i> اشترك في النشرة</div>
+                    <div class="cta-item"><i class="fas fa-download"></i> حمّل الدليل</div>
+                    <div class="cta-item"><i class="fas fa-share-alt"></i> شارك المنشور</div>
+                    <div class="cta-item"><i class="fas fa-comment"></i> اكتب رأيك</div>
+                    <div class="cta-item"><i class="fas fa-bookmark"></i> احفظ المنشور</div>
+                </div>
+            </div>
+            <div>
+                <div class="quote-box animate-on-scroll">
+                    <p class="quote-text" style="font-size:1.1rem;">يحب الناس القصص أكثر من الحقائق المجردة، لأن القصص تثير المشاعر وتجعل المعلومات أسهل في التذكر.</p>
+                </div>
+                <h3 style="font-size:1.2rem; color:var(--gold); margin:20px 0 15px;"><i class="fas fa-book-open"></i> عناصر القصة التسويقية</h3>
+                <div class="story-grid animate-on-scroll">
+                    <div class="story-card">
+                        <div class="story-icon"><i class="fas fa-user"></i></div>
+                        <div class="story-title">البطل</div>
+                        <div class="story-desc">العميل أو الشخص الذي يواجه مشكلة</div>
+                    </div>
+                    <div class="story-card">
+                        <div class="story-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div class="story-title">المشكلة</div>
+                        <div class="story-desc">التحدي الذي يعاني منه البطل</div>
+                    </div>
+                    <div class="story-card">
+                        <div class="story-icon"><i class="fas fa-magic"></i></div>
+                        <div class="story-title">الحل</div>
+                        <div class="story-desc">المنتج أو الخدمة التي تحل المشكلة</div>
+                    </div>
+                    <div class="story-card">
+                        <div class="story-icon"><i class="fas fa-trophy"></i></div>
+                        <div class="story-title">النتيجة</div>
+                        <div class="story-desc">كيف تغيرت حياة العميل بعد الحل</div>
+                    </div>
+                </div>
+                <div class="example-box animate-on-scroll" style="margin-top:20px;">
+                    <div class="example-box-title"><i class="fas fa-female"></i> مثال Storytelling</div>
+                    <div class="example-box-text" style="font-size:1rem;">
+                        "كانت سارة تعاني من ضيق الوقت ولا تجد فرصة لممارسة الرياضة. بعد اشتراكها في تطبيق يقدم تمارين منزلية لمدة 20 دقيقة يوميًا، أصبحت أكثر نشاطًا واستطاعت الالتزام بروتين صحي دون مغادرة المنزل."
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="slide" id="slide-9">
+    <div class="slide-content">
+        <div class="section-header animate-on-scroll">
+            <div class="section-number" style="background:linear-gradient(135deg, var(--rose), #fb7185);"><i class="fas fa-exclamation-triangle"></i></div>
+            <h2 class="section-title-text">أخطاء شائعة في كتابة المحتوى</h2>
+        </div>
+        <ul class="mistakes-list animate-on-scroll">
+            <li><i class="fas fa-times-circle"></i> الكتابة عن المنتج فقط دون الاهتمام بمشكلة العميل</li>
+            <li><i class="fas fa-times-circle"></i> استخدام عناوين مملة لا تجذب الانتباه</li>
+            <li><i class="fas fa-times-circle"></i> كتابة نصوص طويلة ومعقدة يصعب قراءتها</li>
+            <li><i class="fas fa-times-circle"></i> عدم تقسيم المحتوى إلى فقرات وعناوين</li>
+            <li><i class="fas fa-times-circle"></i> إهمال إضافة CTA في نهاية المحتوى</li>
+            <li><i class="fas fa-times-circle"></i> المبالغة في الوعود أو تقديم معلومات غير دقيقة</li>
+            <li><i class="fas fa-times-circle"></i> نشر محتوى لا يناسب الجمهور المستهدف</li>
+            <li><i class="fas fa-times-circle"></i> التركيز على المميزات التقنية وإهمال الفوائد العملية</li>
+        </ul>
+        <div class="section-header animate-on-scroll" style="margin-top:50px;">
+            <div class="section-number" style="background:linear-gradient(135deg, var(--gold), var(--accent)); width:60px; height:60px; font-size:1.5rem;"><i class="fas fa-bookmark"></i></div>
+            <h2 class="section-title-text" style="font-size:1.8rem;">خلاصة الفصل</h2>
+        </div>
+        <div class="content-card animate-on-scroll" style="--card-accent:var(--gold); margin-top:20px;">
+            <div class="card-icon"><i class="fas fa-star"></i></div>
+            <div class="card-title">الخلاصة الذهبية</div>
+            <div class="card-text" style="font-size:1.1rem; line-height:2.2;">
+                كتابة المحتوى الناجحة تعتمد على <span class="value-highlight">فهم الجمهور</span>، واختيار <span class="value-highlight">نوع المحتوى المناسب</span>، وصياغة <span class="value-highlight">رسالة واضحة</span> تقدم قيمة حقيقية.
+                <br><br>
+                يبدأ المحتوى الجيد بـ <span class="value-highlight">عنوان يجذب الانتباه</span>، ثم يعرض <span class="value-highlight">المشكلة</span>، ويقدم <span class="value-highlight">الحل</span>، ويختتم بـ <span class="value-highlight">دعوة واضحة</span> لاتخاذ إجراء.
+                <br><br>
+                وعندما يُستخدم <span class="value-highlight">Storytelling</span> بذكاء، يصبح المحتوى أكثر تأثيرًا وقابلية للتذكر، مما يزيد من ثقة الجمهور ويرفع فرص التفاعل والتحويل إلى عملاء.
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<script>
+let currentSlide = 0;
+const totalSlides = 10;
+const slides = document.querySelectorAll('.slide');
+const navProgress = document.getElementById('navProgress');
+
+function initNavDots() {
+    navProgress.innerHTML = '';
+    for (let i = 0; i < totalSlides; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'nav-dot' + (i === currentSlide ? ' active' : '');
+        dot.onclick = () => goToSlide(i);
+        navProgress.appendChild(dot);
+    }
+}
+
+function updateNavDots() {
+    const dots = document.querySelectorAll('.nav-dot');
+    dots.forEach((dot, i) => {
+        dot.classList.toggle('active', i === currentSlide);
+    });
+}
+
+function goToSlide(n) {
+    if (n < 0 || n >= totalSlides) return;
+    currentSlide = n;
+    slides.forEach((slide, i) => {
+        slide.classList.toggle('active', i === n);
+    });
+    updateNavDots();
+    animateVisibleElements();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function nextSlide() { goToSlide(currentSlide + 1); }
+function prevSlide() { goToSlide(currentSlide - 1); }
+
+function animateVisibleElements() {
+    const visibleSlide = document.querySelector('.slide.active');
+    if (!visibleSlide) return;
+    const elements = visibleSlide.querySelectorAll('.animate-on-scroll');
+    elements.forEach((el, i) => {
+        setTimeout(() => el.classList.add('visible'), i * 150);
+    });
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft') nextSlide();
+    if (e.key === 'ArrowRight') prevSlide();
+});
+
+goToSlide(0);
+initNavDots();
+</script>
+<div class="site-floatnav"><a href="ch7.html"><i class="fas fa-chevron-right"></i><span class="label">السابق</span></a><a href="dashboard.html"><i class="fas fa-house"></i><span class="label">لوحتي</span></a><a class="quiz-link" href="quiz.html?ch=8"><i class="fas fa-clipboard-check"></i><span class="label">الاختبار</span></a><a href="ch9.html"><span class="label">التالي</span><i class="fas fa-chevron-left"></i></a></div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/progress.js"></script>
+<script src="js/trial.js"></script>
+<script src="js/protect-content.js"></script>
+<script>
+const CHAPTER_NUM = 8;
+const _origGoToSlide = goToSlide;
+goToSlide = function(target){
+  _origGoToSlide(target);
+  if (window.LMSProgress) LMSProgress.trackSlide(CHAPTER_NUM, currentSlide, totalSlides);
+};
+(function(){
+  var params = new URLSearchParams(location.search);
+  var urlSlide = parseInt(params.get('slide'));
+  var savedSlide = window.LMSProgress ? LMSProgress.getLastSlide(CHAPTER_NUM) : null;
+  var target = urlSlide || savedSlide;
+  if (target && target > 1 && target <= totalSlides) {
+    setTimeout(function(){ goToSlide(target); }, 350);
+  } else if (window.LMSProgress) {
+    LMSProgress.trackSlide(CHAPTER_NUM, 1, totalSlides);
+  }
+})();
+</script>
+<script>document.addEventListener("DOMContentLoaded", function(){ if(window.LMSTrial) LMSTrial.mountBadgeAndGuard(); });</script>
+<script src="js/mentor.js"></script>
+<script>document.addEventListener("DOMContentLoaded", function(){ if(window.LMSMentor) LMSMentor.mount(CHAPTER_NUM); });</script>
+<script src="js/sw-register.js"></script>
+</body>
+</html>

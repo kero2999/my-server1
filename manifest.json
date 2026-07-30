@@ -1,0 +1,17 @@
+{
+  "name": "منصة التسويق التعليمية",
+  "short_name": "منصة التسويق",
+  "description": "مقرر تعليمي كامل في التسويق والتسويق الرقمي — 9 فصول مع اختبارات وشهادة إتمام",
+  "start_url": "dashboard.html",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0d1b2a",
+  "theme_color": "#0d1b2a",
+  "dir": "rtl",
+  "lang": "ar",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

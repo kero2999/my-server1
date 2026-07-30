@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-protected="true">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الفصل الخامس: مبادئ التسويق</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #FFD700;
+    --gold-light: #FFE44D;
+    --blue-dark: #0a0e27;
+    --blue-mid: #1a1f4b;
+    --blue-light: #2d3561;
+    --red-dark: #1a0a1a;
+    --red-mid: #2d1a2d;
+    --red-accent: #ff2d6d;
+    --purple-dark: #1a0a2e;
+    --purple-mid: #2d1a4a;
+    --purple-accent: #8b5cf6;
+    --glass-bg: rgba(255,255,255,0.06);
+    --glass-border: rgba(255,255,255,0.1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Tajawal', sans-serif;
+    background: var(--blue-dark);
+    color: #fff;
+    overflow-x: hidden;
+    direction: rtl;
+  }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--blue-dark); }
+  ::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 3px; }
+
+  .slide {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .slide-blue { background: linear-gradient(180deg, #0a0e27 0%, #1a1f4b 50%, #0d1133 100%); }
+  .slide-red { background: linear-gradient(180deg, #1a0a1a 0%, #2d1a2d 50%, #1a0a1a 100%); }
+  .slide-purple { background: linear-gradient(180deg, #1a0a2e 0%, #2d1a4a 50%, #1a0a2e 100%); }
+
+  .shape-circle {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.08;
+    pointer-events: none;
+  }
+  .shape-1 { width: 300px; height: 300px; background: var(--gold); top: -100px; left: -100px; }
+  .shape-2 { width: 200px; height: 200px; background: var(--red-accent); bottom: -50px; right: -50px; }
+  .shape-3 { width: 150px; height: 150px; background: var(--purple-accent); top: 50%; left: -50px; }
+
+  .glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    padding: 30px;
+    max-width: 600px;
+    width: 100%;
+    margin: 10px 0;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .glass-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+  }
+  .glass-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    opacity: 0.5;
+  }
+
+  .hero-inner {
+    background: linear-gradient(135deg, rgba(0,0,0,0.6), rgba(0,0,0,0.4));
+    border-radius: 20px;
+    padding: 40px 30px;
+    text-align: center;
+    border: 1px solid rgba(255,215,0,0.2);
+    position: relative;
+  }
+  .hero-inner::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 20%; right: 20%;
+    height: 3px;
+    background: var(--gold);
+    border-radius: 2px;
+  }
+
+  .icon-brain {
+    width: 80px; height: 80px;
+    margin: 0 auto 20px;
+    background: linear-gradient(135deg, var(--gold), var(--gold-light));
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+    box-shadow: 0 10px 30px rgba(255,215,0,0.3);
+  }
+  .icon-small {
+    width: 48px; height: 48px;
+    background: linear-gradient(135deg, var(--gold), var(--gold-light));
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .icon-red {
+    background: linear-gradient(135deg, #ff2d6d, #ff6b9d);
+    box-shadow: 0 6px 20px rgba(255,45,109,0.3);
+  }
+  .icon-purple {
+    background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+    box-shadow: 0 6px 20px rgba(139,92,246,0.3);
+  }
+  .icon-blue {
+    background: linear-gradient(135deg, #3b82f6, #60a5fa);
+    box-shadow: 0 6px 20px rgba(59,130,246,0.3);
+  }
+  .icon-green {
+    background: linear-gradient(135deg, #10b981, #34d399);
+    box-shadow: 0 6px 20px rgba(16,185,129,0.3);
+  }
+  .icon-orange {
+    background: linear-gradient(135deg, #f59e0b, #fbbf24);
+    box-shadow: 0 6px 20px rgba(245,158,11,0.3);
+  }
+  .icon-pink {
+    background: linear-gradient(135deg, #ec4899, #f472b6);
+    box-shadow: 0 6px 20px rgba(236,72,153,0.3);
+  }
+
+  .num-badge {
+    position: absolute;
+    top: -15px;
+    left: 20px;
+    background: linear-gradient(135deg, var(--gold), var(--gold-light));
+    color: var(--blue-dark);
+    font-weight: 900;
+    font-size: 20px;
+    width: 50px; height: 50px;
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 20px rgba(255,215,0,0.4);
+  }
+
+  .title-xl {
+    font-size: 32px;
+    font-weight: 900;
+    color: var(--gold);
+    text-align: center;
+    line-height: 1.3;
+    margin-bottom: 10px;
+  }
+  .title-lg {
+    font-size: 24px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.4;
+  }
+  .title-md {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--gold);
+    line-height: 1.4;
+  }
+  .text-body {
+    font-size: 16px;
+    color: rgba(255,255,255,0.8);
+    line-height: 1.8;
+    margin-top: 10px;
+  }
+  .text-highlight { color: var(--gold); font-weight: 700; }
+  .text-red { color: #ff6b9d; font-weight: 700; }
+  .text-purple { color: #a78bfa; font-weight: 700; }
+  .text-green { color: #34d399; font-weight: 700; }
+  .text-blue { color: #60a5fa; font-weight: 700; }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .section-header .title-lg { flex: 1; }
+
+  .quote-box {
+    background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,215,0,0.02));
+    border-right: 4px solid var(--gold);
+    border-radius: 0 16px 16px 0;
+    padding: 20px;
+    margin: 15px 0;
+    font-size: 16px;
+    line-height: 1.8;
+    color: rgba(255,255,255,0.9);
+  }
+
+  .list-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .list-item:last-child { border-bottom: none; }
+  .check-icon {
+    color: var(--gold);
+    font-weight: 900;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .example-card {
+    background: linear-gradient(135deg, rgba(255,45,109,0.15), rgba(255,45,109,0.05));
+    border: 1px solid rgba(255,45,109,0.3);
+    border-radius: 20px;
+    padding: 25px;
+    margin: 10px 0;
+    max-width: 600px;
+    width: 100%;
+  }
+  .example-card .example-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #ff6b9d;
+    margin-bottom: 12px;
+  }
+
+  .rule-box {
+    background: linear-gradient(135deg, rgba(0,0,0,0.7), rgba(0,0,0,0.5));
+    border: 2px solid var(--gold);
+    border-radius: 20px;
+    padding: 30px;
+    text-align: center;
+    max-width: 500px;
+    width: 100%;
+    margin: 20px auto;
+    position: relative;
+  }
+  .rule-box .rule-title {
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--gold);
+    margin-bottom: 15px;
+  }
+
+  .arrow-flow {
+    text-align: center;
+    color: var(--gold);
+    font-size: 24px;
+    margin: 5px 0;
+    opacity: 0.7;
+  }
+
+  .step-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 20px;
+    margin: 8px 0;
+    width: 100%;
+    max-width: 600px;
+    display: flex;
+    gap: 15px;
+    align-items: flex-start;
+  }
+  .step-letter {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900;
+    font-size: 18px;
+    flex-shrink: 0;
+    color: #fff;
+  }
+
+  .tag {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
+    margin: 3px;
+  }
+  .tag-gold { background: rgba(255,215,0,0.2); color: var(--gold); border: 1px solid rgba(255,215,0,0.3); }
+  .tag-red { background: rgba(255,45,109,0.2); color: #ff6b9d; border: 1px solid rgba(255,45,109,0.3); }
+  .tag-purple { background: rgba(139,92,246,0.2); color: #a78bfa; border: 1px solid rgba(139,92,246,0.3); }
+  .tag-green { background: rgba(16,185,129,0.2); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
+  .tag-blue { background: rgba(59,130,246,0.2); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+
+  .nav-dots {
+    position: fixed;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 100;
+  }
+  .nav-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    cursor: pointer;
+    transition: all 0.3s;
+    border: 2px solid transparent;
+  }
+  .nav-dot.active {
+    background: var(--gold);
+    border-color: rgba(255,215,0,0.3);
+    box-shadow: 0 0 10px rgba(255,215,0,0.5);
+    transform: scale(1.3);
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-in {
+    animation: fadeInUp 0.6s ease forwards;
+    opacity: 0;
+  }
+  .delay-1 { animation-delay: 0.1s; }
+  .delay-2 { animation-delay: 0.2s; }
+  .delay-3 { animation-delay: 0.3s; }
+  .delay-4 { animation-delay: 0.4s; }
+  .delay-5 { animation-delay: 0.5s; }
+
+  @media (max-width: 480px) {
+    .title-xl { font-size: 26px; }
+    .title-lg { font-size: 20px; }
+    .glass-card { padding: 20px; }
+    .slide { padding: 30px 15px; }
+  }
+
+  .progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--gold), var(--gold-light));
+    z-index: 200;
+    transition: width 0.3s ease;
+    box-shadow: 0 0 10px rgba(255,215,0,0.5);
+  }
+
+  .section-label {
+    display: inline-block;
+    background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.05));
+    border: 1px solid rgba(255,215,0,0.3);
+    color: var(--gold);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 15px;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    width: 100%;
+    max-width: 600px;
+  }
+  @media (max-width: 480px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+
+  .mini-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 18px;
+    text-align: center;
+  }
+  .mini-card .mini-icon {
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+  .mini-card .mini-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+  .mini-card .mini-desc {
+    font-size: 13px;
+    color: rgba(255,255,255,0.6);
+  }
+</style>
+<base target="_blank">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d1b2a">
+
+<style>
+.site-floatnav{position:fixed;bottom:22px;left:22px;z-index:2000;display:flex;gap:8px;align-items:center;flex-wrap:wrap;max-width:90vw;}
+.site-floatnav a{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(13,27,42,0.92);backdrop-filter:blur(10px);
+  border:2px solid #ffd700;color:#ffd700;
+  padding:10px 16px;border-radius:25px;
+  font-family:'Tajawal',sans-serif;font-weight:700;font-size:0.85rem;
+  text-decoration:none;transition:all .3s;
+}
+.site-floatnav a:hover{background:#ffd700;color:#0d1b2a;}
+.site-floatnav a.disabled{opacity:0.3;pointer-events:none;}
+.site-floatnav a.quiz-link{border-color:#00bfa5;color:#00bfa5;}
+.site-floatnav a.quiz-link:hover{background:#00bfa5;color:#0d1b2a;}
+@media (max-width:640px){
+  .site-floatnav{left:10px;bottom:10px;gap:6px;}
+  .site-floatnav a{padding:8px 10px;font-size:0.75rem;}
+  .site-floatnav a span.label{display:none;}
+}
+</style>
+</head>
+<body>
+<script>
+(function(){
+  var localSession = localStorage.getItem('lms_session_v1');
+  var remoteToken = localStorage.getItem('lms_token_v1');
+  var remotePaid = false;
+  if (remoteToken) {
+    try {
+      var ru = JSON.parse(localStorage.getItem('lms_remote_user_v1'));
+      remotePaid = ru && String(ru.status || '').trim().toLowerCase() === 'active';
+    } catch(e){}
+  }
+  var trialActive = false;
+  try {
+    var t = JSON.parse(localStorage.getItem('lms_trial_v1'));
+    if (t) { trialActive = ((Date.now() - t.startAt) / 1000) < 600; }
+  } catch(e){}
+
+  var allowed = !!localSession || (!!remoteToken && remotePaid) || trialActive;
+  if(!allowed){
+    location.replace(remoteToken ? 'upgrade.html' : 'index.html');
+    return;
+  }
+
+  // قفل تسلسلي: لازم يجتاز اختبار الفصل رقم 4 قبل الدخول هنا (لا يُطبَّق في وضع المعاينة التجريبية)
+  var isTrialOnly = trialActive && !localSession && !(remoteToken && remotePaid);
+  if (!isTrialOnly) {
+    var uname = localSession || (function(){
+      try {
+        var ru2 = JSON.parse(localStorage.getItem('lms_remote_user_v1'));
+        return ru2 ? ru2.email : null;
+      } catch(e){ return null; }
+    })();
+    if (uname) {
+      try {
+        var progress = JSON.parse(localStorage.getItem('lms_progress_v1_' + uname)) || {};
+        var prevQuiz = progress.quizzes && progress.quizzes[4];
+        if (!prevQuiz || !prevQuiz.passed) {
+          location.replace('dashboard.html?locked=5');
+          return;
+        }
+      } catch(e){}
+    }
+  }
+})();
+</script>
+
+
+<div class="progress-bar" id="progressBar" style="width: 0%"></div>
+<div class="nav-dots" id="navDots"></div>
+
+<!-- SLIDE 1: HERO -->
+<div class="slide slide-blue" id="slide-0" data-section="0">
+  <div class="shape-circle shape-1"></div>
+  <div class="shape-circle shape-2"></div>
+  <div class="glass-card animate-in delay-1" style="max-width: 500px;">
+    <div class="hero-inner">
+      <div class="icon-brain">📊</div>
+      <div class="title-xl">الفصل الخامس</div>
+      <div class="title-md" style="color: var(--gold); margin-bottom: 15px;">مبادئ التسويق</div>
+      <div style="font-size: 15px; color: rgba(255,255,255,0.7); line-height: 1.8;">Marketing Principles</div>
+      <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+        <p style="font-size: 15px; color: rgba(255,255,255,0.8); line-height: 1.8;">كيف تُحوِّل فكرة أو منتجًا إلى علامة تجارية ناجحة تحقق المبيعات وتكسب ولاء العملاء</p>
+      </div>
+      <div style="margin-top: 20px; color: var(--gold); font-weight: 700; font-size: 16px;">
+        ⭐ إذا فهمت هذه المبادئ...<br><span style="color: #fff;">استطعت بناء أي منتج يحتاجه السوق</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 2: WHAT IS MARKETING MIX -->
+<div class="slide slide-blue" id="slide-1" data-section="1">
+  <div class="shape-circle shape-3"></div>
+  <div class="section-header animate-in delay-1" style="max-width: 600px; width: 100%;">
+    <div class="title-lg">ما هو المزيج التسويقي؟</div>
+    <div class="num-badge" style="position: relative; top: 0; left: 0;">01</div>
+  </div>
+  <div class="glass-card animate-in delay-2">
+    <p class="text-body">المزيج التسويقي <span class="text-highlight">Marketing Mix</span> هو مجموعة العناصر الأساسية التي تتحكم في نجاح أي منتج داخل السوق.</p>
+    <p class="text-body" style="margin-top: 15px;">يتكون من أربعة عناصر أساسية تُسمى <span class="text-highlight">4Ps</span>.</p>
+  </div>
+  <div class="glass-card animate-in delay-3" style="margin-top: 15px;">
+    <div class="section-header">
+      <div class="icon-small icon-blue">🎯</div>
+      <div>
+        <div class="title-md">المزيج التسويقي</div>
+        <p class="text-body" style="margin-top: 5px; font-size: 14px;">العناصر الأربعة التي تحدد نجاح المنتج في السوق</p>
+      </div>
+    </div>
+  </div>
+  <div class="grid-2 animate-in delay-4" style="margin-top: 10px;">
+    <div class="mini-card"><div class="mini-icon">📦</div><div class="mini-title">Product</div><div class="mini-desc">المنتج</div></div>
+    <div class="mini-card"><div class="mini-icon">💰</div><div class="mini-title">Price</div><div class="mini-desc">السعر</div></div>
+    <div class="mini-card"><div class="mini-icon">📍</div><div class="mini-title">Place</div><div class="mini-desc">مكان التوزيع</div></div>
+    <div class="mini-card"><div class="mini-icon">📢</div><div class="mini-title">Promotion</div><div class="mini-desc">الترويج</div></div>
+  </div>
+</div>
+
+<!-- SLIDE 3: PRODUCT -->
+<div class="slide slide-blue" id="slide-2" data-section="2">
+  <div class="section-header animate-in delay-1" style="max-width: 600px; width: 100%;">
+    <div class="title-lg">1- Product (المنتج)</div>
+    <div class="icon-small icon-blue">📦</div>
+  </div>
+  <div class="glass-card animate-in delay-2">
+    <p class="text-body">هو كل ما تقدمه الشركة لإشباع حاجة أو حل مشكلة لدى العميل.</p>
+    <div style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 8px;">
+      <span class="tag tag-blue">منتج مادي</span>
+      <span class="tag tag-purple">خدمة</span>
+      <span class="tag tag-green">تطبيق</span>
+      <span class="tag tag-gold">دورة تدريبية</span>
+      <span class="tag tag-red">كتاب إلكتروني</span>
+    </div>
+  </div>
+  <div class="glass-card animate-in delay-3" style="margin-top: 12px;">
+    <div class="title-md" style="margin-bottom: 12px;">عند تصميم المنتج يجب التفكير في:</div>
+    <div class="list-item"><span class="check-icon">✓</span><span>الجودة والتصميم والألوان</span></div>
+    <div class="list-item"><span class="check-icon">✓</span><span>التغليف والمميزات</span></div>
+    <div class="list-item"><span class="check-icon">✓</span><span>الضمان وخدمة ما بعد البيع</span></div>
+  </div>
+  <div class="example-card animate-in delay-4">
+    <div class="example-title"><div class="icon-small icon-red" style="width: 36px; height: 36px; font-size: 16px;">💡</div>مثال: تيشيرتات</div>
+    <p style="color: rgba(255,255,255,0.85); line-height: 1.8; font-size: 15px;">ليس المهم أن يكون مجرد تيشيرت، بل يجب أن يكون: <span class="text-red">قماش قطن ممتاز، طباعة قوية، تغليف جميل، مقاسات متعددة</span> — كل هذه عناصر داخل المنتج.</p>
+  </div>
+</div>
+
+<!-- SLIDE 4: PRICE -->
+<div class="slide slide-red" id="slide-3" data-section="3">
+  <div class="shape-circle shape-1" style="background: var(--red-accent);"></div>
+  <div class="section-header animate-in delay-1" style="max-width: 600px; width: 100%;">
+    <div class="title-lg">2- Price (السعر)</div>
+    <div class="icon-small icon-red">💰</div>
+  </div>
+  <div class="glass-card animate-in delay-2">
+    <p class="text-body">السعر هو المبلغ الذي يدفعه العميل للحصول على المنتج.</p>
+    <div class="quote-box" style="border-right-color: var(--red-accent); background: linear-gradient(135deg, rgba(255,45,109,0.1), rgba(255,45,109,0.02));">
+      <span class="text-red">لكن السعر ليس مجرد رقم.</span><br>يرسل رسالة عن قيمة المنتج. السعر المنخفض جداً قد يجعل العميل يظن أن الجودة ضعيفة. والسعر المرتفع قد يجعل المنتج يبدو فاخراً.
+    </div>
+  </div>
+  <div class="glass-card animate-in delay-3" style="margin-top: 12px;">
+    <div class="title-md" style="color: #ff6b9d; margin-bottom: 12px;">طرق التسعير</div>
+    <div class="list-item"><span class="check-icon" style="color: #ff6b9d;">✓</span><span>حسب التكلفة</span></div>
+    <div class="list-item"><span class="check-icon" style="color: #ff6b9d;">✓</span><span>حسب المنافسين</span></div>
+    <div class="list-item"><span class="check-icon" style="color: #ff6b9d;">✓</span><span>حسب القيمة</span></div>
+    <div class="list-item"><span class="check-icon" style="color: #ff6b9d;">✓</span><span>حسب العرض والطلب</span></div>
+  </div>
+  <div class="example-card animate-in delay-4">
+    <div class="example-title"><div class="icon-small icon-red" style="width: 36px; height: 36px; font-size: 16px;">💡</div>مثال: الساعات</div>
+    <p style="color: rgba(255,255,255,0.85); line-height: 1.8; font-size: 15px;">ساعة بـ <span class="text-red">100 جنيه</span> قد يظن العميل أنها رديئة. بينما ساعة مشابهة بـ <span class="text-red">1200 جنيه</span> قد يعتقد أنها أفضل.</p>
+  </div>
+  <div class="example-card animate-in delay-5">
+    <div class="example-title"><div class="icon-small icon-red" style="width: 36px; height: 36px; font-size: 16px;">💡</div>مثال: الاشتراكات</div>
+    <p style="color: rgba(255,255,255,0.85); line-height: 1.8; font-size: 15px;"><span class="text-red">50 جنيه شهرياً</span> أو <span class="text-red">500 جنيه سنوياً</span> — الكثير يختار السنوي لأنه أوفر!</p>
+  </div>
+</div>
+
+<!-- SLIDE 5: PLACE -->
+<div class="slide slide-blue" id="slide-4" data-section="4">
+  <div class="section-header animate-in delay-1" style="max-width: 600px; width: 100%;">
+    <div class="title-lg">3- Place (مكان التوزيع)</div>
+    <div class="icon-small icon-green">📍</div>
+  </div>
+  <div class="glass-card animate-in delay-2">
+    <p class="text-body">هو المكان الذي يصل فيه المنتج للعميل.</p>
+    <div style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 8px;">
+      <span class="tag tag-green">متجر</span>
+      <span class="tag tag-blue">موقع إلكتروني</span>
+      <span class="tag tag-purple">إنستجرام</span>
+      <span class="tag tag-gold">فيسبوك</span>
+      <span class="tag tag-red">أمازون</span>
+      <span class="tag tag-green">موزعين</span>
+    </div>
+  </div>
+  <div class="example-card animate-in delay-3" style="background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05)); border-color: rgba(16,185,129,0.3);">
+    <div class="example-title" style="color: #34d399;"><div class="icon-small icon-green" style="width: 36px; height: 36px; font-size: 16px;">💡</div>مثال: تيشيرتات</div>
+    <p style="color: rgba(255,255,255,0.85); line-height: 1.8; font-size: 15px;">يمكن البيع من خلال: <span class="text-green">Instagram — Facebook — TikTok — Website</span></p>
+  </div>
+  <div class="example-card animate-in delay-4" style="background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05)); border-color: rgba(16,185,129,0.3);">
+    <div class="example-title" style="color: #34d399;"><div class="icon-small icon-green" style="width: 36px; height: 36px; font-size: 16px;">💡</div>مثال: مطعم</div>
+    <p style="color: rgba(255,255,255,0.85); line-height: 1.8; font-size: 15px;">يبيع داخل المطعم <span class="text-green">وأيضاً عبر تطبيقات التوصيل</span></p>
+  </div>
+</div>
+
+<!-- SLIDE 6: PROMOTION -->
+<div class="slide slide-purple" id="slide-5" data-section="5">
+  <div class="shape-circle shape-2" style="background: var(--purple-accent);"></div>
+  <div class="section-header animate-in delay-1" style="max-width: 600px; width: 100%;">
+    <div class="title-lg">4- Promotion (الترويج)</div>
+    <div class="icon-small icon-purple">📢</div>
+  </div>
+  <div class="glass-card animate-in delay-2">
+    <p class="text-body">هو الطريقة التي تجعل الناس تعرف المنتج.</p>
+  </div>
+  <div class="glass-card animate-in delay-3" style="margin-top: 12px;">
+    <div class="title-md" style="color: #a78bfa; margin-bottom: 12px;">أدوات الترويج</div>
+    <div class="list-item"><span class="check-icon" style="color: #a78bfa;">✓</span><span>الإعلانات والمحتوى</span></div>
+    <div class="list-item"><span class="check-icon" style="color: #a78bfa;">✓</span><span>التسويق بالمؤثرين</span></div>
+    <div class="list-item"><span class="check-icon" style="color: #a78bfa;">✓</span><span>العروض والخصومات</span></div>
+    <div class="list-item"><span class="check-icon" style="color: #a78bfa;">✓</span><span>العلاقات العامة والبريد الإلكتروني</span></div>
+  </div>
+  <div class="grid-2 animate-in delay-4" style="margin-top: 10px;">
+    <div class="mini-card"><div class="mini-icon">📱</div><div class="mini-title">إعلان فيسبوك</div></div>
+    <div class="mini-card"><div class="mini-icon">🎵</div><div class="mini-title">فيديو TikTok</div></div>
+    <div class="mini-card"><div class="mini-icon">🏷️</div><div class="mini-title">خصم 20%</div></div>
+    <div class="mini-card"><div class="mini-icon">⭐</div><div class="mini-title">مؤثرين</div></div>
+  </div>
+</div>
+
+<!-- SLIDE 7: 4Ps EXAMPLE -->
+<div class="slide slide-blue" id="slide-6" data-section="6">
+  <div class="section-header animate-in delay-1" style="max-width: 600px; width: 100%;">
+    <div class="title-lg">مثال شامل على 4Ps</div>
+    <div class="icon-small icon-gold">🎯</div>
+  </div>
+  <div class="glass-card animate-in delay-2">
+    <div class="section-label">السيناريو</div>
+    <p class="text-body" style="font-size: 18px; font-weight: 700; color: #fff;">تبيع تيشيرتًا مسيحياً</p>
+  </div>
+  <div class="step-card animate-in delay-2">
+    <div class="step-letter icon-blue">📦</div>
+    <div><div class="title-md" style="color: #60a5fa;">Product</div><p class="text-body" style="margin-top: 5px; font-size: 14px;">تيشيرت قطني عالي الجودة</p></div>
+  </div>
+  <div class="arrow-flow">↓</div>
+  <div class="step-card animate-in delay-3">
+    <div class="step-letter icon-red">💰</div>
+    <div><div class="title-md" style="color: #ff6b9d;">Price</div><p class="text-body" style="margin-top: 5px; font-size: 14px;">450 جنيه</p></div>
+  </div>
+  <div class="arrow-flow">↓</div>
+  <div class="step-card animate-in delay-3">
+    <div class="step-letter icon-green">📍</div>
+    <div><div class="title-md" style="color: #34d399;">Place</div><p class="text-body" style="margin-top: 5px; font-size: 14px;">متجر إلكتروني + Instagram</p></div>
+  </div>
+  <div class="arrow-flow">↓</div>
+  <div class="step-card animate-in delay-4">
+    <div class="step-letter icon-purple">📢</div>
+    <div><div class="title-md" style="color: #a78bfa;">Promotion</div><p class="text-body" style="margin-top: 5px; font-size: 14px;">فيديوهات + إعلانات + مؤثرين</p></div>
+  </div>
+</div>
+
+<!-- SLIDE 8: 7Ps -->
+<div class="slide slide-red" id="slide-7" data-section="7">
+  <div class="section-header animate-in delay-1" style="max-width: 600px; width: 100%;">
+    <div class="title-lg">7Ps — الخدمات</div>
+    <div class="icon-small icon-red">7️⃣</div>
+  </div>
+  <div class="glass-card animate-in delay-2">
+    <p class="text-body">عندما نتحدث عن <span class="text-red">الخدمات</span>، لا تكفي 4Ps، لذلك أُضيفت ثلاثة عناصر جديدة.</p>
+  </div>
+  <div class="step-card animate-in delay-3">
+    <div class="step-letter icon-red">👥</div>
+    <div><div class="title-md" style="color: #ff6b9d;">People (الأشخاص)</div><p class="text-body" style="margin-top: 5px; font-size: 14px;">كل شخص يتعامل مع العميل. إذا كانت خدمة العملاء سيئة، قد يترك العميل المنتج رغم جودته.</p></div>
+  </div>
+  <div class="arrow-flow">↓</div>
+  <div class="step-card animate-in delay-3">
+    <div class="step-letter icon-orange">⚙️</div>
+    <div><div class="title-md" style="color: #fbbf24;">Process (العمليات)</div><p class="text-body" style="margin-top: 5px; font-size: 14px;">الطريقة التي يحصل بها العميل على المنتج. كلما كانت أسهل زادت المبيعات.</p></div>
+  </div>
+  <div class="arrow-flow">↓</div>
+  <div class="step-card animate-in delay-4">
+    <div class="step-letter icon-pink">🏛️</div>
+    <div><div class="title-md" style="color: #f472b6;">Physical Evidence (الدليل المادي)</div><p class="text-body" style="margin-top: 5px; font-size: 14px;">أي شيء يراه العميل ويعطيه انطباعًا عن الشركة: التغليف، الشعار، الفاتورة.</p></div>
+  </div>
+</div>
+
+<!-- SLIDE 9: STP -->
+<div class="slide slide-purple" id="slide-8" data-section="8">
+  <div class="section-header animate-in delay-1" style="max-width: 600px; width: 100%;">
+    <div class="title-lg">STP — نموذج التسويق</div>
+    <div class="icon-small icon-purple">🎯</div>
+  </div>
+  <div class="glass-card animate-in delay-2">
+    <p class="text-body">واحد من <span class="text-purple">أهم نماذج التسويق</span>، يتكون من ثلاث مراحل.</p>
+  </div>
+  <div class="step-card animate-in delay-2">
+    <div class="step-letter icon-blue">S</div>
+    <div><div class="title-md" style="color: #60a5fa;">Segmentation (تقسيم السوق)</div><p class="text-body" style="margin-top: 5px; font-size: 14px;">تقسيم العملاء إلى مجموعات متشابهة حسب: العمر، الجنس، الدخل، الاهتمامات، الموقع الجغرافي.</p></div>
+  </div>
+  <div class="arrow-flow">↓</div>
+  <div class="step-card animate-in delay-3">
+    <div class="step-letter icon-red">T</div>
+    <div><div class="title-md" style="color: #ff6b9d;">Targeting (اختيار الجمهور)</div><p class="text-body" style="margin-top: 5px; font-size: 14px;">بعد التقسيم تختار المجموعة المناسبة. مثال: تستهدف الشباب من 18–30 سنة.</p></div>
+  </div>
+  <div class="arrow-flow">↓</div>
+  <div class="step-card animate-in delay-4">
+    <div class="step-letter icon-green">P</div>
+    <div><div class="title-md" style="color: #34d399;">Positioning (التموضع)</div><p class="text-body" style="margin-top: 5px; font-size: 14px;">الصورة التي تريد أن يراها العميل عن منتجك. مثال: "أفضل مكان للعمل والدراسة".</p></div>
+  </div>
+</div>
+
+<!-- SLIDE 10: AIDA -->
+<div class="slide slide-blue" id="slide-9" data-section="9">
+  <div class="section-header animate-in delay-1" style="max-width: 600px; width: 100%;">
+    <div class="title-lg">AIDA — رحلة العميل</div>
+    <div class="icon-small icon-gold">🔄</div>
+  </div>
+  <div class="glass-card animate-in delay-2">
+    <p class="text-body">النموذج الذي يشرح كيف يتحول الشخص من <span class="text-highlight">غريب إلى مشتري</span>.</p>
+  </div>
+  <div class="step-card animate-in delay-2">
+    <div class="step-letter icon-blue">A</div>
+    <div><div class="title-md" style="color: #60a5fa;">Attention (الانتباه)</div><p class="text-body" style="margin-top: 5px; font-size: 14px;">لفت الانتباه: صورة قوية، عنوان مثير، لون مختلف.</p></div>
+  </div>
+  <div class="arrow-flow">↓</div>
+  <div class="step-card animate-in delay-3">
+    <div class="step-letter icon-purple">I</div>
+    <div><div class="title-md" style="color: #a78bfa;">Interest (الاهتمام)</div><p class="text-body" style="margin-top: 5px; font-size: 14px;">يبدأ بالقراءة: فيديو يشرح المميزات.</p></div>
+  </div>
+  <div class="arrow-flow">↓</div>
+  <div class="step-card animate-in delay-3">
+    <div class="step-letter icon-red">D</div>
+    <div><div class="title-md" style="color: #ff6b9d;">Desire (الرغبة)</div><p class="text-body" style="margin-top: 5px; font-size: 14px;">إقناعه بأنه يحتاج المنتج: إظهار الفوائد، قصص العملاء، النتائج.</p></div>
+  </div>
+  <div class="arrow-flow">↓</div>
+  <div class="step-card animate-in delay-4">
+    <div class="step-letter icon-green">A</div>
+    <div><div class="title-md" style="color: #34d399;">Action (الشراء)</div><p class="text-body" style="margin-top: 5px; font-size: 14px;">تحفيزه لاتخاذ القرار: اطلب الآن، خصم اليوم فقط، الشحن مجاني.</p></div>
+  </div>
+  <div class="example-card animate-in delay-5" style="background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,215,0,0.02)); border-color: rgba(255,215,0,0.3);">
+    <div class="example-title" style="color: var(--gold);"><div class="icon-small" style="width: 36px; height: 36px; font-size: 16px; background: linear-gradient(135deg, var(--gold), var(--gold-light));">💡</div>مثال: إعلان تيشيرت</div>
+    <p style="color: rgba(255,255,255,0.85); line-height: 2; font-size: 14px;">
+      <span class="text-highlight">Attention:</span> صورة جذابة<br>
+      <span class="text-highlight">↓ Interest:</span> شرح القماش<br>
+      <span class="text-highlight">↓ Desire:</span> تعليقات العملاء<br>
+      <span class="text-highlight">↓ Action:</span> اطلب الآن
+    </p>
+  </div>
+</div>
+
+<!-- SLIDE 11: BUYER DECISION -->
+<div class="slide slide-red" id="slide-10" data-section="10">
+  <div class="section-header animate-in delay-1" style="max-width: 600px; width: 100%;">
+    <div class="title-lg">مراحل قرار الشراء</div>
+    <div class="icon-small icon-red">🛒</div>
+  </div>
+  <div class="glass-card animate-in delay-2">
+    <p class="text-body">يمر العميل بـ <span class="text-red">خمس مراحل</span> قبل شراء أي منتج.</p>
+  </div>
+  <div class="step-card animate-in delay-2">
+    <div class="step-letter icon-blue">1</div>
+    <div><div class="title-md" style="color: #60a5fa;">إدراك المشكلة</div><p class="text-body" style="margin-top: 5px; font-size: 14px;">"أحتاج تيشيرت جديد."</p></div>
+  </div>
+  <div class="arrow-flow">↓</div>
+  <div class="step-card animate-in delay-3">
+    <div class="step-letter icon-purple">2</div>
+    <div><div class="title-md" style="color: #a78bfa;">البحث</div><p class="text-body" style="margin-top: 5px; font-size: 14px;">يبدأ في البحث على الإنترنت.</p></div>
+  </div>
+  <div class="arrow-flow">↓</div>
+  <div class="step-card animate-in delay-3">
+    <div class="step-letter icon-red">3</div>
+    <div><div class="title-md" style="color: #ff6b9d;">المقارنة</div><p class="text-body" style="margin-top: 5px; font-size: 14px;">يقارن بين الأسعار والجودة.</p></div>
+  </div>
+  <div class="arrow-flow">↓</div>
+  <div class="step-card animate-in delay-4">
+    <div class="step-letter icon-green">4</div>
+    <div><div class="title-md" style="color: #34d399;">الشراء</div><p class="text-body" style="margin-top: 5px; font-size: 14px;">يختار المنتج المناسب.</p></div>
+  </div>
+  <div class="arrow-flow">↓</div>
+  <div class="step-card animate-in delay-4">
+    <div class="step-letter icon-gold">5</div>
+    <div><div class="title-md" style="color: var(--gold);">ما بعد الشراء</div><p class="text-body" style="margin-top: 5px; font-size: 14px;">إذا أعجبه: يكرر الشراء ويرشحه. إذا لم يعجبه: تقييم سلبي ولا يعود.</p></div>
+  </div>
+</div>
+
+<!-- SLIDE 12: VALUE PROPOSITION -->
+<div class="slide slide-purple" id="slide-11" data-section="11">
+  <div class="section-header animate-in delay-1" style="max-width: 600px; width: 100%;">
+    <div class="title-lg">Value Proposition</div>
+    <div class="icon-small icon-purple">💎</div>
+  </div>
+  <div class="glass-card animate-in delay-2">
+    <p class="text-body">هو <span class="text-purple">السبب الحقيقي</span> الذي يجعل العميل يشتري منك.</p>
+    <div class="quote-box" style="border-right-color: var(--purple-accent); background: linear-gradient(135deg, rgba(139,92,246,0.1), rgba(139,92,246,0.02));">
+      <span class="text-purple">ليس المنتج، بل القيمة التي يحصل عليها.</span>
+    </div>
+  </div>
+  <div class="rule-box animate-in delay-3">
+    <div class="rule-title">📐 الصيغة البسيطة</div>
+    <p style="color: rgba(255,255,255,0.9); font-size: 16px; line-height: 1.8;">نساعد <span class="text-purple">(من؟)</span> على تحقيق <span class="text-purple">(ماذا؟)</span> من خلال <span class="text-purple">(كيف؟)</span></p>
+  </div>
+  <div class="example-card animate-in delay-4" style="background: linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05)); border-color: rgba(139,92,246,0.3);">
+    <div class="example-title" style="color: #a78bfa;"><div class="icon-small icon-purple" style="width: 36px; height: 36px; font-size: 16px;">💡</div>أمثلة</div>
+    <p style="color: rgba(255,255,255,0.85); line-height: 2; font-size: 14px;">
+      نوفر تيشيرتات تجمع بين <span class="text-purple">الجودة العالية والتصميم العصري</span> بسعر مناسب.<br><br>
+      نساعد أصحاب المشاريع على <span class="text-purple">زيادة مبيعاتهم</span> عبر استراتيجيات تسويق عملية.<br><br>
+      نقدم دورة تعلمك التسويق <span class="text-purple">من الصفر حتى الاحتراف</span> بطريقة سهلة وتطبيقية.
+    </p>
+  </div>
+</div>
+
+<!-- SLIDE 13: USP -->
+<div class="slide slide-blue" id="slide-12" data-section="12">
+  <div class="section-header animate-in delay-1" style="max-width: 600px; width: 100%;">
+    <div class="title-lg">USP — الميزة البيعية الفريدة</div>
+    <div class="icon-small icon-gold">⭐</div>
+  </div>
+  <div class="glass-card animate-in delay-2">
+    <p class="text-body">الميزة التي <span class="text-highlight">تميز منتجك</span> عن جميع المنافسين.</p>
+    <div class="quote-box"><span class="text-highlight">اسأل نفسك: لماذا يشتري العميل مني وليس من غيري؟</span></div>
+  </div>
+  <div class="example-card animate-in delay-3">
+    <div class="example-title"><div class="icon-small" style="width: 36px; height: 36px; font-size: 16px; background: linear-gradient(135deg, var(--gold), var(--gold-light));">1️⃣</div>متجر تيشيرتات</div>
+    <p style="color: rgba(255,255,255,0.85); line-height: 1.8; font-size: 15px;">يطبع <span class="text-highlight">تصميمات مخصصة خلال 24 ساعة</span></p>
+  </div>
+  <div class="example-card animate-in delay-4">
+    <div class="example-title"><div class="icon-small" style="width: 36px; height: 36px; font-size: 16px; background: linear-gradient(135deg, var(--gold), var(--gold-light));">2️⃣</div>مخبز</div>
+    <p style="color: rgba(255,255,255,0.85); line-height: 1.8; font-size: 15px;">يقدم خبزًا طازجًا <span class="text-highlight">يخرج من الفرن كل ساعتين</span></p>
+  </div>
+  <div class="example-card animate-in delay-5">
+    <div class="example-title"><div class="icon-small" style="width: 36px; height: 36px; font-size: 16px; background: linear-gradient(135deg, var(--gold), var(--gold-light));">3️⃣</div>منصة تعليمية</div>
+    <p style="color: rgba(255,255,255,0.85); line-height: 1.8; font-size: 15px;">توفر <span class="text-highlight">متابعة شخصية مع كل طالب</span> حتى انتهاء الدورة</p>
+  </div>
+  <div class="rule-box animate-in delay-5" style="border-color: var(--purple-accent);">
+    <p style="color: rgba(255,255,255,0.9); font-size: 15px; line-height: 1.8;">كلما كانت الـ USP <span class="text-purple">واضحة وصعبة التقليد</span>، زادت قوة العلامة التجارية.</p>
+  </div>
+</div>
+
+<!-- SLIDE 14: BRANDING -->
+<div class="slide slide-purple" id="slide-13" data-section="13">
+  <div class="section-header animate-in delay-1" style="max-width: 600px; width: 100%;">
+    <div class="title-lg">Branding — أساسيات العلامة التجارية</div>
+    <div class="icon-small icon-purple">🏷️</div>
+  </div>
+  <div class="glass-card animate-in delay-2">
+    <p class="text-body">العلامة التجارية <span class="text-purple">ليست مجرد شعار أو اسم</span>، بل هي الانطباع الذي يبقى في ذهن العميل بعد تعامله معك.</p>
+  </div>
+  <div class="glass-card animate-in delay-3" style="margin-top: 12px;">
+    <div class="title-md" style="color: #a78bfa; margin-bottom: 12px;">عناصر العلامة التجارية</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+      <span class="tag tag-purple">الاسم</span>
+      <span class="tag tag-purple">الشعار</span>
+      <span class="tag tag-purple">الألوان</span>
+      <span class="tag tag-purple">الخطوط</span>
+      <span class="tag tag-purple">أسلوب التواصل</span>
+      <span class="tag tag-purple">القيم</span>
+      <span class="tag tag-purple">شخصية العلامة</span>
+      <span class="tag tag-purple">تجربة العميل</span>
+    </div>
+  </div>
+  <div class="glass-card animate-in delay-4" style="margin-top: 12px;">
+    <div class="title-md" style="color: #a78bfa; margin-bottom: 12px;">لماذا العلامة التجارية مهمة؟</div>
+    <div class="list-item"><span class="check-icon" style="color: #a78bfa;">✓</span><span>تزيد الثقة وتميزك عن المنافسين</span></div>
+    <div class="list-item"><span class="check-icon" style="color: #a78bfa;">✓</span><span>تجعل العملاء يتذكرونك</span></div>
+    <div class="list-item"><span class="check-icon" style="color: #a78bfa;">✓</span><span>تساعد على رفع قيمة المنتج</span></div>
+    <div class="list-item"><span class="check-icon" style="color: #a78bfa;">✓</span><span>تبني ولاء العملاء على المدى الطويل</span></div>
+  </div>
+</div>
+
+<!-- SLIDE 15: CONCLUSION -->
+<div class="slide slide-blue" id="slide-14" data-section="14">
+  <div class="shape-circle shape-1"></div>
+  <div class="shape-circle shape-2" style="background: var(--gold);"></div>
+  <div class="section-header animate-in delay-1" style="max-width: 600px; width: 100%;">
+    <div class="title-lg">الخلاصة</div>
+    <div class="icon-small icon-gold">🎯</div>
+  </div>
+  <div class="glass-card animate-in delay-2">
+    <p class="text-body" style="text-align: center; font-size: 18px; font-weight: 700; color: var(--gold);">رحلة مترابطة لبناء نظام تسويقي ناجح</p>
+  </div>
+  <div class="step-card animate-in delay-2">
+    <div class="step-letter icon-blue">1</div>
+    <div><p class="text-body" style="margin-top: 0; font-size: 14px;">افهم السوق باستخدام <span class="text-blue">STP</span> وحدد العميل المناسب</p></div>
+  </div>
+  <div class="arrow-flow">↓</div>
+  <div class="step-card animate-in delay-3">
+    <div class="step-letter icon-purple">2</div>
+    <div><p class="text-body" style="margin-top: 0; font-size: 14px;">قدّم <span class="text-purple">عرض قيمة قويًا</span> يحل مشكلة العميل</p></div>
+  </div>
+  <div class="arrow-flow">↓</div>
+  <div class="step-card animate-in delay-3">
+    <div class="step-letter icon-red">3</div>
+    <div><p class="text-body" style="margin-top: 0; font-size: 14px;">اصنع <span class="text-red">ميزة تنافسية واضحة (USP)</span> تجعلك مختلفًا</p></div>
+  </div>
+  <div class="arrow-flow">↓</div>
+  <div class="step-card animate-in delay-4">
+    <div class="step-letter icon-green">4</div>
+    <div><p class="text-body" style="margin-top: 0; font-size: 14px;">ابنِ <span class="text-green">علامة تجارية قوية (Branding)</span> تترك انطباعًا إيجابيًا</p></div>
+  </div>
+  <div class="arrow-flow">↓</div>
+  <div class="step-card animate-in delay-4">
+    <div class="step-letter icon-gold">5</div>
+    <div><p class="text-body" style="margin-top: 0; font-size: 14px;">استخدم <span class="text-highlight">4Ps أو 7Ps</span> لتقديم المنتج بأفضل صورة</p></div>
+  </div>
+  <div class="arrow-flow">↓</div>
+  <div class="step-card animate-in delay-5">
+    <div class="step-letter icon-blue">6</div>
+    <div><p class="text-body" style="margin-top: 0; font-size: 14px;">صمم رسائلك وفق <span class="text-blue">AIDA</span> لجذب العميل وتحفيزه على الشراء</p></div>
+  </div>
+  <div class="arrow-flow">↓</div>
+  <div class="step-card animate-in delay-5">
+    <div class="step-letter icon-purple">7</div>
+    <div><p class="text-body" style="margin-top: 0; font-size: 14px;">افهم <span class="text-purple">مراحل قرار الشراء</span> لتقدم المحتوى المناسب في كل مرحلة</p></div>
+  </div>
+  <div class="rule-box animate-in delay-5" style="margin-top: 25px;">
+    <div class="rule-title">🚀 النتيجة</div>
+    <p style="color: rgba(255,255,255,0.9); font-size: 15px; line-height: 1.8;">نظام تسويقي متكامل يساعد على جذب العملاء، وتحويلهم إلى مشترين، ثم إلى <span class="text-highlight">عملاء دائمين</span> يوصون الآخرين بعلامتك التجارية.</p>
+  </div>
+</div>
+
+<script>
+// Progress bar
+const progressBar = document.getElementById('progressBar');
+window.addEventListener('scroll', () => {
+  const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+  const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+  const progress = (scrollTop / scrollHeight) * 100;
+  progressBar.style.width = progress + '%';
+});
+
+// Navigation dots
+const slides = document.querySelectorAll('.slide');
+const navDotsContainer = document.getElementById('navDots');
+slides.forEach((slide, index) => {
+  const dot = document.createElement('div');
+  dot.className = 'nav-dot' + (index === 0 ? ' active' : '');
+  dot.addEventListener('click', () => {
+    slide.scrollIntoView({ behavior: 'smooth' });
+  });
+  navDotsContainer.appendChild(dot);
+});
+
+// Active dot on scroll
+const dots = document.querySelectorAll('.nav-dot');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const index = Array.from(slides).indexOf(entry.target);
+      dots.forEach(d => d.classList.remove('active'));
+      if (dots[index]) dots[index].classList.add('active');
+    }
+  });
+}, { threshold: 0.5 });
+
+slides.forEach(slide => observer.observe(slide));
+
+// Intersection Observer for animations
+const animateObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.style.animationPlayState = 'running';
+    }
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.animate-in').forEach(el => {
+  el.style.animationPlayState = 'paused';
+  animateObserver.observe(el);
+});
+</script>
+
+<div class="site-floatnav"><a href="ch4.html"><i class="fas fa-chevron-right"></i><span class="label">السابق</span></a><a href="dashboard.html"><i class="fas fa-house"></i><span class="label">لوحتي</span></a><a class="quiz-link" href="quiz.html?ch=5"><i class="fas fa-clipboard-check"></i><span class="label">الاختبار</span></a><a href="ch6.html"><span class="label">التالي</span><i class="fas fa-chevron-left"></i></a></div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/progress.js"></script>
+<script src="js/trial.js"></script>
+<script src="js/protect-content.js"></script>
+<script>
+const CHAPTER_NUM = 5;
+const _origGoToSlide = goToSlide;
+goToSlide = function(target){
+  _origGoToSlide(target);
+  if (window.LMSProgress) LMSProgress.trackSlide(CHAPTER_NUM, currentSlide, totalSlides);
+};
+(function(){
+  var params = new URLSearchParams(location.search);
+  var urlSlide = parseInt(params.get('slide'));
+  var savedSlide = window.LMSProgress ? LMSProgress.getLastSlide(CHAPTER_NUM) : null;
+  var target = urlSlide || savedSlide;
+  if (target && target > 1 && target <= totalSlides) {
+    setTimeout(function(){ goToSlide(target); }, 350);
+  } else if (window.LMSProgress) {
+    LMSProgress.trackSlide(CHAPTER_NUM, 1, totalSlides);
+  }
+})();
+</script>
+<script>document.addEventListener("DOMContentLoaded", function(){ if(window.LMSTrial) LMSTrial.mountBadgeAndGuard(); });</script>
+<script src="js/mentor.js"></script>
+<script>document.addEventListener("DOMContentLoaded", function(){ if(window.LMSMentor) LMSMentor.mount(CHAPTER_NUM); });</script>
+<script src="js/sw-register.js"></script>
+</body>
+</html>
