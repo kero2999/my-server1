@@ -4,245 +4,212 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const { Resend } = require("resend");
 const supabase = require("../db");
+const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
-const resend = new Resend(process.env.RESEND_API_KEY);
-const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // ساعة واحدة
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-const JWT_SECRET = process.env.JWT_SECRET;
-const TOKEN_EXPIRY = "30d";
-
-function signToken(user) {
-  return jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, {
-    expiresIn: TOKEN_EXPIRY,
-  });
+function signToken(userId) {
+  return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: "30d" });
 }
 
-function publicUser(row) {
+function publicUser(u) {
   return {
-    id: row.id,
-    fullName: row.full_name,
-    email: row.email,
-    status: row.whop_status,
-    createdAt: row.created_at,
+    id: u.id,
+    fullName: u.full_name,
+    email: u.email,
+    status: u.whop_status, // 'pending' | 'active' | 'inactive'
   };
 }
 
-/* ---------------- POST /api/auth/register ---------------- */
+// POST /api/auth/register
 router.post("/register", async (req, res) => {
   try {
-    const fullName = (req.body.fullName || "").trim();
-    const email = (req.body.email || "").trim().toLowerCase();
-    const password = req.body.password || "";
-
+    const { fullName, email, password } = req.body;
     if (!fullName || !email || !password) {
-      return res.json({ ok: false, error: "من فضلك املأ جميع الحقول." });
+      return res.status(400).json({ ok: false, error: "من فضلك املأ جميع الحقول." });
     }
-    if (password.length < 4) {
-      return res.json({ ok: false, error: "كلمة المرور يجب أن تكون 4 أحرف على الأقل." });
+    if (password.length < 6) {
+      return res.status(400).json({ ok: false, error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل." });
     }
+    const normalizedEmail = email.trim().toLowerCase();
 
     const { data: existing } = await supabase
       .from("users")
       .select("id")
-      .eq("email", email)
+      .eq("email", normalizedEmail)
       .maybeSingle();
-
     if (existing) {
-      return res.json({ ok: false, error: "يوجد حساب بهذا الإيميل بالفعل." });
+      return res.status(400).json({ ok: false, error: "يوجد حساب بهذا الإيميل بالفعل." });
     }
 
-    // هل اشتراك الطالب اتفعّل قبل ما يعمل حساب؟ (وصل webhook من Whop الأول)
+    // هل فيه اشتراك Whop مستني الإيميل ده؟
     const { data: pending } = await supabase
       .from("pending_activations")
       .select("*")
-      .eq("email", email)
+      .eq("email", normalizedEmail)
       .maybeSingle();
+    const status = pending ? "active" : "pending";
+    const membershipId = pending ? pending.whop_membership_id : null;
 
     const passwordHash = await bcrypt.hash(password, 10);
-
-    const { data: inserted, error } = await supabase
+    const { data: user, error } = await supabase
       .from("users")
       .insert({
-        full_name: fullName,
-        email,
+        full_name: fullName.trim(),
+        email: normalizedEmail,
         password_hash: passwordHash,
-        whop_status: pending ? pending.status : "pending",
-        whop_membership_id: pending ? pending.whop_membership_id : null,
+        whop_status: status,
+        whop_membership_id: membershipId,
       })
       .select()
       .single();
 
     if (error) throw error;
 
-    if (pending) {
-      await supabase.from("pending_activations").delete().eq("email", email);
-    }
-
-    const token = signToken(inserted);
-    return res.json({ ok: true, token, user: publicUser(inserted) });
-  } catch (err) {
-    console.error("register error:", err);
-    return res.json({ ok: false, error: "حدث خطأ أثناء إنشاء الحساب." });
+    const token = signToken(user.id);
+    res.json({ ok: true, token, user: publicUser(user) });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ ok: false, error: "حصل خطأ غير متوقع، حاول مرة أخرى." });
   }
 });
 
-/* ---------------- POST /api/auth/login ---------------- */
+// POST /api/auth/login
 router.post("/login", async (req, res) => {
   try {
-    const email = (req.body.email || "").trim().toLowerCase();
-    const password = req.body.password || "";
-
-    const { data: user, error } = await supabase
-      .from("users")
-      .select("*")
-      .eq("email", email)
-      .maybeSingle();
-
-    if (error) throw error;
-    if (!user) {
-      return res.json({ ok: false, error: "الإيميل أو كلمة المرور غير صحيحة." });
-    }
-
-    const match = await bcrypt.compare(password, user.password_hash);
-    if (!match) {
-      return res.json({ ok: false, error: "الإيميل أو كلمة المرور غير صحيحة." });
-    }
-
-    const token = signToken(user);
-    return res.json({ ok: true, token, user: publicUser(user) });
-  } catch (err) {
-    console.error("login error:", err);
-    return res.json({ ok: false, error: "حدث خطأ أثناء تسجيل الدخول." });
-  }
-});
-
-/* ---------------- Auth middleware ---------------- */
-function requireToken(req, res, next) {
-  const header = req.headers.authorization || "";
-  const token = header.startsWith("Bearer ") ? header.slice(7) : null;
-  if (!token) return res.status(401).json({ ok: false, error: "غير مصرح." });
-
-  try {
-    req.authUserId = jwt.verify(token, JWT_SECRET).id;
-    next();
-  } catch (e) {
-    return res.status(401).json({ ok: false, error: "الجلسة منتهية، سجّل دخول تاني." });
-  }
-}
-
-/* ---------------- GET /api/auth/me ---------------- */
-router.get("/me", requireToken, async (req, res) => {
-  try {
-    const { data: user, error } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", req.authUserId)
-      .maybeSingle();
-
-    if (error) throw error;
-    if (!user) return res.json({ ok: false, error: "المستخدم غير موجود." });
-
-    return res.json({ ok: true, user: publicUser(user) });
-  } catch (err) {
-    console.error("me error:", err);
-    return res.json({ ok: false, error: "حدث خطأ." });
-  }
-});
-
-/* ---------------- POST /api/auth/forgot-password ---------------- */
-router.post("/forgot-password", async (req, res) => {
-  try {
-    const email = (req.body.email || "").trim().toLowerCase();
-    if (!email) {
-      return res.json({ ok: false, error: "من فضلك اكتب الإيميل." });
-    }
+    const { email, password } = req.body;
+    const normalizedEmail = (email || "").trim().toLowerCase();
 
     const { data: user } = await supabase
       .from("users")
-      .select("id, email, full_name")
-      .eq("email", email)
+      .select("*")
+      .eq("email", normalizedEmail)
       .maybeSingle();
+    if (!user) return res.status(400).json({ ok: false, error: "الإيميل أو كلمة المرور غير صحيحة." });
 
-    // ملحوظة أمان: بنرجّع نفس الرسالة سواء الإيميل موجود أو لأ،
-    // عشان محدش يقدر يعرف إيميلات مسجّلة عندنا من غيرها.
-    if (!user) {
-      return res.json({ ok: true, message: "لو الإيميل ده مسجّل عندنا، هيوصلك رابط إعادة التعيين." });
-    }
+    const match = await bcrypt.compare(password || "", user.password_hash);
+    if (!match) return res.status(400).json({ ok: false, error: "الإيميل أو كلمة المرور غير صحيحة." });
+
+    const token = signToken(user.id);
+    res.json({ ok: true, token, user: publicUser(user) });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ ok: false, error: "حصل خطأ غير متوقع، حاول مرة أخرى." });
+  }
+});
+
+// GET /api/auth/me
+router.get("/me", requireAuth, async (req, res) => {
+  const { data: user } = await supabase.from("users").select("*").eq("id", req.userId).maybeSingle();
+  if (!user) return res.status(404).json({ ok: false, error: "المستخدم غير موجود." });
+  res.json({ ok: true, user: publicUser(user) });
+});
+
+// POST /api/auth/forgot-password
+router.post("/forgot-password", async (req, res) => {
+  // دايمًا نرجّع نفس الرد بغض النظر عن وجود الإيميل من عدمه،
+  // عشان محدش يقدر يستخدم الراوت ده عشان يعرف إيه الإيميلات المسجلة عندنا.
+  const genericOk = { ok: true, message: "لو الإيميل مسجل، هيوصلك رابط إعادة تعيين." };
+  try {
+    const { email } = req.body;
+    const normalizedEmail = (email || "").trim().toLowerCase();
+    if (!normalizedEmail) return res.json(genericOk);
+
+    const { data: user } = await supabase
+      .from("users")
+      .select("id, full_name, email")
+      .eq("email", normalizedEmail)
+      .maybeSingle();
+    if (!user) return res.json(genericOk);
 
     const token = crypto.randomBytes(32).toString("hex");
-    const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS).toISOString();
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // ساعة واحدة
 
     const { error } = await supabase.from("password_resets").insert({
       user_id: user.id,
       token,
-      expires_at: expiresAt,
+      expires_at: expiresAt.toISOString(),
     });
     if (error) throw error;
 
-    const resetLink = `${process.env.FRONTEND_URL}/reset-password.html?token=${token}`;
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password.html?token=${token}`;
 
-    const { data: sendData, error: sendError } = await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
-      to: user.email,
-      subject: "إعادة تعيين كلمة السر",
-      html: `<p>مرحبًا ${user.full_name || ""}،</p>
-             <p>اضغط على الرابط ده عشان تعيد تعيين كلمة السر (صالح لمدة ساعة):</p>
-             <p><a href="${resetLink}">${resetLink}</a></p>
-             <p>لو مطلبتش الرسالة دي، تجاهلها.</p>`,
-    });
+    if (resend && process.env.EMAIL_FROM) {
+      const { data: sendData, error: sendError } = await resend.emails.send({
+        from: process.env.EMAIL_FROM,
+        to: user.email,
+        subject: "إعادة تعيين كلمة السر — منصة التسويق التعليمية",
+        html: `
+          <div dir="rtl" style="font-family:Tajawal,Arial,sans-serif;">
+            <h2>إعادة تعيين كلمة السر</h2>
+            <p>مرحبًا ${user.full_name || ""}،</p>
+            <p>وصلنا طلب لإعادة تعيين كلمة السر الخاصة بحسابك. اضغط على الرابط ده لإكمال العملية (صالح لمدة ساعة واحدة):</p>
+            <p><a href="${resetUrl}" style="color:#ff6f00;font-weight:bold;">إعادة تعيين كلمة السر</a></p>
+            <p>لو ما طلبتش ده، تجاهل الإيميل ده ببساطة، وكلمة السر هتفضل زي ما هي.</p>
+          </div>
+        `,
+      });
 
-    if (sendError) {
-      console.error("resend send error:", sendError);
+      console.log("========== RESEND DEBUG ==========");
+      console.log("API KEY EXISTS:", !!process.env.RESEND_API_KEY);
+      console.log("FROM EMAIL:", process.env.EMAIL_FROM);
+      console.log("TO EMAIL:", user.email);
+
+      if (sendError) {
+        console.error("RESEND ERROR:");
+        console.error(JSON.stringify(sendError, null, 2));
+      } else {
+        console.log("EMAIL SENT SUCCESSFULLY:");
+        console.log(JSON.stringify(sendData, null, 2));
+      }
+
+      console.log("==================================");
     } else {
-      console.log("resend email sent, id:", sendData && sendData.id);
+      console.warn("⚠️ RESEND_API_KEY أو EMAIL_FROM غير مضبوطين — لم يتم إرسال إيميل. رابط إعادة التعيين (للتجربة فقط):", resetUrl);
     }
 
-    return res.json({ ok: true, message: "لو الإيميل ده مسجّل عندنا، هيوصلك رابط إعادة التعيين." });
-  } catch (err) {
-    console.error("forgot-password error:", err);
-    return res.json({ ok: false, error: "حدث خطأ، حاول تاني لاحقًا." });
+    return res.json(genericOk);
+  } catch (e) {
+    console.error(e);
+    return res.json(genericOk);
   }
 });
 
-/* ---------------- POST /api/auth/reset-password ---------------- */
+// POST /api/auth/reset-password
 router.post("/reset-password", async (req, res) => {
   try {
-    const token = (req.body.token || "").trim();
-    const password = req.body.password || "";
-
-    if (!token || !password) {
-      return res.json({ ok: false, error: "بيانات ناقصة." });
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) {
+      return res.status(400).json({ ok: false, error: "بيانات ناقصة." });
     }
-    if (password.length < 4) {
-      return res.json({ ok: false, error: "كلمة المرور يجب أن تكون 4 أحرف على الأقل." });
+    if (newPassword.length < 6) {
+      return res.status(400).json({ ok: false, error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل." });
     }
 
-    const { data: resetRow, error: findError } = await supabase
+    const { data: reset } = await supabase
       .from("password_resets")
       .select("*")
       .eq("token", token)
       .maybeSingle();
 
-    if (findError) throw findError;
-    if (!resetRow || resetRow.used || new Date(resetRow.expires_at) < new Date()) {
-      return res.json({ ok: false, error: "الرابط غير صالح أو منتهي الصلاحية، اطلب رابط جديد." });
+    if (!reset || reset.used || new Date(reset.expires_at) < new Date()) {
+      return res.status(400).json({ ok: false, error: "الرابط غير صالح أو منتهي الصلاحية. اطلب رابط جديد." });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
-
+    const passwordHash = await bcrypt.hash(newPassword, 10);
     const { error: updateError } = await supabase
       .from("users")
       .update({ password_hash: passwordHash })
-      .eq("id", resetRow.user_id);
+      .eq("id", reset.user_id);
     if (updateError) throw updateError;
 
-    await supabase.from("password_resets").update({ used: true }).eq("id", resetRow.id);
+    await supabase.from("password_resets").update({ used: true }).eq("id", reset.id);
 
-    return res.json({ ok: true, message: "تم تغيير كلمة السر بنجاح." });
-  } catch (err) {
-    console.error("reset-password error:", err);
-    return res.json({ ok: false, error: "حدث خطأ، حاول تاني لاحقًا." });
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ ok: false, error: "حصل خطأ غير متوقع، حاول مرة أخرى." });
   }
 });
 
