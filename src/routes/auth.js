@@ -7,8 +7,6 @@ const supabase = require("../db");
 const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
-
-// إعداد Brevo
 const apiInstance = new brevo.TransactionalEmailsApi();
 
 if (process.env.BREVO_API_KEY) {
@@ -19,11 +17,7 @@ if (process.env.BREVO_API_KEY) {
 }
 
 function signToken(userId) {
-  return jwt.sign(
-    { userId },
-    process.env.JWT_SECRET,
-    { expiresIn: "30d" }
-  );
+  return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: "30d" });
 }
 
 function publicUser(u) {
@@ -31,31 +25,20 @@ function publicUser(u) {
     id: u.id,
     fullName: u.full_name,
     email: u.email,
-    status: u.whop_status,
+    status: u.whop_status, // 'pending' | 'active' | 'inactive'
   };
 }
 
-// =========================================================
 // POST /api/auth/register
-// =========================================================
 router.post("/register", async (req, res) => {
   try {
     const { fullName, email, password } = req.body;
-
     if (!fullName || !email || !password) {
-      return res.status(400).json({
-        ok: false,
-        error: "من فضلك املأ جميع الحقول.",
-      });
+      return res.status(400).json({ ok: false, error: "من فضلك املأ جميع الحقول." });
     }
-
     if (password.length < 6) {
-      return res.status(400).json({
-        ok: false,
-        error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل.",
-      });
+      return res.status(400).json({ ok: false, error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل." });
     }
-
     const normalizedEmail = email.trim().toLowerCase();
 
     const { data: existing } = await supabase
@@ -63,28 +46,20 @@ router.post("/register", async (req, res) => {
       .select("id")
       .eq("email", normalizedEmail)
       .maybeSingle();
-
     if (existing) {
-      return res.status(400).json({
-        ok: false,
-        error: "يوجد حساب بهذا الإيميل بالفعل.",
-      });
+      return res.status(400).json({ ok: false, error: "يوجد حساب بهذا الإيميل بالفعل." });
     }
 
-    // هل يوجد اشتراك Whop ينتظر هذا الإيميل؟
+    // هل فيه اشتراك Whop مستني الإيميل ده؟
     const { data: pending } = await supabase
       .from("pending_activations")
       .select("*")
       .eq("email", normalizedEmail)
       .maybeSingle();
-
     const status = pending ? "active" : "pending";
-    const membershipId = pending
-      ? pending.whop_membership_id
-      : null;
+    const membershipId = pending ? pending.whop_membership_id : null;
 
     const passwordHash = await bcrypt.hash(password, 10);
-
     const { data: user, error } = await supabase
       .from("users")
       .insert({
@@ -100,149 +75,93 @@ router.post("/register", async (req, res) => {
     if (error) throw error;
 
     const token = signToken(user.id);
-
-    res.json({
-      ok: true,
-      token,
-      user: publicUser(user),
-    });
+    res.json({ ok: true, token, user: publicUser(user) });
   } catch (e) {
     console.error(e);
-
-    res.status(500).json({
-      ok: false,
-      error: "حصل خطأ غير متوقع، حاول مرة أخرى.",
-    });
+    res.status(500).json({ ok: false, error: "حصل خطأ غير متوقع، حاول مرة أخرى." });
   }
 });
 
-// =========================================================
 // POST /api/auth/login
-// =========================================================
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-
-    const normalizedEmail = (email || "")
-      .trim()
-      .toLowerCase();
+    const normalizedEmail = (email || "").trim().toLowerCase();
 
     const { data: user } = await supabase
       .from("users")
       .select("*")
       .eq("email", normalizedEmail)
       .maybeSingle();
+    if (!user) return res.status(400).json({ ok: false, error: "الإيميل أو كلمة المرور غير صحيحة." });
 
-    if (!user) {
-      return res.status(400).json({
-        ok: false,
-        error: "الإيميل أو كلمة المرور غير صحيحة.",
-      });
-    }
-
-    const match = await bcrypt.compare(
-      password || "",
-      user.password_hash
-    );
-
-    if (!match) {
-      return res.status(400).json({
-        ok: false,
-        error: "الإيميل أو كلمة المرور غير صحيحة.",
-      });
-    }
+    const match = await bcrypt.compare(password || "", user.password_hash);
+    if (!match) return res.status(400).json({ ok: false, error: "الإيميل أو كلمة المرور غير صحيحة." });
 
     const token = signToken(user.id);
-
-    res.json({
-      ok: true,
-      token,
-      user: publicUser(user),
-    });
+    res.json({ ok: true, token, user: publicUser(user) });
   } catch (e) {
     console.error(e);
-
-    res.status(500).json({
-      ok: false,
-      error: "حصل خطأ غير متوقع، حاول مرة أخرى.",
-    });
+    res.status(500).json({ ok: false, error: "حصل خطأ غير متوقع، حاول مرة أخرى." });
   }
 });
 
-// =========================================================
 // GET /api/auth/me
-// =========================================================
 router.get("/me", requireAuth, async (req, res) => {
-  try {
-    const { data: user } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", req.userId)
-      .maybeSingle();
-
-    if (!user) {
-      return res.status(404).json({
-        ok: false,
-        error: "المستخدم غير موجود.",
-      });
-    }
-
-    res.json({
-      ok: true,
-      user: publicUser(user),
-    });
-  } catch (e) {
-    console.error(e);
-
-    res.status(500).json({
-      ok: false,
-      error: "حصل خطأ غير متوقع، حاول مرة أخرى.",
-    });
-  }
+  const { data: user } = await supabase.from("users").select("*").eq("id", req.userId).maybeSingle();
+  if (!user) return res.status(404).json({ ok: false, error: "المستخدم غير موجود." });
+  res.json({ ok: true, user: publicUser(user) });
 });
 
-// =========================================================
 // POST /api/auth/forgot-password
-// =========================================================
 router.post("/forgot-password", async (req, res) => {
   console.log("🔥 FORGOT PASSWORD ROUTE WAS CALLED");
 
-  // لا نكشف إذا كان الإيميل موجودًا أم لا
   const genericOk = {
     ok: true,
-    message: "لو الإيميل مسجل، هيوصلك رابط إعادة تعيين.",
+    message: "لو الإيميل مسجل، هيوصلك رابط إعادة تعيين."
   };
 
   try {
-    const { email } = req.body;
+    console.log("STEP 1: Reading email");
 
-    const normalizedEmail = (email || "")
-      .trim()
-      .toLowerCase();
+    const { email } = req.body;
+    const normalizedEmail = (email || "").trim().toLowerCase();
+
+    console.log("STEP 2: Email received:", normalizedEmail);
 
     if (!normalizedEmail) {
+      console.log("STEP 3: Empty email");
       return res.json(genericOk);
     }
 
-    const { data: user } = await supabase
+    console.log("STEP 4: Querying Supabase users");
+
+    const { data: user, error: userError } = await supabase
       .from("users")
       .select("id, full_name, email")
       .eq("email", normalizedEmail)
       .maybeSingle();
 
+    console.log("STEP 5: Supabase query completed");
+    console.log("USER FOUND:", !!user);
+    console.log("SUPABASE ERROR:", userError);
+
+    if (userError) throw userError;
+
     if (!user) {
+      console.log("STEP 6: User not found");
       return res.json(genericOk);
     }
 
-    // إنشاء Token جديد
+    console.log("STEP 7: Creating reset token");
+
     const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
-    // صلاحية الرابط ساعة واحدة
-    const expiresAt = new Date(
-      Date.now() + 60 * 60 * 1000
-    );
+    console.log("STEP 8: Inserting password reset");
 
-    const { error } = await supabase
+    const { error: resetError } = await supabase
       .from("password_resets")
       .insert({
         user_id: user.id,
@@ -250,168 +169,92 @@ router.post("/forgot-password", async (req, res) => {
         expires_at: expiresAt.toISOString(),
       });
 
-    if (error) throw error;
+    console.log("STEP 9: Password reset insert completed");
+    console.log("RESET ERROR:", resetError);
+
+    if (resetError) throw resetError;
 
     const resetUrl =
       `${process.env.FRONTEND_URL}/reset-password.html?token=${token}`;
 
+    console.log("STEP 10: Reset URL created");
+    console.log("FRONTEND_URL:", process.env.FRONTEND_URL);
+
     console.log("========== BREVO DEBUG ==========");
-    console.log(
-      "BREVO_API_KEY EXISTS:",
-      !!process.env.BREVO_API_KEY
-    );
-    console.log(
-      "EMAIL_FROM:",
-      process.env.EMAIL_FROM
-    );
-    console.log(
-      "TO:",
-      user.email
-    );
-    console.log(
-      "RESET URL:",
-      resetUrl
-    );
+    console.log("BREVO_API_KEY EXISTS:", !!process.env.BREVO_API_KEY);
+    console.log("EMAIL_FROM:", process.env.EMAIL_FROM);
+    console.log("TO:", user.email);
 
-    // إرسال الإيميل عن طريق Brevo
-    if (
-      process.env.BREVO_API_KEY &&
-      process.env.EMAIL_FROM
-    ) {
-      try {
-        const sendSmtpEmail =
-          new brevo.SendSmtpEmail();
+    if (process.env.BREVO_API_KEY && process.env.EMAIL_FROM) {
+      console.log("STEP 11: Starting Brevo email");
 
-        sendSmtpEmail.sender = {
-          email: process.env.EMAIL_FROM,
-          name: "Marketing Platform",
-        };
+      const sendSmtpEmail = new brevo.SendSmtpEmail();
 
-        sendSmtpEmail.to = [
-          {
-            email: user.email,
-            name: user.full_name || "",
-          },
-        ];
+      sendSmtpEmail.sender = {
+        email: process.env.EMAIL_FROM,
+        name: "Marketing Platform"
+      };
 
-        sendSmtpEmail.subject =
-          "إعادة تعيين كلمة السر — منصة التسويق التعليمية";
+      sendSmtpEmail.to = [
+        {
+          email: user.email,
+          name: user.full_name || ""
+        }
+      ];
 
-        sendSmtpEmail.htmlContent = `
-          <div
-            dir="rtl"
-            style="
-              font-family: Arial, sans-serif;
-              max-width: 600px;
-              margin: 0 auto;
-              padding: 30px;
-              line-height: 1.8;
-            "
-          >
-            <h2>إعادة تعيين كلمة السر</h2>
+      sendSmtpEmail.subject =
+        "إعادة تعيين كلمة السر — منصة التسويق التعليمية";
 
-            <p>
-              مرحبًا ${user.full_name || ""}،
-            </p>
+      sendSmtpEmail.htmlContent = `
+        <div dir="rtl" style="font-family:Tajawal,Arial,sans-serif;">
+          <h2>إعادة تعيين كلمة السر</h2>
+          <p>مرحبًا ${user.full_name || ""}،</p>
+          <p>
+            وصلنا طلب لإعادة تعيين كلمة السر الخاصة بحسابك.
+          </p>
+          <p>
+            <a href="${resetUrl}">
+              إعادة تعيين كلمة السر
+            </a>
+          </p>
+          <p>
+            الرابط صالح لمدة ساعة واحدة.
+          </p>
+        </div>
+      `;
 
-            <p>
-              وصلنا طلب لإعادة تعيين كلمة السر الخاصة بحسابك.
-            </p>
+      console.log("STEP 12: Calling Brevo API");
 
-            <p>
-              اضغط على الزر التالي لإعادة تعيين كلمة السر:
-            </p>
+      await apiInstance.sendTransacEmail(sendSmtpEmail);
 
-            <p>
-              <a
-                href="${resetUrl}"
-                style="
-                  display: inline-block;
-                  background: #ff6f00;
-                  color: #ffffff;
-                  text-decoration: none;
-                  padding: 12px 24px;
-                  border-radius: 6px;
-                  font-weight: bold;
-                "
-              >
-                إعادة تعيين كلمة السر
-              </a>
-            </p>
-
-            <p>
-              هذا الرابط صالح لمدة ساعة واحدة فقط.
-            </p>
-
-            <p>
-              إذا لم تطلب إعادة تعيين كلمة السر،
-              يمكنك تجاهل هذا الإيميل.
-            </p>
-          </div>
-        `;
-
-        const result =
-          await apiInstance.sendTransacEmail(
-            sendSmtpEmail
-          );
-
-        console.log(
-          "✅ EMAIL SENT SUCCESSFULLY"
-        );
-
-        console.log(
-          "BREVO RESPONSE:",
-          result
-        );
-      } catch (emailError) {
-        console.error(
-          "❌ BREVO EMAIL ERROR:"
-        );
-
-        console.error(emailError);
-      }
+      console.log("STEP 13: EMAIL SENT SUCCESSFULLY");
     } else {
-      console.warn(
-        "⚠️ BREVO_API_KEY أو EMAIL_FROM غير مضبوطين."
-      );
-
-      console.warn(
-        "رابط إعادة التعيين للتجربة فقط:",
-        resetUrl
-      );
+      console.warn("STEP 11: Brevo environment variables are missing");
+      console.warn("BREVO_API_KEY EXISTS:", !!process.env.BREVO_API_KEY);
+      console.warn("EMAIL_FROM:", process.env.EMAIL_FROM);
     }
 
-    console.log(
-      "================================"
-    );
+    console.log("STEP 14: Returning response");
 
     return res.json(genericOk);
+
   } catch (e) {
+    console.error("🔥 FORGOT PASSWORD ERROR:");
     console.error(e);
 
     return res.json(genericOk);
   }
 });
 
-// =========================================================
 // POST /api/auth/reset-password
-// =========================================================
 router.post("/reset-password", async (req, res) => {
   try {
     const { token, newPassword } = req.body;
-
     if (!token || !newPassword) {
-      return res.status(400).json({
-        ok: false,
-        error: "بيانات ناقصة.",
-      });
+      return res.status(400).json({ ok: false, error: "بيانات ناقصة." });
     }
-
     if (newPassword.length < 6) {
-      return res.status(400).json({
-        ok: false,
-        error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل.",
-      });
+      return res.status(400).json({ ok: false, error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل." });
     }
 
     const { data: reset } = await supabase
@@ -420,48 +263,23 @@ router.post("/reset-password", async (req, res) => {
       .eq("token", token)
       .maybeSingle();
 
-    if (
-      !reset ||
-      reset.used ||
-      new Date(reset.expires_at) < new Date()
-    ) {
-      return res.status(400).json({
-        ok: false,
-        error:
-          "الرابط غير صالح أو منتهي الصلاحية. اطلب رابط جديد.",
-      });
+    if (!reset || reset.used || new Date(reset.expires_at) < new Date()) {
+      return res.status(400).json({ ok: false, error: "الرابط غير صالح أو منتهي الصلاحية. اطلب رابط جديد." });
     }
 
-    const passwordHash =
-      await bcrypt.hash(newPassword, 10);
-
-    const { error: updateError } =
-      await supabase
-        .from("users")
-        .update({
-          password_hash: passwordHash,
-        })
-        .eq("id", reset.user_id);
-
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const { error: updateError } = await supabase
+      .from("users")
+      .update({ password_hash: passwordHash })
+      .eq("id", reset.user_id);
     if (updateError) throw updateError;
 
-    await supabase
-      .from("password_resets")
-      .update({
-        used: true,
-      })
-      .eq("id", reset.id);
+    await supabase.from("password_resets").update({ used: true }).eq("id", reset.id);
 
-    return res.json({
-      ok: true,
-    });
+    return res.json({ ok: true });
   } catch (e) {
     console.error(e);
-
-    res.status(500).json({
-      ok: false,
-      error: "حصل خطأ غير متوقع، حاول مرة أخرى.",
-    });
+    res.status(500).json({ ok: false, error: "حصل خطأ غير متوقع، حاول مرة أخرى." });
   }
 });
 
