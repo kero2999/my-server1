@@ -10,7 +10,7 @@ const COURSE_CONTENT = JSON.parse(
   fs.readFileSync(path.join(__dirname, "..", "..", "data", "course-content.json"), "utf-8")
 );
 
-const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
+const MODEL = process.env.OPENAI_MODEL || "gpt-5.6-mini";
 
 function buildSystemPrompt(chapterNum) {
   const chapter = COURSE_CONTENT[String(chapterNum)];
@@ -33,38 +33,41 @@ function buildSystemPrompt(chapterNum) {
 ${chapterBlock}`;
 }
 
+// POST /api/mentor/chat
+// body: { chapter: number|null, messages: [{role:'user'|'assistant', content:string}] }
 router.post("/chat", requireAuth, async (req, res) => {
   try {
     const { chapter, messages } = req.body;
     if (!Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ ok: false, error: "لا توجد رسائل لإرسالها." });
     }
-    if (!process.env.ANTHROPIC_API_KEY) {
+    if (!process.env.OPENAI_API_KEY) {
       return res.status(500).json({ ok: false, error: "المرشد الذكي غير مفعّل بعد — مفتاح الـ API غير مضبوط على السيرفر." });
     }
 
-    const apiRes = await fetch("https://api.anthropic.com/v1/messages", {
+    const apiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
+        Authorization: "Bearer " + process.env.OPENAI_API_KEY,
       },
       body: JSON.stringify({
         model: MODEL,
         max_tokens: 700,
-        system: buildSystemPrompt(chapter),
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
+        messages: [
+          { role: "system", content: buildSystemPrompt(chapter) },
+          ...messages.map((m) => ({ role: m.role, content: m.content })),
+        ],
       }),
     });
 
     const data = await apiRes.json();
     if (!apiRes.ok) {
-      console.error("Anthropic API error:", data);
+      console.error("OpenAI API error:", data);
       return res.status(502).json({ ok: false, error: "تعذّر الوصول للمرشد الذكي حاليًا، حاول بعد شوية." });
     }
 
-    const reply = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).join("\n").trim();
+    const reply = ((data.choices || [])[0]?.message?.content || "").trim();
     res.json({ ok: true, reply });
   } catch (e) {
     console.error(e);
