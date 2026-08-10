@@ -10,7 +10,7 @@ const COURSE_CONTENT = JSON.parse(
   fs.readFileSync(path.join(__dirname, "..", "..", "data", "course-content.json"), "utf-8")
 );
 
-const MODEL = process.env.OPENAI_MODEL || "gpt-5.6-mini";
+const MODEL = process.env.OPENAI_MODEL || "gpt-5-mini";
 
 function buildSystemPrompt(chapterNum) {
   const chapter = COURSE_CONTENT[String(chapterNum)];
@@ -53,7 +53,7 @@ router.post("/chat", requireAuth, async (req, res) => {
       },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 700,
+        max_completion_tokens: 700,
         messages: [
           { role: "system", content: buildSystemPrompt(chapter) },
           ...messages.map((m) => ({ role: m.role, content: m.content })),
