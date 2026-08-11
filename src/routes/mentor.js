@@ -53,7 +53,7 @@ router.post("/chat", requireAuth, async (req, res) => {
       },
       body: JSON.stringify({
         model: MODEL,
-        max_completion_tokens: 1500,
+        max_completion_tokens: 300,
         reasoning_effort: "minimal",
         messages: [
           { role: "system", content: buildSystemPrompt(chapter) },
@@ -92,19 +92,25 @@ router.post("/speak", requireAuth, async (req, res) => {
       return res.status(500).json({ ok: false, error: "المرشد الذكي غير مفعّل بعد." });
     }
 
+    const ttsModel = process.env.OPENAI_TTS_MODEL || "tts-1";
+    const ttsBody = {
+      model: ttsModel,
+      voice: process.env.OPENAI_TTS_VOICE || "coral",
+      input: text.slice(0, 3000), // حماية من نصوص طويلة جدًا تتخطى حد الموديل
+      response_format: "mp3",
+    };
+    // "instructions" مدعوم بس مع gpt-4o-mini-tts — لو غيّرت الموديل لـ tts-1 (أسرع) الباراميتر ده مش هيتبعت
+    if (ttsModel === "gpt-4o-mini-tts") {
+      ttsBody.instructions = "تكلم بنبرة مدرّس ودود، صبور، وواضح، وبسرعة معتدلة.";
+    }
+
     const apiRes = await fetch("https://api.openai.com/v1/audio/speech", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: "Bearer " + process.env.OPENAI_API_KEY,
       },
-      body: JSON.stringify({
-        model: process.env.OPENAI_TTS_MODEL || "gpt-4o-mini-tts",
-        voice: process.env.OPENAI_TTS_VOICE || "coral",
-        input: text.slice(0, 3000),
-        response_format: "mp3",
-        instructions: "تكلم بنبرة مدرّس ودود، صبور، وواضح، وبسرعة معتدلة.",
-      }),
+      body: JSON.stringify(ttsBody),
     });
 
     if (!apiRes.ok) {
