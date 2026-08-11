@@ -53,7 +53,8 @@ router.post("/chat", requireAuth, async (req, res) => {
       },
       body: JSON.stringify({
         model: MODEL,
-        max_completion_tokens: 700,
+        max_completion_tokens: 1500,
+        reasoning_effort: "minimal",
         messages: [
           { role: "system", content: buildSystemPrompt(chapter) },
           ...messages.map((m) => ({ role: m.role, content: m.content })),
@@ -68,6 +69,10 @@ router.post("/chat", requireAuth, async (req, res) => {
     }
 
     const reply = ((data.choices || [])[0]?.message?.content || "").trim();
+    if (!reply) {
+      console.warn("Empty reply from model, full response:", JSON.stringify(data).slice(0, 500));
+      return res.status(502).json({ ok: false, error: "المرشد الذكي محتاج يعيد المحاولة، اسأل تاني من فضلك." });
+    }
     res.json({ ok: true, reply });
   } catch (e) {
     console.error(e);
