@@ -92,7 +92,7 @@ router.post("/speak", requireAuth, async (req, res) => {
       return res.status(500).json({ ok: false, error: "المرشد الذكي غير مفعّل بعد." });
     }
 
-    const ttsModel = process.env.OPENAI_TTS_MODEL || "tts-1";
+    const ttsModel = process.env.OPENAI_TTS_MODEL || "gpt-4o-mini-tts";
     const ttsBody = {
       model: ttsModel,
       voice: process.env.OPENAI_TTS_VOICE || "coral",
