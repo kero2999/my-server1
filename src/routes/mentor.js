@@ -3,6 +3,7 @@ const path = require("path");
 const fs = require("fs");
 const { requireAuth } = require("../middleware/auth");
 const { PROJECT_PROMPTS } = require("../mentor-projects");
+const supabase = require("../db");
 
 const router = express.Router();
 
@@ -11,6 +12,7 @@ const COURSE_CONTENT = JSON.parse(
 );
 
 const MODEL = process.env.OPENAI_MODEL || "gpt-5-mini";
+const TRIAL_MESSAGE_LIMIT = 3;
 
 function buildSystemPrompt(chapterNum) {
   const chapter = COURSE_CONTENT[String(chapterNum)];
@@ -33,7 +35,39 @@ function buildSystemPrompt(chapterNum) {
 ${chapterBlock}`;
 }
 
-// POST /api/mentor/chat
+// دالة مشتركة لاستدعاء الموديل — تُستخدم من مسار الحساب الكامل ومسار المعاينة المجانية معًا
+async function callMentorModel(chapter, messages) {
+  const apiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + process.env.OPENAI_API_KEY,
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      max_completion_tokens: 300,
+      reasoning_effort: "minimal",
+      messages: [
+        { role: "system", content: buildSystemPrompt(chapter) },
+        ...messages.map((m) => ({ role: m.role, content: m.content })),
+      ],
+    }),
+  });
+
+  const data = await apiRes.json();
+  if (!apiRes.ok) {
+    console.error("OpenAI API error:", data);
+    throw new Error("upstream_error");
+  }
+  const reply = ((data.choices || [])[0]?.message?.content || "").trim();
+  if (!reply) {
+    console.warn("Empty reply from model, full response:", JSON.stringify(data).slice(0, 500));
+    throw new Error("empty_reply");
+  }
+  return reply;
+}
+
+// POST /api/mentor/chat — للمشتركين بحساب كامل ومفعّل
 // body: { chapter: number|null, messages: [{role:'user'|'assistant', content:string}] }
 router.post("/chat", requireAuth, async (req, res) => {
   try {
@@ -45,42 +79,72 @@ router.post("/chat", requireAuth, async (req, res) => {
       return res.status(500).json({ ok: false, error: "المرشد الذكي غير مفعّل بعد — مفتاح الـ API غير مضبوط على السيرفر." });
     }
 
-    const apiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + process.env.OPENAI_API_KEY,
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_completion_tokens: 300,
-        reasoning_effort: "minimal",
-        messages: [
-          { role: "system", content: buildSystemPrompt(chapter) },
-          ...messages.map((m) => ({ role: m.role, content: m.content })),
-        ],
-      }),
-    });
-
-    const data = await apiRes.json();
-    if (!apiRes.ok) {
-      console.error("OpenAI API error:", data);
-      return res.status(502).json({ ok: false, error: "تعذّر الوصول للمرشد الذكي حاليًا، حاول بعد شوية." });
-    }
-
-    const reply = ((data.choices || [])[0]?.message?.content || "").trim();
-    if (!reply) {
-      console.warn("Empty reply from model, full response:", JSON.stringify(data).slice(0, 500));
-      return res.status(502).json({ ok: false, error: "المرشد الذكي محتاج يعيد المحاولة، اسأل تاني من فضلك." });
-    }
+    const reply = await callMentorModel(chapter, messages);
     res.json({ ok: true, reply });
   } catch (e) {
     console.error(e);
+    if (e.message === "empty_reply" || e.message === "upstream_error") {
+      return res.status(502).json({ ok: false, error: "تعذّر الوصول للمرشد الذكي حاليًا، حاول بعد شوية." });
+    }
     res.status(500).json({ ok: false, error: "حصل خطأ غير متوقع، حاول مرة أخرى." });
   }
 });
 
-// POST /api/mentor/speak — تحويل نص لصوت طبيعي حقيقي (مش صوت المتصفح الآلي)
+// POST /api/mentor/trial-chat — للزوار في المعاينة المجانية (بدون حساب)، محدود عدد رسائل
+// header: X-Trial-Session  |  body: { chapter, messages }
+router.post("/trial-chat", async (req, res) => {
+  try {
+    const sessionId = req.headers["x-trial-session"];
+    if (!sessionId || typeof sessionId !== "string") {
+      return res.status(400).json({ ok: false, error: "جلسة معاينة غير صالحة." });
+    }
+    const { chapter, messages } = req.body;
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({ ok: false, error: "لا توجد رسائل لإرسالها." });
+    }
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({ ok: false, error: "المرشد الذكي غير مفعّل بعد." });
+    }
+
+    // اقرأ العداد الحالي لجلسة المعاينة دي، أو أنشئه لو أول مرة
+    const { data: existing } = await supabase
+      .from("trial_mentor_usage")
+      .select("message_count")
+      .eq("session_id", sessionId)
+      .maybeSingle();
+
+    const currentCount = existing ? existing.message_count : 0;
+    if (currentCount >= TRIAL_MESSAGE_LIMIT) {
+      return res.status(403).json({
+        ok: false,
+        limitReached: true,
+        error: "خلصت رسائلك المجانية مع المرشد الذكي — سجّل حساب كامل للمتابعة من غير حدود.",
+      });
+    }
+
+    const reply = await callMentorModel(chapter, messages);
+
+    // حدّث العداد بعد نجاح الرد فقط (منعًا لاحتساب محاولات فاشلة)
+    if (existing) {
+      await supabase
+        .from("trial_mentor_usage")
+        .update({ message_count: currentCount + 1 })
+        .eq("session_id", sessionId);
+    } else {
+      await supabase.from("trial_mentor_usage").insert({ session_id: sessionId, message_count: 1 });
+    }
+
+    res.json({ ok: true, reply, remaining: TRIAL_MESSAGE_LIMIT - (currentCount + 1) });
+  } catch (e) {
+    console.error(e);
+    if (e.message === "empty_reply" || e.message === "upstream_error") {
+      return res.status(502).json({ ok: false, error: "تعذّر الوصول للمرشد الذكي حاليًا، حاول بعد شوية." });
+    }
+    res.status(500).json({ ok: false, error: "حصل خطأ غير متوقع، حاول مرة أخرى." });
+  }
+});
+
+// POST /api/mentor/speak — تحويل نص لصوت طبيعي حقيقي (متاح للحساب الكامل فقط)
 // body: { text: string }  →  يرجّع ملف صوت MP3 مباشرة
 router.post("/speak", requireAuth, async (req, res) => {
   try {
@@ -96,10 +160,9 @@ router.post("/speak", requireAuth, async (req, res) => {
     const ttsBody = {
       model: ttsModel,
       voice: process.env.OPENAI_TTS_VOICE || "coral",
-      input: text.slice(0, 3000), // حماية من نصوص طويلة جدًا تتخطى حد الموديل
+      input: text.slice(0, 3000),
       response_format: "mp3",
     };
-    // "instructions" مدعوم بس مع gpt-4o-mini-tts — لو غيّرت الموديل لـ tts-1 (أسرع) الباراميتر ده مش هيتبعت
     if (ttsModel === "gpt-4o-mini-tts") {
       ttsBody.instructions = "تكلم بنبرة مدرّس ودود، صبور، وواضح، وبسرعة معتدلة.";
     }
