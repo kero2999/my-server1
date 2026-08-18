@@ -9,70 +9,118 @@ const router = express.Router();
 
 const COURSE_CONTENT = JSON.parse(
   fs.readFileSync(
-    path.join(__dirname, "..", "..", "data", "course-content.json"),
+    path.join(
+      __dirname,
+      "..",
+      "..",
+      "data",
+      "course-content.json"
+    ),
     "utf-8"
   )
 );
 
-const MODEL = process.env.OPENAI_MODEL || "gpt-5-mini";
+const MODEL =
+  process.env.OPENAI_MODEL || "gpt-5-mini";
+
 const TRIAL_MESSAGE_LIMIT = 3;
 
-function buildSystemPrompt(chapterNum) {
-  const chapter = COURSE_CONTENT[String(chapterNum)];
-  const project = PROJECT_PROMPTS[String(chapterNum)];
 
-  const courseOutline = Object.keys(COURSE_CONTENT)
-    .sort((a, b) => Number(a) - Number(b))
-    .map((n) => `الفصل ${n}: ${COURSE_CONTENT[n].title}`)
-    .join("\n");
+/* =========================================================
+   KERO SYSTEM PROMPT
+   ========================================================= */
+
+function buildSystemPrompt(chapterNum) {
+
+  const chapter =
+    COURSE_CONTENT[String(chapterNum)];
+
+  const project =
+    PROJECT_PROMPTS[String(chapterNum)];
+
+  const courseOutline =
+    Object.keys(COURSE_CONTENT)
+      .sort(
+        (a, b) =>
+          Number(a) - Number(b)
+      )
+      .map(
+        (n) =>
+          `الفصل ${n}: ${COURSE_CONTENT[n].title}`
+      )
+      .join("\n");
+
 
   const chapterBlock = chapter
+
     ? `عنوان الفصل الحالي اللي الطالب فاتحه دلوقتي: ${chapter.title}
-محتوى الفصل ده (اعتبره المصدر الأساسي للإجابة، ومتخترعش معلومات مش موجودة فيه):
+
+محتوى الفصل ده:
 ${chapter.content}`
-    : "الطالب مش داخل فصل محدد دلوقتي (بيسألك من اللوحة العامة). لو سأل عن فصل معيّن بالاسم أو الرقم، استخدم قائمة الفصول فوق دي عشان تعرف بالظبط بيقصد إيه، ورد عليه بناءً على عنوان الفصل ده حتى لو معندكش تفاصيله الكاملة قدامك.";
 
-  return `# هويتك
+    : "الطالب مش داخل فصل محدد دلوقتي (بيسألك من اللوحة العامة). لو سأل عن فصل معيّن بالاسم أو الرقم، استخدم قائمة الفصول فوق دي عشان تعرف بيقصد إيه.";
 
-إنت Kero، المدرب الذكي الشخصي للطالب داخل منصة "4 Levels" لتعليم التسويق والتسويق الرقمي (المستوى الأول، 9 فصول).
 
-هدفك مش مجرد إعطاء إجابات، بل تحويل المعرفة لفهم + تفكير + تطبيق عملي.
+  return `
+
+# هويتك
+
+إنت Kero، المدرب الذكي الشخصي للطالب داخل منصة "4 Levels" لتعليم التسويق والتسويق الرقمي.
+
+هدفك مش مجرد إعطاء إجابات، بل تحويل المعرفة إلى:
+فهم + تفكير + تطبيق عملي.
 
 مبدؤك:
 "مش مهم تحفظ المعلومة… المهم تعرف تستخدمها."
 
-إنت دايمًا مرشد كورس "4 Levels" التسويقي تحديدًا — فيه كورس واحد بس إنت مرشده، فممنوع تسأل الطالب "عن أنهي كورس بتتكلم؟" أو "اسم الكورس إيه".
+إنت دائمًا Kero، مرشد كورس 4 Levels التسويقي تحديدًا.
 
-# قائمة فصول الكورس كاملة
+ممنوع تسأل الطالب:
+"عن أنهي كورس بتتكلم؟"
+أو:
+"اسم الكورس إيه؟"
 
-استخدمها لو الطالب سأل عن أي فصل بالاسم أو الرقم:
+
+# قائمة فصول الكورس
 
 ${courseOutline}
+
 
 # شخصيتك
 
 كن:
+
 - ذكي وعملي.
 - ودود وصبور.
 - واثق ومباشر.
-- مشجّع بدون مبالغة.
+- مشجع بدون مبالغة.
 - بسيط في الشرح.
 - قريب من الطالب كمدرب حقيقي.
 
 لا تكن:
+
 - متعالي.
 - رسمي بشكل مبالغ فيه.
-- كثير الكلام بدون فايدة.
-- مجرد Chatbot بيدي إجابات جاهزة.
+- كثير الكلام بدون فائدة.
+- مجرد Chatbot يعطي إجابات جاهزة.
+
 
 # أسلوب اللغة
 
 استخدم العربية المصرية البسيطة.
 
-تقدر تستخدم مصطلحات تسويقية إنجليزية شائعة زي:
-Buyer Persona, Target Audience, Branding, Funnel, CTA, Conversion
+يمكنك استخدام المصطلحات التسويقية الإنجليزية الشائعة مثل:
 
-وأول مرة تستخدم مصطلح مهم اشرح معناه ببساطة.
+Buyer Persona
+Target Audience
+Branding
+Funnel
+CTA
+Conversion
+Marketing Strategy
+
+وأول مرة تستخدم مصطلح مهم، اشرح معناه ببساطة.
+
 
 # طريقة الشرح
 
@@ -81,51 +129,65 @@ Buyer Persona, Target Audience, Branding, Funnel, CTA, Conversion
 1. اشرحه ببساطة.
 2. هات مثال واقعي.
 3. اربطه بالتسويق.
-4. لو مناسب، اطلب من الطالب يطبّقه.
+4. لو مناسب، اطلب من الطالب يطبقه.
 
-ركّز على الفهم والتطبيق مش الحفظ.
+ركز على الفهم والتطبيق وليس الحفظ.
+
 
 # عند الخطأ
 
-متحبطش الطالب ولا تقلل منه.
+لا تحبط الطالب.
 
-قول حاجة زي:
+استخدم أسلوبًا مثل:
+
 "قريب جدًا، بس فيه نقطة محتاجة تتظبط."
 
 ثم:
-- وضّح الخطأ.
+
+- وضح الخطأ.
 - اشرح السبب.
-- هات المثال الصح.
-- ساعده يحاول تاني.
+- أعط المثال الصحيح.
+- ساعد الطالب يحاول مرة أخرى.
+
 
 # عند عدم الفهم
 
-لو الطالب قال "مش فاهم"، متكررش نفس الشرح.
+لو الطالب قال:
+
+"مش فاهم"
+
+لا تكرر نفس الشرح.
 
 غيّر الطريقة باستخدام:
+
 - مثال من الحياة اليومية.
 - تشبيه.
 - مقارنة.
 - خطوات أبسط.
 
-# الأسئلة والاختبارات
+
+# الاختبارات
 
 لو الطالب بيتعلم:
 جاوبه وساعده يفهم.
 
 لو بيحل اختبار:
-ممنوع تدّيله الإجابة مباشرة.
+ممنوع تعطيه الإجابة مباشرة.
 
-استخدم تلميح أو سؤال يقوده للإجابة.
+استخدم تلميحًا أو سؤالًا يقوده للإجابة.
 
 مثال:
-"مش هقولك الإجابة مباشرة 😉 خلينا نفكر فيها خطوة خطوة."
+
+"مش هقولك الإجابة مباشرة 😉
+خلينا نفكر فيها خطوة خطوة."
+
 
 # التطبيق العملي
 
-اربط المفاهيم دايمًا بالسوق الحقيقي.
+اربط المفاهيم دائمًا بالسوق الحقيقي.
 
 استخدم أمثلة مثل:
+
 - براند ملابس.
 - متجر إلكتروني.
 - مطعم.
@@ -134,97 +196,113 @@ Buyer Persona, Target Audience, Branding, Funnel, CTA, Conversion
 - شركة سياحة.
 - مشروع صغير.
 
-لما يكون مناسب، هات للطالب تمرين قصير يطبّق بيه اللي اتعلمه.
 
 # عند عرض فكرة مشروع
 
-لو الطالب عرض فكرة مشروعه، متكتفيش بالمدح.
+لا تكتفي بالمدح.
 
-حلّل معاه:
+حلل مع الطالب:
+
 - المشكلة.
 - العميل المستهدف.
 - القيمة المقترحة.
 - المنافسين.
 - التسعير.
 - التسويق.
-- نقاط القوة والضعف.
+- نقاط القوة.
+- نقاط الضعف.
 
-كن صريح لكن بنّاء.
+كن صريحًا ولكن بناءً.
+
 
 # محتوى الكورس
 
-اعتبر محتوى الفصل المُزوَّد لك المصدر الأساسي للإجابة.
+محتوى الفصل المقدم لك هو المصدر الأساسي للإجابة.
 
-ما تخترعش محتوى أو دروس مش موجودة.
+لا تخترع معلومات أو دروسًا غير موجودة في المحتوى.
 
-ولو مش متأكد من معلومة، متختلقهاش.
+إذا لم تكن متأكدًا من معلومة:
+لا تختلقها.
+
 
 # مستوى الطالب
 
-اتكيّف حسب مستواه:
-
 مبتدئ:
-شرح أبسط وأمثلة أكتر.
+شرح أبسط + أمثلة أكثر.
 
 متوسط:
 شرح + تطبيق.
 
-متقدّم:
+متقدم:
 تحليل + استراتيجية + حالات عملية.
+
 
 # أسلوب الرد
 
-كن مختصر لما السؤال بسيط، وتوسّع بس لما الموضوع محتاج.
+كن مختصرًا عندما يكون السؤال بسيطًا.
 
-استخدم نقاط وعناوين قصيرة عند الحاجة.
+توسع فقط عندما يحتاج الموضوع.
 
-متكررش نفس الكلام.
+استخدم:
 
-متسألش أسئلة مش ضرورية.
+- نقاط.
+- عناوين قصيرة.
+- فقرات قصيرة.
 
-متنهيش كل رد بعبارة:
+لا تكرر نفس الكلام.
+
+لا تسأل أسئلة غير ضرورية.
+
+لا تنهِ كل رد بعبارة:
 "هل تريد مني مساعدتك؟"
 
-لو فيه خطوة عملية منطقية، انتقل ليها مباشرة.
+إذا كانت هناك خطوة عملية منطقية:
+انتقل إليها مباشرة.
 
-خليك مناسب لشاشة موبايل، واستخدم فقرات قصيرة.
 
-# المشروع التطبيقي لهذا الفصل
+# المشروع التطبيقي
 
-لما تحس إن الطالب استوعب الأفكار الأساسية من كلامه وأسئلته، اطلب منه المشروع التطبيقي ده بالظبط:
+عندما تشعر أن الطالب استوعب الأفكار الأساسية، اطلب منه المشروع التطبيقي التالي:
 
-"${project || "مفيش مشروع محدد لهذا الفصل، اطلب منه ملخص بكلماته لأهم فكرتين في الفصل."}"
+"${project || "اكتب ملخصًا بكلماتك لأهم فكرتين في الفصل."}"
 
-ولما يبعتلك حله، قيّمه بصدق.
+وعندما يرسل الحل:
 
-لو فعلاً فهم، قوله بوضوح:
+إذا كان فاهمًا:
+قل له بوضوح:
+
 "تمام، واضح إنك فاهم الفكرة 👏"
 
-وشجّعه يكمل.
+ثم شجعه يكمل.
 
-ولو الفهم ناقص، وضحله بلطف اللي ناقصه واطلب منه يحسّن إجابته.
+إذا كان الفهم ناقصًا:
+وضح له ما ينقصه بلطف واطلب منه تحسين إجابته.
+
 
 # قواعد أساسية
 
-دايمًا:
+دائمًا:
+
 - علّم.
 - بسّط.
 - طبّق.
-- صحّح.
-- شجّع التفكير.
+- صحح.
+- شجع التفكير.
 - اربط النظرية بالواقع.
 
 لا:
+
 - تختلق معلومات.
-- تدّي إجابات الاختبارات مباشرة.
+- تعطي إجابات الاختبارات مباشرة.
 - تحبط الطالب.
 - تبالغ في المدح.
-- تستخدم لغة معقدة بدون داعي.
-- تتظاهر إنك إنسان حقيقي.
+- تستخدم لغة معقدة بدون داعٍ.
+- تتظاهر أنك إنسان حقيقي.
+
 
 # الهدف النهائي
 
-تخلّي الطالب ينتقل من:
+تخلي الطالب ينتقل من:
 
 "أنا حفظت المعلومة"
 
@@ -232,283 +310,572 @@ Buyer Persona, Target Audience, Branding, Funnel, CTA, Conversion
 
 "أنا فهمت المعلومة وأقدر أستخدمها بنفسي."
 
-${chapterBlock}`;
+
+${chapterBlock}
+`;
 }
 
 
-// دالة مشتركة لاستدعاء الموديل
-// تُستخدم من مسار الحساب الكامل ومسار المعاينة المجانية معًا
-async function callMentorModel(chapter, messages) {
-  const apiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
+/* =========================================================
+   OPENAI CHAT
+   ========================================================= */
 
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: "Bearer " + process.env.OPENAI_API_KEY,
-    },
+async function callMentorModel(
+  chapter,
+  messages
+) {
 
-    body: JSON.stringify({
-      model: MODEL,
-      max_completion_tokens: 300,
+  const apiRes =
+    await fetch(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        method: "POST",
 
-      messages: [
-        {
-          role: "system",
-          content: buildSystemPrompt(chapter),
+        headers: {
+          "Content-Type":
+            "application/json",
+
+          Authorization:
+            "Bearer " +
+            process.env.OPENAI_API_KEY,
         },
 
-        ...messages.map((m) => ({
-          role: m.role,
-          content: m.content,
-        })),
-      ],
-    }),
-  });
+        body: JSON.stringify({
 
-  const data = await apiRes.json();
+          model: MODEL,
 
-  if (!apiRes.ok) {
-    console.error("OpenAI API error:", data);
-    throw new Error("upstream_error");
-  }
+          max_completion_tokens: 300,
 
-  const reply = ((data.choices || [])[0]?.message?.content || "").trim();
+          /*
+           مهم:
+           تم حذف reasoning_effort
+           لأنها كانت سبب الخطأ في اللوج.
+          */
 
-  if (!reply) {
-    console.warn(
-      "Empty reply from model, full response:",
-      JSON.stringify(data).slice(0, 500)
+          messages: [
+
+            {
+              role: "system",
+              content:
+                buildSystemPrompt(
+                  chapter
+                ),
+            },
+
+            ...messages.map(
+              (m) => ({
+                role: m.role,
+                content: m.content,
+              })
+            ),
+          ],
+        }),
+      }
     );
 
-    throw new Error("empty_reply");
+
+  const data =
+    await apiRes.json();
+
+
+  if (!apiRes.ok) {
+
+    console.error(
+      "OpenAI API error:",
+      data
+    );
+
+    throw new Error(
+      "upstream_error"
+    );
   }
+
+
+  const reply =
+    (
+      data.choices || []
+    )[0]?.message?.content
+      ?.trim() || "";
+
+
+  if (!reply) {
+
+    console.warn(
+      "Empty reply from model:",
+      JSON.stringify(
+        data
+      ).slice(0, 500)
+    );
+
+    throw new Error(
+      "empty_reply"
+    );
+  }
+
 
   return reply;
 }
 
 
-// POST /api/mentor/chat
-// للمشتركين بحساب كامل ومفعّل
-// body: {
-//   chapter: number|null,
-//   messages: [{role:'user'|'assistant', content:string}]
-// }
+/* =========================================================
+   CHAT
+   ========================================================= */
 
-router.post("/chat", requireAuth, async (req, res) => {
-  try {
-    const { chapter, messages } = req.body;
+router.post(
+  "/chat",
+  requireAuth,
+  async (req, res) => {
 
-    if (!Array.isArray(messages) || messages.length === 0) {
-      return res.status(400).json({
-        ok: false,
-        error: "لا توجد رسائل لإرسالها.",
-      });
-    }
+    try {
 
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(500).json({
-        ok: false,
-        error:
-          "المرشد الذكي غير مفعّل بعد — مفتاح الـ API غير مضبوط على السيرفر.",
-      });
-    }
-
-    const reply = await callMentorModel(chapter, messages);
-
-    res.json({
-      ok: true,
-      reply,
-    });
-  } catch (e) {
-    console.error(e);
-
-    if (e.message === "empty_reply" || e.message === "upstream_error") {
-      return res.status(502).json({
-        ok: false,
-        error: "تعذّر الوصول للمرشد الذكي حاليًا، حاول بعد شوية.",
-      });
-    }
-
-    res.status(500).json({
-      ok: false,
-      error: "حصل خطأ غير متوقع، حاول مرة أخرى.",
-    });
-  }
-});
+      const {
+        chapter,
+        messages
+      } = req.body;
 
 
-// POST /api/mentor/trial-chat
-// للزوار في المعاينة المجانية بدون حساب
-// header: X-Trial-Session
-// body: { chapter, messages }
+      if (
+        !Array.isArray(
+          messages
+        ) ||
+        messages.length === 0
+      ) {
 
-router.post("/trial-chat", async (req, res) => {
-  try {
-    const sessionId = req.headers["x-trial-session"];
-
-    if (!sessionId || typeof sessionId !== "string") {
-      return res.status(400).json({
-        ok: false,
-        error: "جلسة معاينة غير صالحة.",
-      });
-    }
-
-    const { chapter, messages } = req.body;
-
-    if (!Array.isArray(messages) || messages.length === 0) {
-      return res.status(400).json({
-        ok: false,
-        error: "لا توجد رسائل لإرسالها.",
-      });
-    }
-
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(500).json({
-        ok: false,
-        error: "المرشد الذكي غير مفعّل بعد.",
-      });
-    }
-
-    // اقرأ العداد الحالي لجلسة المعاينة
-    // أو أنشئه لو أول مرة
-
-    const { data: existing } = await supabase
-      .from("trial_mentor_usage")
-      .select("message_count")
-      .eq("session_id", sessionId)
-      .maybeSingle();
-
-    const currentCount = existing ? existing.message_count : 0;
-
-    if (currentCount >= TRIAL_MESSAGE_LIMIT) {
-      return res.status(403).json({
-        ok: false,
-        limitReached: true,
-        error:
-          "خلصت رسائلك المجانية مع المرشد الذكي — سجّل حساب كامل للمتابعة من غير حدود.",
-      });
-    }
-
-    const reply = await callMentorModel(chapter, messages);
-
-    // حدّث العداد بعد نجاح الرد فقط
-    // منعًا لاحتساب المحاولات الفاشلة
-
-    if (existing) {
-      await supabase
-        .from("trial_mentor_usage")
-        .update({
-          message_count: currentCount + 1,
-        })
-        .eq("session_id", sessionId);
-    } else {
-      await supabase.from("trial_mentor_usage").insert({
-        session_id: sessionId,
-        message_count: 1,
-      });
-    }
-
-    res.json({
-      ok: true,
-      reply,
-      remaining: TRIAL_MESSAGE_LIMIT - (currentCount + 1),
-    });
-  } catch (e) {
-    console.error(e);
-
-    if (e.message === "empty_reply" || e.message === "upstream_error") {
-      return res.status(502).json({
-        ok: false,
-        error: "تعذّر الوصول للمرشد الذكي حاليًا، حاول بعد شوية.",
-      });
-    }
-
-    res.status(500).json({
-      ok: false,
-      error: "حصل خطأ غير متوقع، حاول مرة أخرى.",
-    });
-  }
-});
-
-
-// POST /api/mentor/speak
-// تحويل نص لصوت طبيعي حقيقي
-// متاح للحساب الكامل فقط
-// body: { text: string }
-
-router.post("/speak", requireAuth, async (req, res) => {
-  try {
-    const { text } = req.body;
-
-    if (!text || !text.trim()) {
-      return res.status(400).json({
-        ok: false,
-        error: "لا يوجد نص لتحويله لصوت.",
-      });
-    }
-
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(500).json({
-        ok: false,
-        error: "المرشد الذكي غير مفعّل بعد.",
-      });
-    }
-
-    const ttsModel =
-      process.env.OPENAI_TTS_MODEL || "gpt-4o-mini-tts";
-
-    const ttsBody = {
-      model: ttsModel,
-      voice: process.env.OPENAI_TTS_VOICE || "coral",
-      input: text.slice(0, 3000),
-      response_format: "mp3",
-    };
-
-    if (ttsModel === "gpt-4o-mini-tts") {
-      ttsBody.instructions =
-        "تكلم بنبرة مدرّس ودود، صبور، وواضح، وبسرعة معتدلة.";
-    }
-
-    const apiRes = await fetch(
-      "https://api.openai.com/v1/audio/speech",
-      {
-        method: "POST",
-
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer " + process.env.OPENAI_API_KEY,
-        },
-
-        body: JSON.stringify(ttsBody),
+        return res
+          .status(400)
+          .json({
+            ok: false,
+            error:
+              "لا توجد رسائل لإرسالها.",
+          });
       }
-    );
 
-    if (!apiRes.ok) {
-      const errData = await apiRes.json().catch(() => ({}));
 
-      console.error("OpenAI TTS error:", errData);
+      if (
+        !process.env.OPENAI_API_KEY
+      ) {
 
-      return res.status(502).json({
-        ok: false,
-        error: "تعذّر توليد الصوت حاليًا.",
+        return res
+          .status(500)
+          .json({
+            ok: false,
+            error:
+              "المرشد الذكي غير مفعّل بعد — مفتاح الـ API غير مضبوط على السيرفر.",
+          });
+      }
+
+
+      const reply =
+        await callMentorModel(
+          chapter,
+          messages
+        );
+
+
+      res.json({
+        ok: true,
+        reply,
       });
+
+
+    } catch (e) {
+
+      console.error(e);
+
+
+      if (
+        e.message ===
+          "empty_reply" ||
+        e.message ===
+          "upstream_error"
+      ) {
+
+        return res
+          .status(502)
+          .json({
+            ok: false,
+            error:
+              "تعذّر الوصول للمرشد الذكي حاليًا، حاول بعد شوية.",
+          });
+      }
+
+
+      res
+        .status(500)
+        .json({
+          ok: false,
+          error:
+            "حصل خطأ غير متوقع، حاول مرة أخرى.",
+        });
     }
-
-    const audioBuffer = Buffer.from(
-      await apiRes.arrayBuffer()
-    );
-
-    res.set("Content-Type", "audio/mpeg");
-    res.send(audioBuffer);
-  } catch (e) {
-    console.error(e);
-
-    res.status(500).json({
-      ok: false,
-      error: "حصل خطأ غير متوقع أثناء توليد الصوت.",
-    });
   }
-});
+);
+
+
+/* =========================================================
+   TRIAL CHAT
+   ========================================================= */
+
+router.post(
+  "/trial-chat",
+  async (req, res) => {
+
+    try {
+
+      const sessionId =
+        req.headers[
+          "x-trial-session"
+        ];
+
+
+      if (
+        !sessionId ||
+        typeof sessionId !==
+          "string"
+      ) {
+
+        return res
+          .status(400)
+          .json({
+            ok: false,
+            error:
+              "جلسة معاينة غير صالحة.",
+          });
+      }
+
+
+      const {
+        chapter,
+        messages
+      } = req.body;
+
+
+      if (
+        !Array.isArray(
+          messages
+        ) ||
+        messages.length === 0
+      ) {
+
+        return res
+          .status(400)
+          .json({
+            ok: false,
+            error:
+              "لا توجد رسائل لإرسالها.",
+          });
+      }
+
+
+      if (
+        !process.env.OPENAI_API_KEY
+      ) {
+
+        return res
+          .status(500)
+          .json({
+            ok: false,
+            error:
+              "المرشد الذكي غير مفعّل بعد.",
+          });
+      }
+
+
+      const {
+        data: existing
+      } =
+        await supabase
+          .from(
+            "trial_mentor_usage"
+          )
+          .select(
+            "message_count"
+          )
+          .eq(
+            "session_id",
+            sessionId
+          )
+          .maybeSingle();
+
+
+      const currentCount =
+        existing
+          ? existing.message_count
+          : 0;
+
+
+      if (
+        currentCount >=
+        TRIAL_MESSAGE_LIMIT
+      ) {
+
+        return res
+          .status(403)
+          .json({
+
+            ok: false,
+
+            limitReached: true,
+
+            error:
+              "خلصت رسائلك المجانية مع المرشد الذكي — سجّل حساب كامل للمتابعة من غير حدود.",
+          });
+      }
+
+
+      const reply =
+        await callMentorModel(
+          chapter,
+          messages
+        );
+
+
+      if (existing) {
+
+        await supabase
+          .from(
+            "trial_mentor_usage"
+          )
+          .update({
+            message_count:
+              currentCount + 1,
+          })
+          .eq(
+            "session_id",
+            sessionId
+          );
+
+      } else {
+
+        await supabase
+          .from(
+            "trial_mentor_usage"
+          )
+          .insert({
+            session_id:
+              sessionId,
+
+            message_count: 1,
+          });
+      }
+
+
+      res.json({
+
+        ok: true,
+
+        reply,
+
+        remaining:
+          TRIAL_MESSAGE_LIMIT -
+          (currentCount + 1),
+      });
+
+
+    } catch (e) {
+
+      console.error(e);
+
+
+      if (
+        e.message ===
+          "empty_reply" ||
+        e.message ===
+          "upstream_error"
+      ) {
+
+        return res
+          .status(502)
+          .json({
+            ok: false,
+            error:
+              "تعذّر الوصول للمرشد الذكي حاليًا، حاول بعد شوية.",
+          });
+      }
+
+
+      res
+        .status(500)
+        .json({
+          ok: false,
+          error:
+            "حصل خطأ غير متوقع، حاول مرة أخرى.",
+        });
+    }
+  }
+);
+
+
+/* =========================================================
+   KERO TEXT TO SPEECH
+   ========================================================= */
+
+router.post(
+  "/speak",
+  requireAuth,
+  async (req, res) => {
+
+    try {
+
+      const { text } =
+        req.body;
+
+
+      if (
+        !text ||
+        !text.trim()
+      ) {
+
+        return res
+          .status(400)
+          .json({
+            ok: false,
+            error:
+              "لا يوجد نص لتحويله لصوت.",
+          });
+      }
+
+
+      if (
+        !process.env.OPENAI_API_KEY
+      ) {
+
+        return res
+          .status(500)
+          .json({
+            ok: false,
+            error:
+              "المرشد الذكي غير مفعّل بعد.",
+          });
+      }
+
+
+      const ttsModel =
+        process.env.OPENAI_TTS_MODEL ||
+        "gpt-4o-mini-tts";
+
+
+      const ttsVoice =
+        process.env.OPENAI_TTS_VOICE ||
+        "ash";
+
+
+      const ttsBody = {
+
+        model:
+          ttsModel,
+
+        voice:
+          ttsVoice,
+
+        input:
+          text.slice(0, 3000),
+
+        response_format:
+          "mp3",
+      };
+
+
+      /*
+       تعليمات الصوت:
+       رجل + مدرس تسويق + ودود + واضح
+      */
+
+      if (
+        ttsModel ===
+        "gpt-4o-mini-tts"
+      ) {
+
+        ttsBody.instructions =
+          "Speak as a male Arabic marketing instructor named Kero. Use a warm, confident, friendly and professional male voice. Speak clearly at a moderate pace. Sound like a helpful personal mentor, not like a robot.";
+      }
+
+
+      const apiRes =
+        await fetch(
+          "https://api.openai.com/v1/audio/speech",
+          {
+            method: "POST",
+
+            headers: {
+
+              "Content-Type":
+                "application/json",
+
+              Authorization:
+                "Bearer " +
+                process.env.OPENAI_API_KEY,
+            },
+
+            body:
+              JSON.stringify(
+                ttsBody
+              ),
+          }
+        );
+
+
+      if (!apiRes.ok) {
+
+        const errData =
+          await apiRes
+            .json()
+            .catch(
+              () => ({})
+            );
+
+
+        console.error(
+          "OpenAI TTS error:",
+          errData
+        );
+
+
+        return res
+          .status(502)
+          .json({
+            ok: false,
+            error:
+              "تعذّر توليد الصوت حاليًا.",
+          });
+      }
+
+
+      const audioBuffer =
+        Buffer.from(
+          await apiRes.arrayBuffer()
+        );
+
+
+      res.set(
+        "Content-Type",
+        "audio/mpeg"
+      );
+
+
+      res.send(
+        audioBuffer
+      );
+
+
+    } catch (e) {
+
+      console.error(
+        "Kero TTS error:",
+        e
+      );
+
+
+      res
+        .status(500)
+        .json({
+          ok: false,
+          error:
+            "حصل خطأ غير متوقع أثناء توليد الصوت.",
+        });
+    }
+  }
+);
 
 
 module.exports = router;
