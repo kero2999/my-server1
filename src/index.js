@@ -6,12 +6,25 @@ const authRoutes = require("./routes/auth");
 const webhookRoutes = require("./routes/webhooks");
 const mentorRoutes = require("./routes/mentor");
 const projectsRoutes = require("./routes/projects");
+const coursesRoutes = require("./routes/courses");
+const paymentsRoutes = require("./routes/payments");
+const adminRoutes = require("./routes/admin");
+const contentRoutes = require("./routes/content");
 
 const app = express();
+const allowedOrigins = (process.env.FRONTEND_URL || "*")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "*",
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("CORS origin not allowed"));
+    },
   })
 );
 
@@ -24,6 +37,10 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/mentor", mentorRoutes);
 app.use("/api/projects", projectsRoutes);
+app.use("/api/courses", coursesRoutes);
+app.use("/api/payments", paymentsRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/content", contentRoutes);
 
 app.get("/health", (req, res) => res.json({ ok: true, service: "marketing-platform-server" }));
 
