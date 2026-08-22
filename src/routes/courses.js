@@ -40,7 +40,7 @@ function publicCourse(row) {
 async function findPublishedCourse(identifier) {
   let query = supabase
     .from("courses")
-    .select("id, slug, title, description, thumbnail_url, price_cents, currency, category_id, instructor, status, trial_minutes, entry_file, created_at, updated_at, categories(name, slug)")
+    .select("id, slug, title, description, thumbnail_url, price_cents, currency, category_id, instructor, status, trial_minutes, entry_file, content_bucket, content_prefix, created_at, updated_at, categories(name, slug)")
     .eq("status", "published");
   query = courseFilter(query, identifier);
   const { data, error } = await query.maybeSingle();
