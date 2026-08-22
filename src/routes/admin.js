@@ -8,6 +8,16 @@ const { requireAdmin } = require("../middleware/admin");
 const router = express.Router();
 const COURSE_FILES_BUCKET = process.env.COURSE_FILES_BUCKET || "course-files";
 
+function normalizeZipPath(value) {
+  const normalized = String(value || "").replace(/\\/g, "/");
+  if (!normalized || normalized.startsWith("/") || normalized.includes("\0")) return null;
+  const parts = normalized.split("/");
+  while (parts.length > 1 && /\uFFFD/u.test(parts[0])) parts.shift();
+  if (!parts.length || parts.some((part) => !part || part === "." || part === ".." || /^[a-zA-Z]:$/.test(part))) return null;
+  if (parts.some((part) => /[\u0000-\u001F\u007F]/u.test(part) || /\uFFFD/u.test(part))) return null;
+  return parts.join("/");
+}
+
 function slugify(value) {
   return String(value || "")
     .trim()
@@ -152,13 +162,15 @@ router.post("/courses/:courseId/upload-zip", express.raw({ type: ["application/z
     let extractedBytes = 0;
     for (const entry of archive.files) {
       if (entry.type !== "File") continue;
-      const normalized = String(entry.path || "").replace(/\\/g, "/");
-      const segments = normalized.split("/");
-      if (!normalized || normalized.startsWith("/") || normalized.includes("\0") || segments.some((part) => !part || part === "." || part === ".." || /^[a-zA-Z]:$/.test(part))) {
-        return res.status(400).json({ ok: false, error: "يحتوي ZIP على مسار ملف غير آمن." });
+      const normalized = normalizeZipPath(entry.path);
+      if (!normalized) {
+        return res.status(400).json({ ok: false, error: "يحتوي ZIP على مسار ملف غير صالح أو مشوّه." });
       }
       extractedBytes += Number(entry.uncompressedSize || 0);
       if (extractedBytes > 250 * 1024 * 1024) return res.status(400).json({ ok: false, error: "حجم الملفات بعد فك الضغط أكبر من الحد المسموح." });
+      if (entries.some((item) => item.path === normalized)) {
+        return res.status(400).json({ ok: false, error: "يحتوي ZIP على مسارات ملفات متكررة بعد تصحيح الترميز." });
+      }
       entries.push({ entry, path: normalized });
     }
     if (!entries.length) return res.status(400).json({ ok: false, error: "ملف ZIP لا يحتوي على ملفات قابلة للتشغيل." });
