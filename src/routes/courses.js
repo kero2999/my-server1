@@ -40,7 +40,7 @@ function publicCourse(row) {
 async function findPublishedCourse(identifier) {
   let query = supabase
     .from("courses")
-    .select("id, slug, title, description, thumbnail_url, price_cents, currency, category_id, instructor, status, trial_minutes, entry_file, content_bucket, content_prefix, created_at, updated_at, categories(name, slug)")
+    .select("id, slug, title, description, thumbnail_url, price_cents, currency, category_id, instructor, status, trial_minutes, entry_file, current_version_id, content_bucket, content_prefix, created_at, updated_at, categories(name, slug)")
     .eq("status", "published");
   query = courseFilter(query, identifier);
   const { data, error } = await query.maybeSingle();
@@ -83,6 +83,22 @@ function trialStatus(trial) {
     startedAt: trial.started_at,
     expiresAt: trial.expires_at,
   };
+}
+
+async function resolveEntryFile(course) {
+  const currentEntry = String(course?.entry_file || "").trim();
+  if (/\.html?$/i.test(currentEntry)) return currentEntry;
+  if (!course?.current_version_id) return currentEntry;
+  const { data: version, error } = await supabase
+    .from("course_versions")
+    .select("manifest")
+    .eq("id", course.current_version_id)
+    .maybeSingle();
+  if (error) throw error;
+  const files = Array.isArray(version?.manifest?.files) ? version.manifest.files : [];
+  return files.find((file) => String(file).toLowerCase() === "index.html")
+    || files.find((file) => String(file).toLowerCase().endsWith("/index.html"))
+    || currentEntry;
 }
 
 async function getAccess(userId, courseId) {
@@ -151,8 +167,9 @@ router.get("/:courseId/content-token", requireAuth, async (req, res) => {
     if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
     const access = await getAccess(req.userId, course.id);
     if (!access.canAccess) return res.status(403).json({ ok: false, error: "لا تملك صلاحية الوصول إلى محتوى هذا الكورس." });
+    const entryFile = await resolveEntryFile(course);
     const token = jwt.sign({ userId: req.userId, courseId: String(course.id), scope: "course-content" }, process.env.JWT_SECRET, { expiresIn: access.accessType === "trial" ? "15m" : "1h" });
-    res.json({ ok: true, token, entryFile: course.entry_file, expiresIn: access.accessType === "trial" ? 900 : 3600 });
+    res.json({ ok: true, token, entryFile, expiresIn: access.accessType === "trial" ? 900 : 3600 });
   } catch (e) {
     accessError(res, e);
   }
@@ -447,3 +464,4 @@ module.exports.findPublishedCourse = findPublishedCourse;
 module.exports.getAccess = getAccess;
 module.exports.findPublishedCourse = findPublishedCourse;
 module.exports.getAccess = getAccess;
+module.exports.resolveEntryFile = resolveEntryFile;

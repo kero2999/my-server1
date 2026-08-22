@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 const mime = require("mime-types");
 const supabase = require("../db");
 const { authenticate } = require("../middleware/auth");
-const { findPublishedCourse, getAccess } = require("./courses");
+const { findPublishedCourse, getAccess, resolveEntryFile } = require("./courses");
 
 const router = express.Router();
 
@@ -41,8 +41,13 @@ router.get("/:courseId/*", async (req, res) => {
     if (!access.canAccess) return res.status(403).json({ ok: false, error: "لا تملك صلاحية الوصول إلى محتوى هذا الكورس." });
     if (!course.content_bucket || !course.content_prefix) return res.status(404).json({ ok: false, error: "محتوى الكورس غير مرفوع بعد." });
 
-    const requestedPath = safeRelativePath(req.params[0] || course.entry_file);
+    let requestedPath = safeRelativePath(req.params[0] || course.entry_file);
     if (!requestedPath) return res.status(400).json({ ok: false, error: "مسار الملف غير صالح." });
+    const currentEntryPath = safeRelativePath(course.entry_file);
+    if (currentEntryPath && requestedPath === currentEntryPath && !/\.html?$/i.test(requestedPath)) {
+      const resolvedEntry = await resolveEntryFile(course);
+      if (resolvedEntry) requestedPath = resolvedEntry;
+    }
     const storagePath = `${course.content_prefix}/${requestedPath}`;
     const { data, error } = await supabase.storage.from(course.content_bucket).download(storagePath);
     if (error || !data) return res.status(404).json({ ok: false, error: "ملف الكورس غير موجود." });
