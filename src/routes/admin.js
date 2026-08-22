@@ -18,6 +18,27 @@ function normalizeZipPath(value) {
   return parts.join("/");
 }
 
+async function findIndexFileInStorage(bucket, prefix) {
+  const queue = [String(prefix || "").replace(/\/+$/, "")];
+  const visited = new Set();
+  let scanned = 0;
+  while (queue.length && scanned < 1000) {
+    const current = queue.shift();
+    if (!current || visited.has(current)) continue;
+    visited.add(current);
+    const { data, error } = await supabase.storage.from(bucket).list(current, { limit: 1000, sortBy: { column: "name", order: "asc" } });
+    if (error) throw error;
+    for (const item of data || []) {
+      scanned += 1;
+      const child = `${current}/${item.name}`;
+      if (String(item.name || "").toLowerCase() === "index.html" && item.id) return child;
+      if (!item.id && item.name) queue.push(child);
+      if (scanned >= 1000) break;
+    }
+  }
+  return "";
+}
+
 function slugify(value) {
   return String(value || "")
     .trim()
@@ -237,7 +258,10 @@ router.post("/courses/:courseId/publish", async (req, res) => {
 
     const manifestFiles = Array.isArray(version.manifest?.files) ? version.manifest.files : [];
     const manifestEntry = String(version.manifest?.entryFile || "").trim();
-    const detectedEntry = manifestFiles.find((file) => file === "index.html") || manifestFiles.find((file) => String(file).endsWith("/index.html")) || (manifestEntry.endsWith(".html") ? manifestEntry : "");
+    let detectedEntry = manifestFiles.find((file) => file === "index.html") || manifestFiles.find((file) => String(file).endsWith("/index.html")) || (manifestEntry.endsWith(".html") ? manifestEntry : "");
+    if (!detectedEntry && course.content_bucket && course.content_prefix) {
+      detectedEntry = await findIndexFileInStorage(course.content_bucket, course.content_prefix);
+    }
     const { error: versionError } = await supabase.from("course_versions").update({ is_published: true }).eq("id", course.current_version_id);
     if (versionError) throw versionError;
     const coursePatch = { status: "published", updated_at: new Date().toISOString() };
