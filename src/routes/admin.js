@@ -227,9 +227,22 @@ router.post("/courses/:courseId/publish", async (req, res) => {
     if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
     if (!course.current_version_id) return res.status(400).json({ ok: false, error: "ارفع ZIP للكورس قبل نشره." });
 
+    const { data: version, error: versionReadError } = await supabase
+      .from("course_versions")
+      .select("id, manifest")
+      .eq("id", course.current_version_id)
+      .maybeSingle();
+    if (versionReadError) throw versionReadError;
+    if (!version) return res.status(404).json({ ok: false, error: "إصدار الكورس غير موجود." });
+
+    const manifestFiles = Array.isArray(version.manifest?.files) ? version.manifest.files : [];
+    const manifestEntry = String(version.manifest?.entryFile || "").trim();
+    const detectedEntry = manifestFiles.find((file) => file === "index.html") || manifestFiles.find((file) => String(file).endsWith("/index.html")) || (manifestEntry.endsWith(".html") ? manifestEntry : "");
     const { error: versionError } = await supabase.from("course_versions").update({ is_published: true }).eq("id", course.current_version_id);
     if (versionError) throw versionError;
-    const { data, error } = await supabase.from("courses").update({ status: "published", updated_at: new Date().toISOString() }).eq("id", id).select().single();
+    const coursePatch = { status: "published", updated_at: new Date().toISOString() };
+    if (detectedEntry) coursePatch.entry_file = detectedEntry;
+    const { data, error } = await supabase.from("courses").update(coursePatch).eq("id", id).select().single();
     if (error) throw error;
     res.json({ ok: true, course: publicAdminCourse(data) });
   } catch (e) {
