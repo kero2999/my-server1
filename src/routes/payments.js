@@ -1,0 +1,124 @@
+const express = require("express");
+const crypto = require("crypto");
+const supabase = require("../db");
+const { requireAuth } = require("../middleware/auth");
+const { createCheckout } = require("../paymob");
+
+const router = express.Router();
+
+function isNumericId(value) {
+  return /^\d+$/.test(String(value || ""));
+}
+
+async function findPublishedCourse(identifier) {
+  let query = supabase
+    .from("courses")
+    .select("id, slug, title, price_cents, currency, status")
+    .eq("status", "published");
+  query = isNumericId(identifier) ? query.eq("id", Number(identifier)) : query.eq("slug", String(identifier));
+  const { data, error } = await query.maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+router.post("/course/:courseId/create", requireAuth, async (req, res) => {
+  let payment = null;
+  try {
+    const course = await findPublishedCourse(req.params.courseId);
+    if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
+
+    const { data: existingEnrollment, error: enrollmentError } = await supabase
+      .from("enrollments")
+      .select("id, status")
+      .eq("user_id", req.userId)
+      .eq("course_id", course.id)
+      .maybeSingle();
+    if (enrollmentError) throw enrollmentError;
+    if (existingEnrollment && existingEnrollment.status === "active") {
+      return res.status(409).json({ ok: false, error: "هذا الكورس موجود بالفعل في حسابك." });
+    }
+
+    const amountCents = Number(course.price_cents || 0);
+    if (!Number.isInteger(amountCents) || amountCents < 0) {
+      return res.status(500).json({ ok: false, error: "سعر الكورس غير صالح في قاعدة البيانات." });
+    }
+
+    if (amountCents === 0) {
+      const { data: enrollment, error } = await supabase
+        .from("enrollments")
+        .upsert({
+          user_id: req.userId,
+          course_id: course.id,
+          status: "active",
+          source: "free",
+          purchased_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "user_id,course_id" })
+        .select("id, status, source, purchased_at")
+        .single();
+      if (error) throw error;
+      return res.status(201).json({ ok: true, free: true, enrollment });
+    }
+
+    const { data: user, error: userError } = await supabase
+      .from("users")
+      .select("id, email, full_name")
+      .eq("id", req.userId)
+      .maybeSingle();
+    if (userError) throw userError;
+    if (!user) return res.status(404).json({ ok: false, error: "المستخدم غير موجود." });
+
+    const merchantOrderId = `ql_${req.userId}_${course.id}_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
+    const { data: insertedPayment, error: paymentError } = await supabase
+      .from("payments")
+      .insert({
+        user_id: req.userId,
+        course_id: course.id,
+        merchant_order_id: merchantOrderId,
+        provider: "paymob",
+        amount_cents: amountCents,
+        currency: course.currency || "EGP",
+        status: "pending",
+      })
+      .select("id, merchant_order_id, amount_cents, currency, status")
+      .single();
+    if (paymentError) throw paymentError;
+    payment = insertedPayment;
+
+    const checkout = await createCheckout({
+      amountCents,
+      currency: course.currency || "EGP",
+      merchantOrderId,
+      user: { email: user.email, fullName: user.full_name },
+    });
+
+    const { error: updateError } = await supabase
+      .from("payments")
+      .update({ provider_order_id: checkout.providerOrderId, updated_at: new Date().toISOString() })
+      .eq("id", payment.id);
+    if (updateError) throw updateError;
+
+    res.status(201).json({
+      ok: true,
+      payment: Object.assign({}, payment, { providerOrderId: checkout.providerOrderId }),
+      checkoutUrl: checkout.checkoutUrl,
+    });
+  } catch (e) {
+    console.error("Payment creation error:", e);
+    if (payment && payment.id) {
+      await supabase.from("payments").update({ status: "failed", updated_at: new Date().toISOString() }).eq("id", payment.id);
+    }
+    if (e.message === "PAYMOB_API_KEY_MISSING" || e.message === "PAYMOB_INTEGRATION_ID_MISSING" || e.message === "PAYMOB_IFRAME_ID_MISSING") {
+      return res.status(503).json({ ok: false, error: "الدفع غير مفعّل بعد على السيرفر. أضف إعدادات Paymob أولًا." });
+    }
+    if (e.message === "PAYMOB_INTEGRATION_ID_INVALID") {
+      return res.status(503).json({ ok: false, error: "إعداد PAYMOB_INTEGRATION_ID غير صالح." });
+    }
+    if (e.message === "PAYMOB_UPSTREAM_ERROR") {
+      return res.status(502).json({ ok: false, error: "تعذّر إنشاء جلسة الدفع من Paymob حاليًا." });
+    }
+    res.status(500).json({ ok: false, error: "تعذّر إنشاء طلب الدفع حاليًا." });
+  }
+});
+
+module.exports = router;

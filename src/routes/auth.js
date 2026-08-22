@@ -25,7 +25,8 @@ function publicUser(u) {
     id: u.id,
     fullName: u.full_name,
     email: u.email,
-    status: u.whop_status, // 'pending' | 'active' | 'inactive'
+    status: u.whop_status, // legacy status retained during marketplace migration
+    role: u.role || "user",
   };
 }
 
