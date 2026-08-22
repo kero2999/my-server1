@@ -31,7 +31,7 @@ async function findIndexFileInStorage(bucket, prefix) {
     for (const item of data || []) {
       scanned += 1;
       const child = `${current}/${item.name}`;
-      if (String(item.name || "").toLowerCase() === "index.html" && item.id) return child;
+      if (String(item.name || "").toLowerCase() === "index.html") return child;
       if (!item.id && item.name) queue.push(child);
       if (scanned >= 1000) break;
     }
