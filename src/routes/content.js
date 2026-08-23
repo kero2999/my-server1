@@ -39,6 +39,49 @@ function readCookie(header, name) {
   return "";
 }
 
+async function discoverStoredPath(bucket, prefix, requestedPath) {
+  const root = String(prefix || "").replace(/\/+$/, "");
+  const target = String(requestedPath || "").replace(/\\/g, "/").toLowerCase();
+  if (!bucket || !root || !target) return "";
+  const queue = [root];
+  const visited = new Set();
+  const basename = target.split("/").pop();
+  let scanned = 0;
+  while (queue.length && scanned < 2000) {
+    const current = queue.shift();
+    if (!current || visited.has(current)) continue;
+    visited.add(current);
+    const { data, error } = await supabase.storage.from(bucket).list(current, { limit: 1000, sortBy: { column: "name", order: "asc" } });
+    if (error) throw error;
+    for (const item of data || []) {
+      scanned += 1;
+      const child = `${current}/${item.name}`;
+      const relative = child.slice(root.length + 1).replace(/\\/g, "/");
+      if (relative.toLowerCase() === target) return relative;
+      if ((target.endsWith("/ch1.html") || target.endsWith("/index.html")) && String(item.name || "").toLowerCase() === basename && item.id) {
+        return relative;
+      }
+      if (!item.id && item.name) queue.push(child);
+      if (scanned >= 2000) break;
+    }
+  }
+  return "";
+}
+
+async function downloadCourseFile(course, requestedPath) {
+  const candidates = [requestedPath];
+  const basename = String(requestedPath || "").split("/").pop().toLowerCase();
+  if (basename === "ch1.html" || basename === "index.html") {
+    const discovered = await discoverStoredPath(course.content_bucket, course.content_prefix, requestedPath);
+    if (discovered && !candidates.includes(discovered)) candidates.push(discovered);
+  }
+  for (const path of candidates) {
+    const { data, error } = await supabase.storage.from(course.content_bucket).download(`${course.content_prefix}/${path}`);
+    if (!error && data) return { data, path };
+  }
+  return null;
+}
+
 function tokenFromReferer(req) {
   const referer = String(req.get("referer") || "").trim();
   if (!referer) return "";
@@ -91,11 +134,15 @@ router.get("/:courseId/*", async (req, res) => {
       const resolvedEntry = await resolveEntryFile(course);
       if (resolvedEntry) requestedPath = resolvedEntry;
     }
-    const storagePath = `${course.content_prefix}/${requestedPath}`;
-    const { data, error } = await supabase.storage.from(course.content_bucket).download(storagePath);
-    if (error || !data) return res.status(404).json({ ok: false, error: "ملف الكورس غير موجود." });
+    const stored = await downloadCourseFile(course, requestedPath);
+    if (!stored) return res.status(404).json({ ok: false, error: "ملف الكورس غير موجود." });
+    if (stored.path !== requestedPath && /(?:^|\/)ch1\.html$/i.test(requestedPath)) {
+      const { error: repairError } = await supabase.from("courses").update({ entry_file: stored.path, updated_at: new Date().toISOString() }).eq("id", course.id);
+      if (repairError) console.warn("Course entry path repair skipped:", repairError.message || repairError);
+      requestedPath = stored.path;
+    }
 
-    const buffer = Buffer.from(await data.arrayBuffer());
+    const buffer = Buffer.from(await stored.data.arrayBuffer());
     res.set({
       "Content-Type": mime.lookup(requestedPath) || "application/octet-stream",
       "Cache-Control": access.accessType === "enrolled" ? "private, max-age=300" : "private, no-store",
