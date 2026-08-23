@@ -114,9 +114,34 @@ function pickIndexFile(files, currentEntry) {
   return "";
 }
 
-async function findIndexFileInStorage(bucket, prefix) {
+function preferredStartFile(currentEntry) {
+  return /(?:^|\/)capacitor-setup\.md$/i.test(String(currentEntry || "").replace(/\\/g, "/")) ? "ch1.html" : "index.html";
+}
+
+function pickCourseEntryFile(files, currentEntry) {
+  const paths = (Array.isArray(files) ? files : [])
+    .map(manifestFilePath)
+    .filter(Boolean);
+  const lower = (value) => String(value).toLowerCase().replace(/\\/g, "/");
+  const preferred = preferredStartFile(currentEntry).toLowerCase();
+  const current = String(currentEntry || "").replace(/\\/g, "/");
+  const slash = current.lastIndexOf("/");
+  const directory = slash > 0 ? lower(current.slice(0, slash)) : "";
+  const sibling = directory
+    ? paths.find((file) => lower(file) === `${directory}/${preferred}`)
+    : paths.find((file) => lower(file) === preferred);
+  if (sibling) return sibling;
+  if (preferred === "ch1.html") {
+    const lesson = paths.find((file) => lower(file).endsWith("/ch1.html"));
+    if (lesson) return lesson;
+  }
+  return pickIndexFile(paths, currentEntry);
+}
+
+async function findFileInStorage(bucket, prefix, fileName) {
   const root = String(prefix || "").replace(/\/+$/, "");
   if (!bucket || !root) return "";
+  const target = String(fileName || "").toLowerCase();
   const queue = [root];
   const visited = new Set();
   let scanned = 0;
@@ -131,7 +156,7 @@ async function findIndexFileInStorage(bucket, prefix) {
     for (const item of data || []) {
       scanned += 1;
       const child = `${current}/${item.name}`;
-      if (String(item.name || "").toLowerCase() === "index.html") return child.slice(root.length + 1);
+      if (String(item.name || "").toLowerCase() === target) return child.slice(root.length + 1);
       if (!item.id && item.name) queue.push(child);
       if (scanned >= 2000) break;
     }
@@ -141,6 +166,7 @@ async function findIndexFileInStorage(bucket, prefix) {
 
 async function resolveEntryFile(course) {
   const currentEntry = String(course?.entry_file || "").trim();
+  const preferred = preferredStartFile(currentEntry);
   if (course?.current_version_id) {
     const { data: version, error } = await supabase
       .from("course_versions")
@@ -148,10 +174,10 @@ async function resolveEntryFile(course) {
       .eq("id", course.current_version_id)
       .maybeSingle();
     if (error) throw error;
-    const manifestEntry = pickIndexFile(version?.manifest?.files, currentEntry);
+    const manifestEntry = pickCourseEntryFile(version?.manifest?.files, currentEntry);
     if (manifestEntry) return manifestEntry;
   }
-  const storageEntry = await findIndexFileInStorage(course?.content_bucket, course?.content_prefix);
+  const storageEntry = await findFileInStorage(course?.content_bucket, course?.content_prefix, preferred);
   if (storageEntry) return storageEntry;
   return currentEntry;
 }
@@ -532,3 +558,4 @@ module.exports.findPublishedCourse = findPublishedCourse;
 module.exports.getAccess = getAccess;
 module.exports.resolveEntryFile = resolveEntryFile;
 module.exports.pickIndexFile = pickIndexFile;
+module.exports.pickCourseEntryFile = pickCourseEntryFile;
