@@ -19,10 +19,10 @@ function prepareCourseHtml(buffer) {
   const html = buffer.toString("utf8");
   // The outer Marketplace gateway has already authenticated this request.
   // Disable the legacy bundle's origin-local auth redirect inside the iframe.
-  return Buffer.from(
-    html.replace(/(<html\b[^>]*?)\sdata-protected=(['"])true\2/i, '$1 data-protected="false"'),
-    "utf8"
-  );
+  const sanitized = html
+    .replace(/(<html\b[^>]*?)\sdata-protected=(['"])true\2/i, '$1 data-protected="false"')
+    .replace(/<script\b[^>]*\bsrc=(['"])[^'"]*auth\.js\1[^>]*>\s*<\/script>/gi, '');
+  return Buffer.from(sanitized, "utf8");
 }
 
 function contentCookieName(courseIdentifier) {
