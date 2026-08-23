@@ -15,18 +15,51 @@ function safeRelativePath(value) {
   return parts.join("/");
 }
 
+function contentCookieName(courseIdentifier) {
+  const safeIdentifier = String(courseIdentifier || "").replace(/[^a-zA-Z0-9_-]/g, "_");
+  return `ql_content_token_${safeIdentifier}`;
+}
+
+function readCookie(header, name) {
+  const prefix = `${name}=`;
+  for (const part of String(header || "").split(";")) {
+    const trimmed = part.trim();
+    if (trimmed.startsWith(prefix)) return decodeURIComponent(trimmed.slice(prefix.length));
+  }
+  return "";
+}
+
+function tokenFromReferer(req) {
+  const referer = String(req.get("referer") || "").trim();
+  if (!referer) return "";
+  try {
+    const refererUrl = new URL(referer);
+    const requestOrigin = `${req.protocol}://${req.get("host")}`;
+    if (refererUrl.origin !== requestOrigin || !refererUrl.pathname.startsWith("/api/content/")) return "";
+    return String(refererUrl.searchParams.get("access_token") || "").trim();
+  } catch (e) {
+    return "";
+  }
+}
+
 function contentIdentity(req) {
   const sessionUserId = authenticate(req);
-  if (sessionUserId) return { userId: sessionUserId, scopedCourseId: null };
-  const accessToken = String(req.query.access_token || "").trim();
-  if (!accessToken) return null;
-  try {
-    const payload = jwt.verify(accessToken, process.env.JWT_SECRET);
-    if (payload.scope !== "course-content" || !payload.userId || !payload.courseId) return null;
-    return { userId: payload.userId, scopedCourseId: String(payload.courseId) };
-  } catch (e) {
-    return null;
+  if (sessionUserId) return { userId: sessionUserId, scopedCourseId: null, accessToken: "" };
+  const candidates = [
+    String(req.query.access_token || "").trim(),
+    readCookie(req.headers.cookie, contentCookieName(req.params.courseId)),
+    tokenFromReferer(req),
+  ].filter(Boolean);
+  for (const accessToken of candidates) {
+    try {
+      const payload = jwt.verify(accessToken, process.env.JWT_SECRET);
+      if (payload.scope !== "course-content" || !payload.userId || !payload.courseId) continue;
+      return { userId: payload.userId, scopedCourseId: String(payload.courseId), accessToken };
+    } catch (e) {
+      // Try the next transport (cookie or same-origin referrer) if this token is stale.
+    }
   }
+  return null;
 }
 
 // GET /api/content/:courseId/* — private course file gateway.
@@ -56,8 +89,19 @@ router.get("/:courseId/*", async (req, res) => {
     res.set({
       "Content-Type": mime.lookup(requestedPath) || "application/octet-stream",
       "Cache-Control": access.accessType === "enrolled" ? "private, max-age=300" : "private, no-store",
+      "Referrer-Policy": "same-origin",
       "X-Content-Type-Options": "nosniff",
     });
+    if (identity.accessToken) {
+      let maxAge = 900;
+      try {
+        const payload = jwt.decode(identity.accessToken);
+        if (payload && Number.isFinite(payload.exp)) maxAge = Math.max(60, Number(payload.exp) - Math.floor(Date.now() / 1000));
+      } catch (e) {
+        // Keep the short default if decoding is unavailable.
+      }
+      res.append("Set-Cookie", `${contentCookieName(req.params.courseId)}=${encodeURIComponent(identity.accessToken)}; Path=/api/content/${encodeURIComponent(req.params.courseId)}; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=None`);
+    }
     res.send(buffer);
   } catch (e) {
     console.error("Course content error:", e);

@@ -85,20 +85,75 @@ function trialStatus(trial) {
   };
 }
 
+function manifestFilePath(file) {
+  if (typeof file === "string") return file.trim();
+  if (!file || typeof file !== "object") return "";
+  return String(file.path || file.name || file.relativePath || "").trim();
+}
+
+function pickIndexFile(files, currentEntry) {
+  const paths = (Array.isArray(files) ? files : [])
+    .map(manifestFilePath)
+    .filter(Boolean);
+  const lower = (value) => String(value).toLowerCase().replace(/\\/g, "/");
+  const exact = paths.find((file) => lower(file) === "index.html");
+  if (exact) return exact;
+  const nested = paths.find((file) => lower(file).endsWith("/index.html"));
+  if (nested) return nested;
+
+  const current = String(currentEntry || "").replace(/\\/g, "/");
+  const slash = current.lastIndexOf("/");
+  if (slash > 0) {
+    const directory = lower(current.slice(0, slash));
+    const sibling = paths.find((file) => {
+      const normalized = lower(file);
+      return normalized === `${directory}/index.html`;
+    });
+    if (sibling) return sibling;
+  }
+  return "";
+}
+
+async function findIndexFileInStorage(bucket, prefix) {
+  const root = String(prefix || "").replace(/\/+$/, "");
+  if (!bucket || !root) return "";
+  const queue = [root];
+  const visited = new Set();
+  let scanned = 0;
+  while (queue.length && scanned < 2000) {
+    const current = queue.shift();
+    if (!current || visited.has(current)) continue;
+    visited.add(current);
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .list(current, { limit: 1000, sortBy: { column: "name", order: "asc" } });
+    if (error) throw error;
+    for (const item of data || []) {
+      scanned += 1;
+      const child = `${current}/${item.name}`;
+      if (String(item.name || "").toLowerCase() === "index.html") return child.slice(root.length + 1);
+      if (!item.id && item.name) queue.push(child);
+      if (scanned >= 2000) break;
+    }
+  }
+  return "";
+}
+
 async function resolveEntryFile(course) {
   const currentEntry = String(course?.entry_file || "").trim();
-  if (/\.html?$/i.test(currentEntry)) return currentEntry;
-  if (!course?.current_version_id) return currentEntry;
-  const { data: version, error } = await supabase
-    .from("course_versions")
-    .select("manifest")
-    .eq("id", course.current_version_id)
-    .maybeSingle();
-  if (error) throw error;
-  const files = Array.isArray(version?.manifest?.files) ? version.manifest.files : [];
-  return files.find((file) => String(file).toLowerCase() === "index.html")
-    || files.find((file) => String(file).toLowerCase().endsWith("/index.html"))
-    || currentEntry;
+  if (course?.current_version_id) {
+    const { data: version, error } = await supabase
+      .from("course_versions")
+      .select("manifest")
+      .eq("id", course.current_version_id)
+      .maybeSingle();
+    if (error) throw error;
+    const manifestEntry = pickIndexFile(version?.manifest?.files, currentEntry);
+    if (manifestEntry) return manifestEntry;
+  }
+  const storageEntry = await findIndexFileInStorage(course?.content_bucket, course?.content_prefix);
+  if (storageEntry) return storageEntry;
+  return currentEntry;
 }
 
 async function getAccess(userId, courseId) {
@@ -168,6 +223,17 @@ router.get("/:courseId/content-token", requireAuth, async (req, res) => {
     const access = await getAccess(req.userId, course.id);
     if (!access.canAccess) return res.status(403).json({ ok: false, error: "لا تملك صلاحية الوصول إلى محتوى هذا الكورس." });
     const entryFile = await resolveEntryFile(course);
+    if (entryFile && entryFile !== course.entry_file) {
+      const { error: repairError } = await supabase
+        .from("courses")
+        .update({ entry_file: entryFile, updated_at: new Date().toISOString() })
+        .eq("id", course.id);
+      if (repairError) {
+        console.warn("Course entry repair skipped:", repairError.message || repairError);
+      } else {
+        course.entry_file = entryFile;
+      }
+    }
     const token = jwt.sign({ userId: req.userId, courseId: String(course.id), scope: "course-content" }, process.env.JWT_SECRET, { expiresIn: access.accessType === "trial" ? "15m" : "1h" });
     res.json({ ok: true, token, entryFile, expiresIn: access.accessType === "trial" ? 900 : 3600 });
   } catch (e) {
@@ -465,3 +531,4 @@ module.exports.getAccess = getAccess;
 module.exports.findPublishedCourse = findPublishedCourse;
 module.exports.getAccess = getAccess;
 module.exports.resolveEntryFile = resolveEntryFile;
+module.exports.pickIndexFile = pickIndexFile;
