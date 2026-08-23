@@ -114,16 +114,17 @@ function pickIndexFile(files, currentEntry) {
   return "";
 }
 
-function preferredStartFile(currentEntry) {
+function preferredStartFile(currentEntry, course) {
+  if (String(course?.slug || "") === "level-2") return "ch1.html";
   return /(?:^|\/)capacitor-setup\.md$/i.test(String(currentEntry || "").replace(/\\/g, "/")) ? "ch1.html" : "index.html";
 }
 
-function pickCourseEntryFile(files, currentEntry) {
+function pickCourseEntryFile(files, currentEntry, course) {
   const paths = (Array.isArray(files) ? files : [])
     .map(manifestFilePath)
     .filter(Boolean);
   const lower = (value) => String(value).toLowerCase().replace(/\\/g, "/");
-  const preferred = preferredStartFile(currentEntry).toLowerCase();
+  const preferred = preferredStartFile(currentEntry, course).toLowerCase();
   const current = String(currentEntry || "").replace(/\\/g, "/");
   const slash = current.lastIndexOf("/");
   const directory = slash > 0 ? lower(current.slice(0, slash)) : "";
@@ -166,7 +167,7 @@ async function findFileInStorage(bucket, prefix, fileName) {
 
 async function resolveEntryFile(course) {
   const currentEntry = String(course?.entry_file || "").trim();
-  const preferred = preferredStartFile(currentEntry);
+  const preferred = preferredStartFile(currentEntry, course);
   if (course?.current_version_id) {
     const { data: version, error } = await supabase
       .from("course_versions")
@@ -174,7 +175,7 @@ async function resolveEntryFile(course) {
       .eq("id", course.current_version_id)
       .maybeSingle();
     if (error) throw error;
-    const manifestEntry = pickCourseEntryFile(version?.manifest?.files, currentEntry);
+    const manifestEntry = pickCourseEntryFile(version?.manifest?.files, currentEntry, course);
     if (manifestEntry) return manifestEntry;
   }
   const storageEntry = await findFileInStorage(course?.content_bucket, course?.content_prefix, preferred);
