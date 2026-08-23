@@ -15,6 +15,16 @@ function safeRelativePath(value) {
   return parts.join("/");
 }
 
+function prepareCourseHtml(buffer) {
+  const html = buffer.toString("utf8");
+  // The outer Marketplace gateway has already authenticated this request.
+  // Disable the legacy bundle's origin-local auth redirect inside the iframe.
+  return Buffer.from(
+    html.replace(/(<html\b[^>]*?)\sdata-protected=(['"])true\2/i, '$1 data-protected="false"'),
+    "utf8"
+  );
+}
+
 function contentCookieName(courseIdentifier) {
   const safeIdentifier = String(courseIdentifier || "").replace(/[^a-zA-Z0-9_-]/g, "_");
   return `ql_content_token_${safeIdentifier}`;
@@ -102,7 +112,8 @@ router.get("/:courseId/*", async (req, res) => {
       }
       res.append("Set-Cookie", `${contentCookieName(req.params.courseId)}=${encodeURIComponent(identity.accessToken)}; Path=/api/content/${encodeURIComponent(req.params.courseId)}; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=None`);
     }
-    res.send(buffer);
+    const responseBody = /text\/html/i.test(mime.lookup(requestedPath) || "") ? prepareCourseHtml(buffer) : buffer;
+    res.send(responseBody);
   } catch (e) {
     console.error("Course content error:", e);
     res.status(500).json({ ok: false, error: "تعذر تحميل محتوى الكورس." });
@@ -110,3 +121,4 @@ router.get("/:courseId/*", async (req, res) => {
 });
 
 module.exports = router;
+module.exports.prepareCourseHtml = prepareCourseHtml;
