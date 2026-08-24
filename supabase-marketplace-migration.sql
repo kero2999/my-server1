@@ -189,6 +189,12 @@ alter table if exists project_submissions
 alter table if exists project_submissions
   add column if not exists feedback text;
 
+alter table if exists project_submissions
+  add column if not exists ai_evaluation jsonb;
+
+alter table if exists project_submissions
+  add column if not exists evaluated_at timestamptz;
+
 create table if not exists certificates (
   id bigint generated always as identity primary key,
   user_id bigint not null references users(id) on delete cascade,

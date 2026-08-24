@@ -3,8 +3,9 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const supabase = require("../db");
 const { requireAuth } = require("../middleware/auth");
-
+const { buildLearning, evaluateProject, isChapterUnlocked } = require("../learning");
 const router = express.Router();
+
 const DEFAULT_TRIAL_MINUTES = 10;
 
 function isNumericId(value) {
@@ -249,6 +250,19 @@ router.get("/:courseId", async (req, res) => {
 });
 
 // GET /api/courses/:courseId/access — authoritative entitlement/trial state.
+router.get("/:courseId/learning", requireAuth, async (req, res) => {
+  try {
+    const course = await findPublishedCourse(req.params.courseId);
+    if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
+    const access = await getAccess(req.userId, course.id);
+    if (!access.canAccess) return res.status(403).json({ ok: false, error: "ابدأ التجربة أو اشترِ الكورس للوصول إلى لوحة التعلم." });
+    const learning = await buildLearning({ userId: req.userId, course, access });
+    res.json({ ok: true, learning: { ...learning, course: publicCourse(course) } });
+  } catch (e) {
+    accessError(res, e);
+  }
+});
+
 router.get("/:courseId/content-token", requireAuth, async (req, res) => {
   try {
     const course = await findPublishedCourse(req.params.courseId);
@@ -410,6 +424,11 @@ router.post("/:courseId/quizzes/:quizId/submit", requireAuth, async (req, res) =
     const { data: quiz, error: quizError } = await quizQuery.maybeSingle();
     if (quizError) throw quizError;
     if (!quiz) return res.status(404).json({ ok: false, error: "الاختبار غير موجود." });
+    const quizChapter = Number(String(quiz.quiz_key || "").match(/(\d+)/)?.[1] || 0);
+    if (quizChapter > 1) {
+      const unlock = await isChapterUnlocked(req.userId, course.id, quizChapter);
+      if (!unlock.unlocked) return res.status(403).json({ ok: false, error: "اجتز اختبار الفصل السابق أولًا." });
+    }
 
     const answers = Array.isArray(req.body.answers) ? req.body.answers : [];
     const questions = Array.isArray(quiz.questions) ? quiz.questions : [];
@@ -459,7 +478,7 @@ router.get("/:courseId/quizzes/:quizId/result", requireAuth, async (req, res) =>
   }
 });
 
-// POST /api/courses/:courseId/projects/:projectId/submit — central project submission.
+// POST /api/courses/:courseId/projects/:projectId/submit — AI-graded project submission.
 router.post("/:courseId/projects/:projectId/submit", requireAuth, async (req, res) => {
   try {
     const course = await findPublishedCourse(req.params.courseId);
@@ -467,24 +486,49 @@ router.post("/:courseId/projects/:projectId/submit", requireAuth, async (req, re
     const access = await getAccess(req.userId, course.id);
     if (!access.canAccess) return res.status(403).json({ ok: false, error: "لا تملك صلاحية الوصول إلى هذا الكورس." });
     const text = String(req.body.text || "").trim();
-    if (!text) return res.status(400).json({ ok: false, error: "المشروع فارغ." });
-    let projectQuery = supabase.from("projects").select("id, project_key, title").eq("course_id", course.id);
+    if (text.length < 80) return res.status(400).json({ ok: false, error: "اكتب مشروعًا لا يقل عن 80 حرفًا حتى يستطيع الذكاء الاصطناعي تقييمه." });
+    if (text.length > 12000) return res.status(400).json({ ok: false, error: "حجم المشروع كبير جدًا. اختصره إلى 12000 حرف أو أقل." });
+
+    let projectQuery = supabase.from("projects").select("id, project_key, title, instructions, passing_score").eq("course_id", course.id);
     projectQuery = findByIdOrKey(projectQuery, req.params.projectId, "project_key");
     const { data: project, error: projectError } = await projectQuery.maybeSingle();
     if (projectError) throw projectError;
     if (!project) return res.status(404).json({ ok: false, error: "المشروع غير موجود." });
-    const { data: user, error: userError } = await supabase.from("users").select("email").eq("id", req.userId).maybeSingle();
+    const learning = await buildLearning({ userId: req.userId, course, access });
+    if (!learning.overall.allQuizzesPassed) return res.status(403).json({ ok: false, error: "أكمل واجتز اختبارات جميع الفصول أولًا." });
+
+    const { data: user, error: userError } = await supabase.from("users").select("email, full_name").eq("id", req.userId).maybeSingle();
     if (userError) throw userError;
+    if (!user) return res.status(404).json({ ok: false, error: "المستخدم غير موجود." });
+
+    let evaluation;
+    try {
+      evaluation = await evaluateProject({ course, project, student: user, text });
+    } catch (error) {
+      console.error("Project evaluation failed:", error);
+      if (error.code === "AI_EVALUATOR_NOT_CONFIGURED") {
+        return res.status(503).json({ ok: false, error: "تقييم الذكاء الاصطناعي غير مضبوط على الخادم بعد." });
+      }
+      return res.status(502).json({ ok: false, error: "تعذر تقييم المشروع الآن. حاول مرة أخرى." });
+    }
+
+    const passingScore = Number(project.passing_score || 70);
+    const passed = Number(evaluation.score) >= passingScore;
+    const status = passed ? "passed" : "failed";
     const { data: submission, error } = await supabase.from("project_submissions").insert({
       user_id: req.userId,
-      email: user?.email || "",
+      email: user.email || "",
       course_id: course.id,
       project_id: project.id,
       content: text,
-      status: "submitted",
-    }).select("id, course_id, project_id, status, submitted_at").single();
+      status,
+      score: Number(evaluation.score),
+      feedback: String(evaluation.feedback || "").trim(),
+      ai_evaluation: evaluation,
+      evaluated_at: new Date().toISOString(),
+    }).select("id, course_id, project_id, status, score, feedback, ai_evaluation, evaluated_at, submitted_at").single();
     if (error) throw error;
-    res.status(201).json({ ok: true, submission });
+    res.status(201).json({ ok: true, submission, passed, passingScore });
   } catch (e) {
     accessError(res, e);
   }
@@ -502,7 +546,7 @@ router.get("/:courseId/projects/:projectId/status", requireAuth, async (req, res
     const { data: project, error: projectError } = await projectQuery.maybeSingle();
     if (projectError) throw projectError;
     if (!project) return res.status(404).json({ ok: false, error: "المشروع غير موجود." });
-    const { data, error } = await supabase.from("project_submissions").select("id, status, score, feedback, submitted_at").eq("user_id", req.userId).eq("course_id", course.id).eq("project_id", project.id).order("submitted_at", { ascending: false }).limit(1).maybeSingle();
+    const { data, error } = await supabase.from("project_submissions").select("id, status, score, feedback, ai_evaluation, evaluated_at, submitted_at").eq("user_id", req.userId).eq("course_id", course.id).eq("project_id", project.id).order("submitted_at", { ascending: false }).limit(1).maybeSingle();
     if (error) throw error;
     res.json({ ok: true, submission: data || null });
   } catch (e) {
@@ -528,14 +572,29 @@ router.get("/:courseId/certificate", requireAuth, async (req, res) => {
     const lessonIds = (lessons || []).map((lesson) => lesson.id);
     const [{ data: progress, error: progressError }, { data: attempts, error: attemptsError }, { data: submissions, error: submissionsError }] = await Promise.all([
       supabase.from("course_progress").select("lesson_id, completed").eq("user_id", req.userId).eq("course_id", course.id),
-      supabase.from("quiz_attempts").select("quiz_id, passed").eq("user_id", req.userId).eq("course_id", course.id).eq("passed", true),
-      supabase.from("project_submissions").select("project_id, status, score").eq("user_id", req.userId).eq("course_id", course.id).in("status", ["completed", "approved", "passed"]),
+      supabase.from("quiz_attempts").select("quiz_id, score, passed, attempted_at").eq("user_id", req.userId).eq("course_id", course.id).eq("passed", true),
+      supabase.from("project_submissions").select("project_id, status, score, submitted_at").eq("user_id", req.userId).eq("course_id", course.id).in("status", ["completed", "approved", "passed"]),
     ]);
     if (progressError || attemptsError || submissionsError) throw progressError || attemptsError || submissionsError;
 
     const completedLessonIds = new Set((progress || []).filter((item) => item.completed).map((item) => item.lesson_id));
     const passedQuizIds = new Set((attempts || []).map((item) => item.quiz_id));
     const completedProjectIds = new Set((submissions || []).map((item) => item.project_id));
+    const quizScoresById = new Map();
+    (attempts || []).forEach((attempt) => {
+      const previous = quizScoresById.get(attempt.quiz_id);
+      if (!previous || Number(attempt.score || 0) > Number(previous.score || 0)) quizScoresById.set(attempt.quiz_id, attempt);
+    });
+    const scoredQuizzes = (quizzes || []).map((quiz) => quizScoresById.get(quiz.id)).filter(Boolean);
+    const quizAverage = scoredQuizzes.length ? Math.round((scoredQuizzes.reduce((sum, item) => sum + Number(item.score || 0), 0) / scoredQuizzes.length) * 100) / 100 : 0;
+    const projectSubmission = (submissions || []).slice().sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at))[0] || null;
+    const { data: student, error: studentError } = await supabase.from("users").select("id, full_name, email").eq("id", req.userId).maybeSingle();
+    if (studentError) throw studentError;
+    const certificateDetails = {
+      course: publicCourse(course),
+      student,
+      scores: { quizAverage, projectScore: projectSubmission ? Number(projectSubmission.score || 0) : 0 },
+    };
     const lessonsOk = !lessonIds.length || lessonIds.every((id) => completedLessonIds.has(id));
     const quizzesOk = !(quizzes || []).length || (quizzes || []).every((quiz) => passedQuizIds.has(quiz.id));
     const projectsOk = !(projects || []).length || (projects || []).every((project) => completedProjectIds.has(project.id));
@@ -543,7 +602,7 @@ router.get("/:courseId/certificate", requireAuth, async (req, res) => {
 
     const { data: existing, error: existingError } = await supabase.from("certificates").select("certificate_number, verification_code, issued_at, course_id").eq("user_id", req.userId).eq("course_id", course.id).maybeSingle();
     if (existingError) throw existingError;
-    if (existing) return res.json({ ok: true, certificate: existing });
+    if (existing) return res.json({ ok: true, certificate: existing, ...certificateDetails });
     const certificate = {
       user_id: req.userId,
       course_id: course.id,
@@ -552,7 +611,7 @@ router.get("/:courseId/certificate", requireAuth, async (req, res) => {
     };
     const { data: created, error } = await supabase.from("certificates").insert(certificate).select("certificate_number, verification_code, issued_at, course_id").single();
     if (error) throw error;
-    res.status(201).json({ ok: true, certificate: created });
+    res.status(201).json({ ok: true, certificate: created, ...certificateDetails });
   } catch (e) {
     accessError(res, e);
   }

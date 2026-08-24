@@ -4,6 +4,7 @@ const mime = require("mime-types");
 const supabase = require("../db");
 const { authenticate } = require("../middleware/auth");
 const { findPublishedCourse, getAccess, resolveEntryFile } = require("./courses");
+const { isChapterUnlocked } = require("../learning");
 
 const router = express.Router();
 
@@ -130,6 +131,13 @@ router.get("/:courseId/*", async (req, res) => {
 
     let requestedPath = safeRelativePath(req.params[0] || course.entry_file);
     if (!requestedPath) return res.status(400).json({ ok: false, error: "مسار الملف غير صالح." });
+    const chapterFile = requestedPath.match(/(?:^|\/)ch(\d+)\.html$/i);
+    const quizFile = /(?:^|\/)quiz\.html$/i.test(requestedPath) ? Number(req.query.ch || 0) : 0;
+    const requestedChapter = chapterFile ? Number(chapterFile[1]) : quizFile || (/(?:^|\/)index\.html$/i.test(requestedPath) ? 1 : 0);
+    if (requestedChapter > 1) {
+      const unlock = await isChapterUnlocked(identity.userId, course.id, requestedChapter);
+      if (!unlock.unlocked) return res.status(403).json({ ok: false, error: "هذا الفصل مقفول. اجتز اختبار الفصل السابق أولًا." });
+    }
     const currentEntryPath = safeRelativePath(course.entry_file);
     if (currentEntryPath && requestedPath === currentEntryPath && !/\.html?$/i.test(requestedPath)) {
       const resolvedEntry = await resolveEntryFile(course);
