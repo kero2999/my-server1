@@ -167,6 +167,12 @@ async function findFileInStorage(bucket, prefix, fileName) {
 
 async function resolveEntryFile(course) {
   const currentEntry = String(course?.entry_file || "").trim();
+  // Marketing Launch is uploaded with a root index.html. Avoid a storage tree scan
+  // on every content-token request; the content gateway still discovers a nested
+  // index.html if an older upload placed the files under a folder.
+  if (String(course?.slug || "") === "marketing-launch" && /\.html?$/i.test(currentEntry)) {
+    return currentEntry;
+  }
   const preferred = preferredStartFile(currentEntry, course);
   if (course?.current_version_id) {
     const { data: version, error } = await supabase
