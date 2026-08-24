@@ -101,6 +101,7 @@ async function buildLearning({ userId, course, access }) {
         title: quiz.title,
         passingScore: Number(quiz.passing_score || 70),
         questionCount: quizQuestions(quiz.questions).length,
+        requiredCorrect: Math.ceil((quizQuestions(quiz.questions).length * Number(quiz.passing_score || 70)) / 100),
         questions: quizQuestions(quiz.questions),
       } : null,
       result: attempt ? {
