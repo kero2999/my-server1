@@ -10,6 +10,7 @@ const coursesRoutes = require("./routes/courses");
 const paymentsRoutes = require("./routes/payments");
 const adminRoutes = require("./routes/admin");
 const contentRoutes = require("./routes/content");
+const certificatesRoutes = require("./routes/certificates");
 
 const app = express();
 const allowedOrigins = (process.env.FRONTEND_URL || "*")
@@ -41,6 +42,7 @@ app.use("/api/courses", coursesRoutes);
 app.use("/api/payments", paymentsRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/content", contentRoutes);
+app.use("/api/certificates", certificatesRoutes);
 
 app.get("/health", (req, res) => res.json({ ok: true, service: "marketing-platform-server" }));
 
