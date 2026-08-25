@@ -2,6 +2,7 @@ const express = require("express");
 const path = require("path");
 const fs = require("fs");
 const { requireAuth } = require("../middleware/auth");
+const { rateLimit } = require("../middleware/rate-limit");
 const { PROJECT_PROMPTS } = require("../mentor-projects");
 const supabase = require("../db");
 
@@ -24,7 +25,28 @@ const MODEL =
   process.env.OPENAI_MODEL || "gpt-5-mini";
 
 const TRIAL_MESSAGE_LIMIT = 3;
+const MAX_MESSAGES = 20;
+const MAX_MESSAGE_CHARS = 4000;
+const mentorKey = (req) => String(req.userId || `${req.ip || "unknown"}:${String(req.headers["x-trial-session"] || "").slice(0, 100)}`);
+const mentorLimiter = rateLimit({ name: "mentor-chat", windowMs: 60 * 1000, max: 20, keyGenerator: mentorKey });
+const trialMentorLimiter = rateLimit({ name: "mentor-trial-chat", windowMs: 60 * 1000, max: 6 });
+const speechLimiter = rateLimit({ name: "mentor-speech", windowMs: 60 * 1000, max: 12, keyGenerator: mentorKey });
 
+function normalizeChapter(value) {
+  const chapter = Number(value || 0);
+  return Number.isInteger(chapter) && chapter >= 0 && chapter <= 100 ? chapter : 0;
+}
+
+function normalizeMessages(value) {
+  if (!Array.isArray(value) || value.length === 0 || value.length > MAX_MESSAGES) return null;
+  const messages = value.map((message) => {
+    if (!message || !["user", "assistant"].includes(message.role) || typeof message.content !== "string") return null;
+    const content = message.content.trim();
+    if (!content || content.length > MAX_MESSAGE_CHARS) return null;
+    return { role: message.role, content };
+  });
+  return messages.every(Boolean) ? messages : null;
+}
 
 /* =========================================================
    KERO SYSTEM PROMPT
@@ -424,22 +446,15 @@ async function callMentorModel(
 router.post(
   "/chat",
   requireAuth,
+  mentorLimiter,
   async (req, res) => {
 
     try {
 
-      const {
-        chapter,
-        messages
-      } = req.body;
+      const chapter = normalizeChapter(req.body?.chapter);
+      const messages = normalizeMessages(req.body?.messages);
 
-
-      if (
-        !Array.isArray(
-          messages
-        ) ||
-        messages.length === 0
-      ) {
+      if (!messages) {
 
         return res
           .status(400)
@@ -518,6 +533,7 @@ router.post(
 
 router.post(
   "/trial-chat",
+  trialMentorLimiter,
   async (req, res) => {
 
     try {
@@ -530,8 +546,8 @@ router.post(
 
       if (
         !sessionId ||
-        typeof sessionId !==
-          "string"
+        typeof sessionId !== "string" ||
+        !/^[A-Za-z0-9_-]{8,128}$/.test(sessionId)
       ) {
 
         return res
@@ -544,18 +560,10 @@ router.post(
       }
 
 
-      const {
-        chapter,
-        messages
-      } = req.body;
+      const chapter = normalizeChapter(req.body?.chapter);
+      const messages = normalizeMessages(req.body?.messages);
 
-
-      if (
-        !Array.isArray(
-          messages
-        ) ||
-        messages.length === 0
-      ) {
+      if (!messages) {
 
         return res
           .status(400)
@@ -713,18 +721,14 @@ router.post(
 router.post(
   "/speak",
   requireAuth,
+  speechLimiter,
   async (req, res) => {
 
     try {
 
-      const { text } =
-        req.body;
+      const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
 
-
-      if (
-        !text ||
-        !text.trim()
-      ) {
+      if (!text) {
 
         return res
           .status(400)

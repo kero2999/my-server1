@@ -9,7 +9,7 @@
     "dev": "node --watch src/index.js"
   },
   "dependencies": {
-    "@getbrevo/brevo": "^2.0.0",
+    "@getbrevo/brevo": "^6.0.3",
     "@supabase/supabase-js": "^2.45.4",
     "@whop/sdk": "^0.0.40",
     "bcryptjs": "^2.4.3",

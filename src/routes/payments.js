@@ -2,9 +2,11 @@ const express = require("express");
 const crypto = require("crypto");
 const supabase = require("../db");
 const { requireAuth } = require("../middleware/auth");
+const { rateLimit } = require("../middleware/rate-limit");
 const { createCheckout } = require("../paymob");
 
 const router = express.Router();
+const checkoutLimiter = rateLimit({ name: "payment-checkout", windowMs: 10 * 60 * 1000, max: 5, keyGenerator: (req) => String(req.userId || req.ip || "unknown") });
 
 function isNumericId(value) {
   return /^\d+$/.test(String(value || ""));
@@ -21,7 +23,7 @@ async function findPublishedCourse(identifier) {
   return data;
 }
 
-router.post("/course/:courseId/create", requireAuth, async (req, res) => {
+router.post("/course/:courseId/create", requireAuth, checkoutLimiter, async (req, res) => {
   let payment = null;
   try {
     const course = await findPublishedCourse(req.params.courseId);

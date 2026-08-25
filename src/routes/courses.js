@@ -3,10 +3,15 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const supabase = require("../db");
 const { requireAuth } = require("../middleware/auth");
+const { rateLimit } = require("../middleware/rate-limit");
 const { buildLearning, evaluateProject, isChapterUnlocked } = require("../learning");
 const router = express.Router();
 
 const DEFAULT_TRIAL_MINUTES = 10;
+const userKey = (req) => String(req.userId || req.ip || "unknown");
+const trialStartLimiter = rateLimit({ name: "course-trial-start", windowMs: 15 * 60 * 1000, max: 3, keyGenerator: userKey });
+const quizSubmitLimiter = rateLimit({ name: "quiz-submit", windowMs: 10 * 60 * 1000, max: 20, keyGenerator: userKey });
+const projectSubmitLimiter = rateLimit({ name: "project-submit", windowMs: 15 * 60 * 1000, max: 3, keyGenerator: userKey });
 
 function isNumericId(value) {
   return /^\d+$/.test(String(value || ""));
@@ -300,7 +305,7 @@ router.get("/:courseId/access", requireAuth, async (req, res) => {
 });
 
 // POST /api/courses/:courseId/trial/start — one server-tracked trial per user/course.
-router.post("/:courseId/trial/start", requireAuth, async (req, res) => {
+router.post("/:courseId/trial/start", requireAuth, trialStartLimiter, async (req, res) => {
   try {
     const course = await findPublishedCourse(req.params.courseId);
     if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
@@ -412,7 +417,7 @@ function findByIdOrKey(query, identifier, keyColumn) {
 }
 
 // POST /api/courses/:courseId/quizzes/:quizId/submit — score answers server-side.
-router.post("/:courseId/quizzes/:quizId/submit", requireAuth, async (req, res) => {
+router.post("/:courseId/quizzes/:quizId/submit", requireAuth, quizSubmitLimiter, async (req, res) => {
   try {
     const course = await findPublishedCourse(req.params.courseId);
     if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
@@ -479,7 +484,7 @@ router.get("/:courseId/quizzes/:quizId/result", requireAuth, async (req, res) =>
 });
 
 // POST /api/courses/:courseId/projects/:projectId/submit — AI-graded project submission.
-router.post("/:courseId/projects/:projectId/submit", requireAuth, async (req, res) => {
+router.post("/:courseId/projects/:projectId/submit", requireAuth, projectSubmitLimiter, async (req, res) => {
   try {
     const course = await findPublishedCourse(req.params.courseId);
     if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
