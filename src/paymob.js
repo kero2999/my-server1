@@ -90,6 +90,7 @@ function legacyHmacPayload(obj) {
     obj && obj.is_capture,
     obj && obj.is_refunded,
     obj && obj.is_standalone_payment,
+    obj && obj.is_voided,
     order.id,
     obj && obj.owner,
     obj && obj.pending,
