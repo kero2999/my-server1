@@ -2,22 +2,33 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
-const brevo = require("@getbrevo/brevo");
+const { BrevoClient } = require("@getbrevo/brevo");
 const supabase = require("../db");
 const { requireAuth } = require("../middleware/auth");
+const { rateLimit } = require("../middleware/rate-limit");
 
 const router = express.Router();
-const apiInstance = new brevo.TransactionalEmailsApi();
-
-if (process.env.BREVO_API_KEY) {
-  apiInstance.setApiKey(
-    brevo.TransactionalEmailsApiApiKeys.apiKey,
-    process.env.BREVO_API_KEY
-  );
-}
+const accountKey = (req) => `${req.ip || "unknown"}:${String(req.body?.email || "").trim().toLowerCase().slice(0, 160)}`;
+const registerLimiter = rateLimit({ name: "auth-register", windowMs: 15 * 60 * 1000, max: 5 });
+const loginLimiter = rateLimit({ name: "auth-login", windowMs: 15 * 60 * 1000, max: 10, keyGenerator: accountKey });
+const recoveryLimiter = rateLimit({ name: "auth-recovery", windowMs: 60 * 60 * 1000, max: 3, keyGenerator: accountKey });
+const resetLimiter = rateLimit({ name: "auth-reset", windowMs: 60 * 60 * 1000, max: 10 });
+const apiInstance = process.env.BREVO_API_KEY
+  ? new BrevoClient({ apiKey: process.env.BREVO_API_KEY, maxRetries: 0, timeoutInSeconds: 15 })
+  : null;
 
 function signToken(userId) {
   return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: "30d" });
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>\"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;",
+  }[character]));
 }
 
 function publicUser(u) {
@@ -31,14 +42,17 @@ function publicUser(u) {
 }
 
 // POST /api/auth/register
-router.post("/register", async (req, res) => {
+router.post("/register", registerLimiter, async (req, res) => {
   try {
-    const { fullName, email, password } = req.body;
-    if (!fullName || !email || !password) {
+    const { fullName, email, password } = req.body || {};
+    if (typeof fullName !== "string" || typeof email !== "string" || typeof password !== "string" || !fullName.trim() || !email.trim() || !password) {
       return res.status(400).json({ ok: false, error: "من فضلك املأ جميع الحقول." });
     }
-    if (password.length < 6) {
-      return res.status(400).json({ ok: false, error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل." });
+    if (fullName.trim().length > 120 || email.trim().length > 320 || password.length > 128) {
+      return res.status(400).json({ ok: false, error: "بيانات الحساب أطول من الحد المسموح." });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({ ok: false, error: "كلمة المرور يجب أن تكون 8 أحرف على الأقل." });
     }
     const normalizedEmail = email.trim().toLowerCase();
 
@@ -84,10 +98,13 @@ router.post("/register", async (req, res) => {
 });
 
 // POST /api/auth/login
-router.post("/login", async (req, res) => {
+router.post("/login", loginLimiter, async (req, res) => {
   try {
-    const { email, password } = req.body;
-    const normalizedEmail = (email || "").trim().toLowerCase();
+    const { email, password } = req.body || {};
+    if (typeof email !== "string" || typeof password !== "string" || email.length > 320 || password.length > 128) {
+      return res.status(400).json({ ok: false, error: "الإيميل أو كلمة المرور غير صحيحة." });
+    }
+    const normalizedEmail = email.trim().toLowerCase();
 
     const { data: user } = await supabase
       .from("users")
@@ -115,8 +132,7 @@ router.get("/me", requireAuth, async (req, res) => {
 });
 
 // POST /api/auth/forgot-password
-router.post("/forgot-password", async (req, res) => {
-  console.log("🔥 FORGOT PASSWORD ROUTE WAS CALLED");
+router.post("/forgot-password", recoveryLimiter, async (req, res) => {
 
   const genericOk = {
     ok: true,
@@ -124,19 +140,15 @@ router.post("/forgot-password", async (req, res) => {
   };
 
   try {
-    console.log("STEP 1: Reading email");
 
     const { email } = req.body;
     const normalizedEmail = (email || "").trim().toLowerCase();
 
-    console.log("STEP 2: Email received:", normalizedEmail);
 
     if (!normalizedEmail) {
-      console.log("STEP 3: Empty email");
       return res.json(genericOk);
     }
 
-    console.log("STEP 4: Querying Supabase users");
 
     const { data: user, error: userError } = await supabase
       .from("users")
@@ -144,23 +156,17 @@ router.post("/forgot-password", async (req, res) => {
       .eq("email", normalizedEmail)
       .maybeSingle();
 
-    console.log("STEP 5: Supabase query completed");
-    console.log("USER FOUND:", !!user);
-    console.log("SUPABASE ERROR:", userError);
 
     if (userError) throw userError;
 
     if (!user) {
-      console.log("STEP 6: User not found");
       return res.json(genericOk);
     }
 
-    console.log("STEP 7: Creating reset token");
 
     const token = crypto.randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
-    console.log("STEP 8: Inserting password reset");
 
     const { error: resetError } = await supabase
       .from("password_resets")
@@ -170,92 +176,59 @@ router.post("/forgot-password", async (req, res) => {
         expires_at: expiresAt.toISOString(),
       });
 
-    console.log("STEP 9: Password reset insert completed");
-    console.log("RESET ERROR:", resetError);
 
     if (resetError) throw resetError;
 
     const resetUrl =
       `${process.env.FRONTEND_URL}/reset-password.html?token=${token}`;
 
-    console.log("STEP 10: Reset URL created");
-    console.log("FRONTEND_URL:", process.env.FRONTEND_URL);
 
-    console.log("========== BREVO DEBUG ==========");
-    console.log("BREVO_API_KEY EXISTS:", !!process.env.BREVO_API_KEY);
-    console.log("EMAIL_FROM:", process.env.EMAIL_FROM);
-    console.log("TO:", user.email);
 
-    if (process.env.BREVO_API_KEY && process.env.EMAIL_FROM) {
-      console.log("STEP 11: Starting Brevo email");
-
-      const sendSmtpEmail = new brevo.SendSmtpEmail();
-
-      sendSmtpEmail.sender = {
-        email: process.env.EMAIL_FROM,
-        name: "Marketing Platform"
+    if (apiInstance && process.env.EMAIL_FROM) {
+      const displayName = escapeHtml(user.full_name || "");
+      const safeResetUrl = escapeHtml(resetUrl);
+      const sendSmtpEmail = {
+        sender: {
+          email: process.env.EMAIL_FROM,
+          name: "Marketing Platform",
+        },
+        to: [{ email: user.email, name: user.full_name || "" }],
+        subject: "إعادة تعيين كلمة السر — منصة التسويق التعليمية",
+        htmlContent: `
+          <div dir="rtl" style="font-family:Tajawal,Arial,sans-serif;">
+            <h2>إعادة تعيين كلمة السر</h2>
+            <p>مرحبًا ${displayName}،</p>
+            <p>وصلنا طلب لإعادة تعيين كلمة السر الخاصة بحسابك.</p>
+            <p><a href="${safeResetUrl}">إعادة تعيين كلمة السر</a></p>
+            <p>الرابط صالح لمدة ساعة واحدة.</p>
+          </div>
+        `,
       };
-
-      sendSmtpEmail.to = [
-        {
-          email: user.email,
-          name: user.full_name || ""
-        }
-      ];
-
-      sendSmtpEmail.subject =
-        "إعادة تعيين كلمة السر — منصة التسويق التعليمية";
-
-      sendSmtpEmail.htmlContent = `
-        <div dir="rtl" style="font-family:Tajawal,Arial,sans-serif;">
-          <h2>إعادة تعيين كلمة السر</h2>
-          <p>مرحبًا ${user.full_name || ""}،</p>
-          <p>
-            وصلنا طلب لإعادة تعيين كلمة السر الخاصة بحسابك.
-          </p>
-          <p>
-            <a href="${resetUrl}">
-              إعادة تعيين كلمة السر
-            </a>
-          </p>
-          <p>
-            الرابط صالح لمدة ساعة واحدة.
-          </p>
-        </div>
-      `;
-
-      console.log("STEP 12: Calling Brevo API");
-
-      await apiInstance.sendTransacEmail(sendSmtpEmail);
-
-      console.log("STEP 13: EMAIL SENT SUCCESSFULLY");
-    } else {
-      console.warn("STEP 11: Brevo environment variables are missing");
-      console.warn("BREVO_API_KEY EXISTS:", !!process.env.BREVO_API_KEY);
-      console.warn("EMAIL_FROM:", process.env.EMAIL_FROM);
+      await apiInstance.transactionalEmails.sendTransacEmail(sendSmtpEmail);
     }
 
-    console.log("STEP 14: Returning response");
 
     return res.json(genericOk);
 
   } catch (e) {
-    console.error("🔥 FORGOT PASSWORD ERROR:");
-    console.error(e);
+    console.error("Password recovery error");
 
     return res.json(genericOk);
   }
 });
 
 // POST /api/auth/reset-password
-router.post("/reset-password", async (req, res) => {
+router.post("/reset-password", resetLimiter, async (req, res) => {
   try {
     const { token, newPassword } = req.body;
     if (!token || !newPassword) {
       return res.status(400).json({ ok: false, error: "بيانات ناقصة." });
     }
-    if (newPassword.length < 6) {
-      return res.status(400).json({ ok: false, error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل." });
+    if (typeof newPassword !== "string" || newPassword.length > 128) {
+      return res.status(400).json({ ok: false, error: "كلمة المرور غير صالحة." });
+    }
+    if (newPassword.length < 8) {
+      return res.status(400).json({ ok: false, error: "كلمة المرور يجب أن تكون 8 أحرف على الأقل." });
     }
 
     const { data: reset } = await supabase

@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const { rateLimit } = require("./middleware/rate-limit");
 
 const authRoutes = require("./routes/auth");
 const webhookRoutes = require("./routes/webhooks");
@@ -13,28 +14,46 @@ const contentRoutes = require("./routes/content");
 const certificatesRoutes = require("./routes/certificates");
 
 const app = express();
-const allowedOrigins = (process.env.FRONTEND_URL || "*")
+app.disable("x-powered-by");
+app.set("trust proxy", 1);
+
+const allowedOrigins = (process.env.FRONTEND_URL || "")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
+if (!allowedOrigins.length) {
+  allowedOrigins.push("http://localhost:3000", "http://localhost:5173");
+}
 
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
+      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
       return callback(new Error("CORS origin not allowed"));
     },
+    optionsSuccessStatus: 204,
   })
+);
+
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader("Permissions-Policy", "camera=(), geolocation=(), microphone=(self)");
+  res.setHeader("Strict-Transport-Security", "max-age=31536000");
+  next();
+});
+
+app.use(
+  "/api",
+  rateLimit({ name: "api-global", windowMs: 60 * 1000, max: 120 })
 );
 
 // مهم: راوت الـ webhook لازم ياخد الـ body كنص خام (raw) قبل ما نعمل express.json()
 // عشان التحقق من التوقيع (signature) يشتغل صح.
-app.use("/api/webhooks", express.text({ type: "*/*" }), webhookRoutes);
+app.use("/api/webhooks", express.text({ type: "*/*", limit: "1mb" }), webhookRoutes);
 
-// باقي الراوتس بتاخد JSON عادي
-app.use(express.json());
+// باقي الراوتس بتاخد JSON عادي مع حد يمنع أجسام الطلبات الضخمة.
+app.use(express.json({ limit: "256kb", strict: true }));
 app.use("/api/auth", authRoutes);
 app.use("/api/mentor", mentorRoutes);
 app.use("/api/projects", projectsRoutes);
