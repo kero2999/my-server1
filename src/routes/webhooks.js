@@ -6,15 +6,58 @@ const { verifyHmac, callbackDetails } = require("../paymob");
 const router = express.Router();
 
 router.post("/paymob", async (req, res) => {
+  const bodyType = typeof req.body;
+  const bodyLength = bodyType === "string" ? req.body.length : 0;
+  const querySignature = typeof req.query.hmac === "string" ? req.query.hmac : "";
+  const headerSignature = typeof req.headers["x-paymob-hmac"] === "string" ? req.headers["x-paymob-hmac"] : "";
+
+  console.log("[Paymob webhook] received", {
+    method: req.method,
+    path: req.path,
+    bodyType,
+    bodyLength,
+    contentType: req.headers["content-type"] || null,
+    hasQueryHmac: Boolean(querySignature),
+    hasHeaderHmac: Boolean(headerSignature),
+  });
+
   try {
     if (typeof req.body !== "string") {
+      console.warn("[Paymob webhook] rejected", { reason: "body_not_raw_text", bodyType });
       return res.status(400).json({ ok: false, error: "Invalid raw callback body" });
     }
-    const payload = JSON.parse(req.body);
-    const signature = req.query.hmac || req.headers["x-paymob-hmac"] || payload.hmac || (payload.obj && payload.obj.hmac);
-    if (!signature || !verifyHmac(payload, signature)) {
+
+    let payload;
+    try {
+      payload = JSON.parse(req.body);
+    } catch (error) {
+      console.warn("[Paymob webhook] rejected", { reason: "invalid_json", bodyLength });
+      return res.status(400).json({ ok: false, error: "Invalid callback JSON" });
+    }
+
+    const payloadSignature = payload && typeof payload.hmac === "string" ? payload.hmac : "";
+    const nestedSignature = payload && payload.obj && typeof payload.obj.hmac === "string" ? payload.obj.hmac : "";
+    const signature = querySignature || headerSignature || payloadSignature || nestedSignature;
+    const signatureSource = querySignature ? "query" : headerSignature ? "header" : payloadSignature ? "body" : nestedSignature ? "body.obj" : "none";
+
+    let validHmac = false;
+    try {
+      validHmac = Boolean(signature && verifyHmac(payload, signature));
+    } catch (error) {
+      console.error("[Paymob webhook] HMAC configuration/error:", error.message);
+      return res.status(503).json({ ok: false, error: "Webhook configuration unavailable" });
+    }
+
+    if (!validHmac) {
+      console.warn("[Paymob webhook] rejected", { reason: signature ? "invalid_hmac" : "missing_hmac", signatureSource });
       return res.status(400).json({ ok: false, error: "Invalid HMAC" });
     }
+
+    console.log("[Paymob webhook] accepted", {
+      signatureSource,
+      hasObj: Boolean(payload && payload.obj),
+      payloadKeys: payload && typeof payload === "object" ? Object.keys(payload).slice(0, 20) : [],
+    });
 
     const details = callbackDetails(payload);
     if (!details.transactionId || !details.providerOrderId) {
