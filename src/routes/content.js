@@ -16,14 +16,29 @@ function safeRelativePath(value) {
   return parts.join("/");
 }
 
-function prepareCourseHtml(buffer) {
+function prepareCourseHtml(buffer, requestedPath = "") {
   const html = buffer.toString("utf8");
   // The outer Marketplace gateway has already authenticated this request.
   // Disable the legacy bundle's origin-local auth redirect inside the iframe.
-  const sanitized = html
+  let sanitized = html
     .replace(/(<html\b[^>]*?)\sdata-protected=(['"])true\2/i, '$1 data-protected="false"')
     .replace(/<script\b[^>]*\bsrc=(['"])[^'"]*auth\.js\1[^>]*>\s*<\/script>/gi, '')
     .replace(/<script\b[^>]*>[\s\S]*?lms_session_v1[\s\S]*?<\/script>/gi, '');
+
+  const isChapter = /(?:^|\/)ch\d+\.html$/i.test(String(requestedPath || ""));
+  if (isChapter) {
+    const hasChapterMentorAccess = /mentor-top-btn|mentor-topbar/i.test(sanitized);
+    if (!hasChapterMentorAccess) {
+      const mentorTopbar = '<div class="mentor-topbar"><img src="https://www.quadralevel.com/images/kero.png" alt="Kero Mentor"><div><strong>Mentor</strong><span>اسأل عن هذا الفصل</span></div><button type="button" onclick="openChapterMentor()"><i class="fas fa-comments"></i><span class="mentor-label">افتح المحادثة</span></button></div>';
+      const mentorTopbarStyle = '<style id="mentor-top-access-style">.mentor-topbar{position:fixed;top:14px;right:18px;z-index:1100;display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid rgba(255,215,0,.45);border-radius:18px;background:rgba(10,14,39,.9);backdrop-filter:blur(12px);box-shadow:0 10px 28px rgba(0,0,0,.28);color:#fff}.mentor-topbar img{width:38px;height:38px;border-radius:12px;object-fit:cover;border:1px solid rgba(255,215,0,.5)}.mentor-topbar div{display:flex;flex-direction:column;gap:2px;min-width:105px}.mentor-topbar strong{color:#ffd700;font-size:14px}.mentor-topbar span{color:rgba(255,255,255,.72);font-size:11px}.mentor-topbar button{border:1px solid #ffd700;background:transparent;color:#ffd700;border-radius:999px;padding:7px 11px;font:700 12px Tajawal,sans-serif;cursor:pointer;transition:transform .2s,background .2s,color .2s}.mentor-topbar button:hover{transform:translateY(-2px);background:#ffd700;color:#0a0e27}@media(max-width:640px){.mentor-topbar{top:10px;right:10px;left:10px;justify-content:flex-start;padding:7px 9px}.mentor-topbar div{flex:1;min-width:0}.mentor-topbar .mentor-label{display:none}.mentor-topbar button{width:40px;height:34px;padding:0}.mentor-topbar button i{margin:0}}</style>';
+      sanitized = sanitized.replace(/<\/head>/i, mentorTopbarStyle + '</head>');
+      sanitized = sanitized.replace(/<body\b[^>]*>/i, '$&' + mentorTopbar);
+    }
+    if (!/function\s+openChapterMentor\s*\(/.test(sanitized)) {
+      const mentorHelper = '<script>function openChapterMentor(){var fab=document.getElementById("mentor-fab");if(fab){fab.click();return;}if(window.LMSMentor){window.LMSMentor.mount(typeof CHAPTER_NUM==="number"?CHAPTER_NUM:0);setTimeout(function(){var mountedFab=document.getElementById("mentor-fab");if(mountedFab)mountedFab.click();},80);}}</script>';
+      sanitized = sanitized.replace(/<\/body>/i, mentorHelper + '</body>');
+    }
+  }
   return Buffer.from(sanitized, "utf8");
 }
 
@@ -168,7 +183,7 @@ router.get("/:courseId/*", async (req, res) => {
       }
       res.append("Set-Cookie", `${contentCookieName(req.params.courseId)}=${encodeURIComponent(identity.accessToken)}; Path=/api/content/${encodeURIComponent(req.params.courseId)}; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=None`);
     }
-    const responseBody = /text\/html/i.test(mime.lookup(requestedPath) || "") ? prepareCourseHtml(buffer) : buffer;
+    const responseBody = /text\/html/i.test(mime.lookup(requestedPath) || "") ? prepareCourseHtml(buffer, requestedPath) : buffer;
     res.send(responseBody);
   } catch (e) {
     console.error("Course content error:", e);
