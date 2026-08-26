@@ -9,9 +9,19 @@ const { isChapterUnlocked } = require("../learning");
 const router = express.Router();
 const PUBLIC_MENTOR_IMAGE = "https://www.quadralevel.com/images/mentor-avatar.jpeg";
 
+function courseIdentifier(courseSlug, courseId) {
+  return String(courseSlug || courseId || "").trim();
+}
+
 function courseDashboardUrl(courseSlug, courseId) {
-  const identifier = String(courseSlug || courseId || "").trim();
+  const identifier = courseIdentifier(courseSlug, courseId);
   return identifier ? `https://www.quadralevel.com/dashboard/${encodeURIComponent(identifier)}` : "https://www.quadralevel.com/courses";
+}
+
+function courseQuizUrl(courseSlug, courseId, chapterNumber) {
+  const identifier = courseIdentifier(courseSlug, courseId);
+  const chapter = Math.max(1, Number(chapterNumber) || 1);
+  return identifier ? `https://www.quadralevel.com/quiz/${encodeURIComponent(identifier)}/chapter/${chapter}` : "https://www.quadralevel.com/courses";
 }
 
 function safeRelativePath(value) {
@@ -31,12 +41,22 @@ function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "", courseId
     .replace(/<script\b[^>]*\bsrc=(['"])[^'"]*auth\.js\1[^>]*>\s*<\/script>/gi, '')
     .replace(/<script\b[^>]*>[\s\S]*?lms_session_v1[\s\S]*?<\/script>/gi, '');
 
-  const isChapter = /(?:^|\/)(?:ch\d+|index)\.html$/i.test(String(requestedPath || ""));
+  const chapterMatch = String(requestedPath || "").match(/(?:^|\/)ch(\d+)\.html$/i);
+  const chapterNumber = chapterMatch ? Number(chapterMatch[1]) : /(?:^|\/)index\.html$/i.test(String(requestedPath || "")) ? 1 : 0;
+  const isChapter = chapterNumber > 0;
   if (isChapter) {
     const dashboardUrl = courseDashboardUrl(courseSlug, courseId);
+    const quizUrl = courseQuizUrl(courseSlug, courseId, chapterNumber);
     sanitized = sanitized
       .replace(/<a(\b[^>]*?)href=(['"])(?:\.\.\/|\.\/)*dashboard\.html(?:\?[^'"]*)?\2/gi, '<a$1href="' + dashboardUrl + '" target="_top"')
       .replace(/location\.replace\(\s*(['"])(?:\.\.\/|\.\/)*dashboard\.html(?:\?[^'"]*)?\1\s*\)/gi, 'location.replace("' + dashboardUrl + '")');
+    const hasChapterNavigation = /class=(['"])[^>]*\bsite-floatnav\b[^>]*\1/i.test(sanitized);
+    if (!hasChapterNavigation) {
+      const chapterNavStyle = '<style id="chapter-nav-style">.site-floatnav{position:fixed;bottom:22px;left:22px;z-index:2000;display:flex;gap:8px;align-items:center;flex-wrap:wrap;max-width:90vw}.site-floatnav a{display:flex;align-items:center;gap:8px;background:rgba(11,11,12,.92);backdrop-filter:blur(10px);border:2px solid #c9a86a;color:#c9a86a;padding:10px 16px;border-radius:25px;font-family:Tajawal,sans-serif;font-weight:700;font-size:.85rem;text-decoration:none;transition:all .3s}.site-floatnav a:hover{background:#c9a86a;color:#0b0b0c;transform:translateY(-3px)}.site-floatnav a.quiz-link{border-color:#3f8f7d;color:#3f8f7d}.site-floatnav a.quiz-link:hover{background:#3f8f7d;color:#0b0b0c}@media(max-width:640px){.site-floatnav{left:10px;bottom:10px;gap:6px}.site-floatnav a{padding:8px 10px;font-size:.75rem}.site-floatnav a span.label{display:none}}</style>';
+      const chapterNav = '<nav class="site-floatnav" aria-label="تنقل الكورس"><a href="' + dashboardUrl + '" target="_top"><i class="fas fa-house"></i><span class="label">لوحتي</span></a><a class="quiz-link" href="' + quizUrl + '" target="_top"><i class="fas fa-clipboard-check"></i><span class="label">الاختبار</span></a></nav>';
+      sanitized = sanitized.replace(/<\/head>/i, chapterNavStyle + '</head>');
+      sanitized = sanitized.replace(/<body\b[^>]*>/i, '$&' + chapterNav);
+    }
     const hasChapterMentorAccess = /mentor-top-btn|mentor-topbar/i.test(sanitized);
     if (!hasChapterMentorAccess) {
       const mentorTopbar = '<div class="mentor-topbar"><img src="' + PUBLIC_MENTOR_IMAGE + '" alt="Kero Mentor"><div><strong>Mentor</strong><span>اسأل عن هذا الفصل</span></div><button type="button" onclick="openChapterMentor()"><i class="fas fa-comments"></i><span class="mentor-label">افتح المحادثة</span></button></div>';
