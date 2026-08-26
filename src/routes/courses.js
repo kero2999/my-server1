@@ -5,6 +5,7 @@ const supabase = require("../db");
 const { requireAuth } = require("../middleware/auth");
 const { rateLimit } = require("../middleware/rate-limit");
 const { buildLearning, evaluateProject, isChapterUnlocked } = require("../learning");
+const { findCampaignTrial, campaignTrialStatus, findCampaignByCourse } = require("../campaign-service");
 const router = express.Router();
 
 const DEFAULT_TRIAL_MINUTES = 10;
@@ -77,7 +78,7 @@ async function findTrial(userId, courseId) {
 }
 
 function trialStatus(trial) {
-  if (!trial) return { started: false, active: false, remainingSeconds: 0 };
+  if (!trial) return { started: false, active: false, remainingSeconds: 0, kind: "free" };
   const remainingSeconds = Math.max(
     0,
     Math.floor((new Date(trial.expires_at).getTime() - Date.now()) / 1000)
@@ -86,6 +87,7 @@ function trialStatus(trial) {
     started: true,
     active: remainingSeconds > 0,
     remainingSeconds,
+    kind: "free",
     startedAt: trial.started_at,
     expiresAt: trial.expires_at,
   };
@@ -196,18 +198,25 @@ async function resolveEntryFile(course) {
 }
 
 async function getAccess(userId, courseId) {
-  const [enrollment, trial] = await Promise.all([
+  const [enrollment, trial, campaignTrial] = await Promise.all([
     findEnrollment(userId, courseId),
     findTrial(userId, courseId),
+    findCampaignTrial(userId, courseId),
   ]);
   const activeEnrollment = enrollment && enrollment.status === "active";
-  const trialInfo = trialStatus(trial);
+  const freeTrial = trialStatus(trial);
+  const paidTrial = campaignTrialStatus(campaignTrial);
+  const hasCampaignTrial = paidTrial.started;
+  const primaryTrial = hasCampaignTrial ? paidTrial : freeTrial;
+  const activeTrial = hasCampaignTrial ? paidTrial.active : freeTrial.active;
   return {
     enrolled: Boolean(activeEnrollment),
     enrollment: activeEnrollment ? enrollment : null,
-    trial: trialInfo,
-    canAccess: Boolean(activeEnrollment || trialInfo.active),
-    accessType: activeEnrollment ? "enrolled" : trialInfo.active ? "trial" : "none",
+    trial: primaryTrial,
+    freeTrial,
+    campaignTrial: paidTrial,
+    canAccess: Boolean(activeEnrollment || activeTrial),
+    accessType: activeEnrollment ? "enrolled" : paidTrial.active ? "campaign_trial" : freeTrial.active ? "trial" : "none",
   };
 }
 
@@ -291,8 +300,8 @@ router.get("/:courseId/content-token", requireAuth, async (req, res) => {
         course.entry_file = entryFile;
       }
     }
-    const token = jwt.sign({ userId: req.userId, courseId: String(course.id), scope: "course-content" }, process.env.JWT_SECRET, { expiresIn: access.accessType === "trial" ? "15m" : "1h" });
-    res.json({ ok: true, token, entryFile, expiresIn: access.accessType === "trial" ? 900 : 3600 });
+    const token = jwt.sign({ userId: req.userId, courseId: String(course.id), scope: "course-content" }, process.env.JWT_SECRET, { expiresIn: access.accessType === "enrolled" ? "1h" : "15m" });
+    res.json({ ok: true, token, entryFile, expiresIn: access.accessType === "enrolled" ? 3600 : 900 });
   } catch (e) {
     accessError(res, e);
   }
@@ -311,8 +320,10 @@ router.get("/:courseId/access", requireAuth, async (req, res) => {
 
 // POST /api/courses/:courseId/trial/start — one server-tracked trial per user/course.
 router.post("/:courseId/trial/start", requireAuth, trialStartLimiter, async (req, res) => {
+  let resolvedCourseId = null;
   try {
     const course = await findPublishedCourse(req.params.courseId);
+    resolvedCourseId = course?.id || null;
     if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
 
     const enrollment = await findEnrollment(req.userId, course.id);
@@ -320,9 +331,19 @@ router.post("/:courseId/trial/start", requireAuth, trialStartLimiter, async (req
       return res.json({ ok: true, access: await getAccess(req.userId, course.id) });
     }
 
+    const campaignTrial = await findCampaignTrial(req.userId, course.id);
+    if (campaignTrial) {
+      return res.json({ ok: true, access: await getAccess(req.userId, course.id) });
+    }
+
     const existing = await findTrial(req.userId, course.id);
     if (existing) {
       return res.json({ ok: true, access: await getAccess(req.userId, course.id) });
+    }
+
+    const campaign = await findCampaignByCourse(course.id);
+    if (campaign && campaign.enabled) {
+      return res.status(409).json({ ok: false, error: "عرض الوصول الكامل لمدة 10 أيام متاح لهذا الكورس بدلًا من التجربة المجانية الحالية." });
     }
 
     const minutes = Number(course.trial_minutes || DEFAULT_TRIAL_MINUTES);
@@ -342,7 +363,7 @@ router.post("/:courseId/trial/start", requireAuth, trialStartLimiter, async (req
     // A unique race means a second request reused the already-created trial.
     if (e && e.code === "23505") {
       try {
-        return res.json({ ok: true, access: await getAccess(req.userId, Number(req.params.courseId)) });
+        return res.json({ ok: true, access: await getAccess(req.userId, resolvedCourseId || Number(req.params.courseId)) });
       } catch (retryError) {
         return accessError(res, retryError);
       }
