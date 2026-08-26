@@ -12,6 +12,7 @@ const paymentsRoutes = require("./routes/payments");
 const adminRoutes = require("./routes/admin");
 const contentRoutes = require("./routes/content");
 const certificatesRoutes = require("./routes/certificates");
+const reviewsRoutes = require("./routes/reviews");
 
 const app = express();
 app.disable("x-powered-by");
@@ -62,6 +63,7 @@ app.use("/api/payments", paymentsRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/content", contentRoutes);
 app.use("/api/certificates", certificatesRoutes);
+app.use("/api/reviews", reviewsRoutes);
 
 app.get("/health", (req, res) => res.json({ ok: true, service: "marketing-platform-server" }));
 
