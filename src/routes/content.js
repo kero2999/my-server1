@@ -31,7 +31,7 @@ function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "") {
     .replace(/<script\b[^>]*\bsrc=(['"])[^'"]*auth\.js\1[^>]*>\s*<\/script>/gi, '')
     .replace(/<script\b[^>]*>[\s\S]*?lms_session_v1[\s\S]*?<\/script>/gi, '');
 
-  const isChapter = /(?:^|\/)ch\d+\.html$/i.test(String(requestedPath || ""));
+  const isChapter = /(?:^|\/)(?:ch\d+|index)\.html$/i.test(String(requestedPath || ""));
   if (isChapter) {
     const dashboardUrl = courseDashboardUrl(courseSlug);
     sanitized = sanitized
