@@ -24,6 +24,13 @@ function courseQuizUrl(courseSlug, courseId, chapterNumber) {
   return identifier ? `https://www.quadralevel.com/quiz/${encodeURIComponent(identifier)}/chapter/${chapter}` : "https://www.quadralevel.com/courses";
 }
 
+function courseChapterImageUrl(courseSlug, chapterNumber) {
+  const slug = String(courseSlug || "").trim().toLowerCase();
+  const chapter = Math.max(1, Number(chapterNumber) || 1);
+  if (!/^(marketing-launch|marketing-growth)$/.test(slug) || chapter > 9) return "";
+  return `https://www.quadralevel.com/images/course-chapters/${slug}-ch${chapter}.webp`;
+}
+
 function safeRelativePath(value) {
   const normalized = String(value || "").replace(/\\/g, "/");
   if (!normalized || normalized.startsWith("/") || normalized.includes("\0")) return null;
@@ -47,9 +54,16 @@ function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "", courseId
   if (isChapter) {
     const dashboardUrl = courseDashboardUrl(courseSlug, courseId);
     const quizUrl = courseQuizUrl(courseSlug, courseId, chapterNumber);
+    const chapterImageUrl = courseChapterImageUrl(courseSlug, chapterNumber);
     sanitized = sanitized
       .replace(/<a(\b[^>]*?)href=(['"])(?:\.\.\/|\.\/)*dashboard\.html(?:\?[^'"]*)?\2/gi, '<a$1href="' + dashboardUrl + '" target="_top"')
       .replace(/location\.replace\(\s*(['"])(?:\.\.\/|\.\/)*dashboard\.html(?:\?[^'"]*)?\1\s*\)/gi, 'location.replace("' + dashboardUrl + '")');
+    if (chapterImageUrl && !/id=(['"])ql-chapter-visual\1/i.test(sanitized)) {
+      const chapterVisualStyle = '<style id="ql-chapter-visual-style">.ql-chapter-visual{width:min(1120px,calc(100% - 32px));margin:28px auto 30px;border:1px solid rgba(201,168,106,.34);border-radius:24px;overflow:hidden;background:#0b1c31;box-shadow:0 18px 42px rgba(0,0,0,.18)}.ql-chapter-visual img{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover}.ql-chapter-visual figcaption{padding:8px 16px;color:rgba(255,255,255,.7);font:500 12px/1.7 Tajawal,sans-serif;text-align:center}@media(max-width:640px){.ql-chapter-visual{width:calc(100% - 20px);margin:18px auto 24px;border-radius:16px}.ql-chapter-visual figcaption{padding:6px 10px;font-size:11px}}</style>';
+      const chapterVisual = '<figure id="ql-chapter-visual" class="ql-chapter-visual"><img src="' + chapterImageUrl + '" alt="صورة توضيحية لموضوع الفصل" loading="eager" decoding="async" fetchpriority="high"><figcaption>صورة توضيحية لموضوع الفصل</figcaption></figure>';
+      sanitized = sanitized.replace(/<\/head>/i, chapterVisualStyle + '</head>');
+      sanitized = sanitized.replace(/<body\b[^>]*>/i, '$&' + chapterVisual);
+    }
     const hasChapterNavigation = /class=(['"])[^>]*\bsite-floatnav\b[^>]*\1/i.test(sanitized);
     if (!hasChapterNavigation) {
       const chapterNavStyle = '<style id="chapter-nav-style">.site-floatnav{position:fixed;bottom:22px;left:22px;z-index:2000;display:flex;gap:8px;align-items:center;flex-wrap:wrap;max-width:90vw}.site-floatnav a{display:flex;align-items:center;gap:8px;background:rgba(11,11,12,.92);backdrop-filter:blur(10px);border:2px solid #c9a86a;color:#c9a86a;padding:10px 16px;border-radius:25px;font-family:Tajawal,sans-serif;font-weight:700;font-size:.85rem;text-decoration:none;transition:all .3s}.site-floatnav a:hover{background:#c9a86a;color:#0b0b0c;transform:translateY(-3px)}.site-floatnav a.quiz-link{border-color:#3f8f7d;color:#3f8f7d}.site-floatnav a.quiz-link:hover{background:#3f8f7d;color:#0b0b0c}@media(max-width:640px){.site-floatnav{left:10px;bottom:10px;gap:6px}.site-floatnav a{padding:8px 10px;font-size:.75rem}.site-floatnav a span.label{display:none}}</style>';
