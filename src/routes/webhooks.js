@@ -2,6 +2,7 @@ const express = require("express");
 const supabase = require("../db");
 const whopsdk = require("../whop");
 const { verifyHmac, callbackDetails } = require("../paymob");
+const { CAMPAIGN_KEY, findCampaignByKey, campaignExpiry } = require("../campaign-service");
 
 const router = express.Router();
 
@@ -84,30 +85,36 @@ router.post("/paymob", async (req, res) => {
     }
 
     if (payment.status === "paid") {
+      if (payment.payment_type === "campaign_trial") await activateCampaignTrial(payment);
       return res.status(200).json({ received: true, duplicate: true });
     }
 
     const nextStatus = details.success ? "paid" : "failed";
+    const paidAt = details.success ? new Date().toISOString() : null;
     const { error: updateError } = await supabase.from("payments").update({
       status: nextStatus,
       provider_transaction_id: details.transactionId,
       raw_callback: details.raw,
-      paid_at: details.success ? new Date().toISOString() : null,
+      paid_at: paidAt,
       updated_at: new Date().toISOString(),
     }).eq("id", payment.id);
     if (updateError) throw updateError;
 
     if (details.success) {
-      const { error: enrollmentError } = await supabase.from("enrollments").upsert({
-        user_id: payment.user_id,
-        course_id: payment.course_id,
-        status: "active",
-        source: "paymob",
-        payment_id: payment.id,
-        purchased_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }, { onConflict: "user_id,course_id" });
-      if (enrollmentError) throw enrollmentError;
+      if (payment.payment_type === "campaign_trial") {
+        await activateCampaignTrial({ ...payment, status: "paid", paid_at: paidAt });
+      } else {
+        const { error: enrollmentError } = await supabase.from("enrollments").upsert({
+          user_id: payment.user_id,
+          course_id: payment.course_id,
+          status: "active",
+          source: "paymob",
+          payment_id: payment.id,
+          purchased_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "user_id,course_id" });
+        if (enrollmentError) throw enrollmentError;
+      }
     }
 
     return res.status(200).json({ received: true, status: nextStatus });
@@ -116,6 +123,31 @@ router.post("/paymob", async (req, res) => {
     return res.status(500).json({ ok: false, error: "Webhook processing failed" });
   }
 });
+
+async function activateCampaignTrial(payment) {
+  const metadata = payment.metadata && typeof payment.metadata === "object" ? payment.metadata : {};
+  const campaignKey = String(metadata.campaignKey || CAMPAIGN_KEY);
+  const campaign = await findCampaignByKey(campaignKey);
+  if (!campaign || Number(campaign.course_id) !== Number(payment.course_id)) throw new Error("CAMPAIGN_NOT_CONFIGURED");
+
+  const durationDays = Number(metadata.durationDays || campaign.duration_days);
+  const startedAt = payment.paid_at || new Date().toISOString();
+  const expiresAt = campaignExpiry(startedAt, durationDays);
+  if (!expiresAt) throw new Error("CAMPAIGN_DURATION_INVALID");
+
+  const { error: trialError } = await supabase.from("campaign_trials").insert({
+    campaign_key: campaignKey,
+    user_id: payment.user_id,
+    course_id: payment.course_id,
+    payment_id: payment.id,
+    duration_days: durationDays,
+    status: "active",
+    started_at: startedAt,
+    expires_at: expiresAt,
+    updated_at: new Date().toISOString(),
+  });
+  if (trialError && trialError.code !== "23505") throw trialError;
+}
 
 router.post("/whop", (req, res) => {
   if (!whopsdk) return res.status(503).json({ ok: false, error: "Whop integration is disabled." });
