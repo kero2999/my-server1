@@ -28,7 +28,8 @@ function courseChapterImageUrl(courseSlug, chapterNumber) {
   const slug = String(courseSlug || "").trim().toLowerCase();
   const chapter = Math.max(1, Number(chapterNumber) || 1);
   if (!/^(marketing-launch|marketing-growth)$/.test(slug) || chapter > 9) return "";
-  return `https://www.quadralevel.com/images/course-chapters/${slug}-ch${chapter}.webp`;
+  const assetPrefix = slug === "marketing-launch" ? "launch" : "growth";
+  return `https://www.quadralevel.com/images/course-chapters/${assetPrefix}-ch${chapter}.webp`;
 }
 
 function safeRelativePath(value) {
