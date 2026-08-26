@@ -231,12 +231,16 @@ router.get("/", async (req, res) => {
         .select("id")
         .eq("slug", String(req.query.category))
         .maybeSingle();
-      if (!category) return res.json({ ok: true, courses: [] });
+      if (!category) {
+        res.set("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
+        return res.json({ ok: true, courses: [] });
+      }
       query = query.eq("category_id", category.id);
     }
 
     const { data, error } = await query;
     if (error) throw error;
+    res.set("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
     res.json({ ok: true, courses: (data || []).map(publicCourse) });
   } catch (e) {
     accessError(res, e);
@@ -248,6 +252,7 @@ router.get("/:courseId", async (req, res) => {
   try {
     const course = await findPublishedCourse(req.params.courseId);
     if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
+    res.set("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
     res.json({ ok: true, course: publicCourse(course) });
   } catch (e) {
     accessError(res, e);
