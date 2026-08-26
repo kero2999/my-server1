@@ -9,9 +9,9 @@ const { isChapterUnlocked } = require("../learning");
 const router = express.Router();
 const PUBLIC_MENTOR_IMAGE = "https://www.quadralevel.com/images/mentor-avatar.jpeg";
 
-function courseDashboardUrl(courseSlug) {
-  const slug = String(courseSlug || "").trim();
-  return slug ? `https://www.quadralevel.com/dashboard/${encodeURIComponent(slug)}` : "https://www.quadralevel.com/courses";
+function courseDashboardUrl(courseSlug, courseId) {
+  const identifier = String(courseSlug || courseId || "").trim();
+  return identifier ? `https://www.quadralevel.com/dashboard/${encodeURIComponent(identifier)}` : "https://www.quadralevel.com/courses";
 }
 
 function safeRelativePath(value) {
@@ -22,7 +22,7 @@ function safeRelativePath(value) {
   return parts.join("/");
 }
 
-function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "") {
+function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "", courseId = "") {
   const html = buffer.toString("utf8");
   // The outer Marketplace gateway has already authenticated this request.
   // Disable the legacy bundle's origin-local auth redirect inside the iframe.
@@ -33,22 +33,27 @@ function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "") {
 
   const isChapter = /(?:^|\/)(?:ch\d+|index)\.html$/i.test(String(requestedPath || ""));
   if (isChapter) {
-    const dashboardUrl = courseDashboardUrl(courseSlug);
+    const dashboardUrl = courseDashboardUrl(courseSlug, courseId);
     sanitized = sanitized
       .replace(/<a(\b[^>]*?)href=(['"])(?:\.\.\/|\.\/)*dashboard\.html(?:\?[^'"]*)?\2/gi, '<a$1href="' + dashboardUrl + '" target="_top"')
       .replace(/location\.replace\(\s*(['"])(?:\.\.\/|\.\/)*dashboard\.html(?:\?[^'"]*)?\1\s*\)/gi, 'location.replace("' + dashboardUrl + '")');
     const hasChapterMentorAccess = /mentor-top-btn|mentor-topbar/i.test(sanitized);
     if (!hasChapterMentorAccess) {
-      const mentorTopbar = '<div class="mentor-topbar"><img src="https://www.quadralevel.com/images/mentor-avatar.jpeg" alt="Kero Mentor"><div><strong>Mentor</strong><span>اسأل عن هذا الفصل</span></div><button type="button" onclick="openChapterMentor()"><i class="fas fa-comments"></i><span class="mentor-label">افتح المحادثة</span></button></div>';
+      const mentorTopbar = '<div class="mentor-topbar"><img src="' + PUBLIC_MENTOR_IMAGE + '" alt="Kero Mentor"><div><strong>Mentor</strong><span>اسأل عن هذا الفصل</span></div><button type="button" onclick="openChapterMentor()"><i class="fas fa-comments"></i><span class="mentor-label">افتح المحادثة</span></button></div>';
       const mentorTopbarStyle = '<style id="mentor-top-access-style">.mentor-topbar{position:fixed;top:14px;right:18px;z-index:1100;display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid rgba(255,215,0,.45);border-radius:18px;background:rgba(10,14,39,.9);backdrop-filter:blur(12px);box-shadow:0 10px 28px rgba(0,0,0,.28);color:#fff}.mentor-topbar img{width:38px;height:38px;border-radius:12px;object-fit:cover;border:1px solid rgba(255,215,0,.5)}.mentor-topbar div{display:flex;flex-direction:column;gap:2px;min-width:105px}.mentor-topbar strong{color:#ffd700;font-size:14px}.mentor-topbar span{color:rgba(255,255,255,.72);font-size:11px}.mentor-topbar button{border:1px solid #ffd700;background:transparent;color:#ffd700;border-radius:999px;padding:7px 11px;font:700 12px Tajawal,sans-serif;cursor:pointer;transition:transform .2s,background .2s,color .2s}.mentor-topbar button:hover{transform:translateY(-2px);background:#ffd700;color:#0a0e27}@media(max-width:640px){.mentor-topbar{top:10px;right:10px;left:10px;justify-content:flex-start;padding:7px 9px}.mentor-topbar div{flex:1;min-width:0}.mentor-topbar .mentor-label{display:none}.mentor-topbar button{width:40px;height:34px;padding:0}.mentor-topbar button i{margin:0}}</style>';
       sanitized = sanitized.replace(/<\/head>/i, mentorTopbarStyle + '</head>');
       sanitized = sanitized.replace(/<body\b[^>]*>/i, '$&' + mentorTopbar);
     }
     if (!/function\s+openChapterMentor\s*\(/.test(sanitized)) {
-      const mentorHelper = '<script>function openChapterMentor(){var fab=document.getElementById("mentor-fab");if(fab){fab.click();return;}if(window.LMSMentor){window.LMSMentor.mount(typeof CHAPTER_NUM==="number"?CHAPTER_NUM:0);setTimeout(function(){var mountedFab=document.getElementById("mentor-fab");if(mountedFab)mountedFab.click();},80);}}</script>';
+      const mentorHelper = '<script>function openChapterMentor(){var fab=document.getElementById("mentor-fab");if(fab){fab.click();return;}if(window.LMSMentor){window.LMSMentor.mount(typeof CHAPTER_NUM==="number"?CHAPTER_NUM:1);setTimeout(function(){var mountedFab=document.getElementById("mentor-fab");if(mountedFab)mountedFab.click();},80);}}</script>';
       sanitized = sanitized.replace(/<\/body>/i, mentorHelper + '</body>');
     }
-    const mentorImageFix = '<script>(function(){var image="' + PUBLIC_MENTOR_IMAGE + '";function sync(){document.querySelectorAll(`#mentor-fab img,#mentor-panel img,.mentor-topbar img,.mentor-avatar-small,.mh-icon img,img[src*="kero"],img[src*="mentor"]`).forEach(function(node){if(node.getAttribute("src")!==image)node.src=image;});}function boot(){sync();if(window.MutationObserver){new MutationObserver(sync).observe(document.documentElement,{childList:true,subtree:true});}}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot,{once:true});else boot();})();</script>';
+    const hasMentorScript = /<script\b[^>]*\bsrc=(['"])[^'"]*mentor\.js\1/i.test(sanitized);
+    if (!hasMentorScript) {
+      const mentorBootstrap = '<script>(function(){function mount(){if(window.LMSMentor&&!document.getElementById("mentor-fab"))window.LMSMentor.mount(typeof CHAPTER_NUM==="number"?CHAPTER_NUM:1);}function load(){if(window.LMSMentor){mount();return;}var script=document.createElement("script");script.src="https://www.quadralevel.com/js/mentor.js";script.async=false;script.onload=mount;document.head.appendChild(script);}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",load,{once:true});else load();})();</script>';
+      sanitized = sanitized.replace(/<\/body>/i, mentorBootstrap + '</body>');
+    }
+    const mentorImageFix = '<script>(function(){var image=' + JSON.stringify(PUBLIC_MENTOR_IMAGE) + ';var dashboard=' + JSON.stringify(dashboardUrl) + ';function sync(){document.querySelectorAll(`#mentor-fab img,#mentor-panel img,.mentor-topbar img,.mentor-avatar-small,.mh-icon img,img[src*="kero"],img[src*="mentor"]`).forEach(function(node){if(node.getAttribute("src")!==image)node.src=image;});document.querySelectorAll("a").forEach(function(node){var href=node.getAttribute("href")||"";var label=node.textContent||"";if(/dashboard\\.html|(?:^|\\/)courses(?:\\.html)?(?:[?#]|$)/i.test(href)&&/لوحتي|لوحة التعلم/i.test(label)){node.setAttribute("href",dashboard);node.setAttribute("target","_top");}});}function boot(){sync();if(window.MutationObserver){new MutationObserver(sync).observe(document.documentElement,{childList:true,subtree:true});}}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot,{once:true});else boot();})();</script>';
     sanitized = sanitized.replace(/<\/body>/i, mentorImageFix + '</body>');
   }
   return Buffer.from(sanitized, "utf8");
@@ -195,7 +200,7 @@ router.get("/:courseId/*", async (req, res) => {
       }
       res.append("Set-Cookie", `${contentCookieName(req.params.courseId)}=${encodeURIComponent(identity.accessToken)}; Path=/api/content/${encodeURIComponent(req.params.courseId)}; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=None`);
     }
-    const responseBody = /text\/html/i.test(mime.lookup(requestedPath) || "") ? prepareCourseHtml(buffer, requestedPath, course.slug) : buffer;
+    const responseBody = /text\/html/i.test(mime.lookup(requestedPath) || "") ? prepareCourseHtml(buffer, requestedPath, course.slug, course.id) : buffer;
     res.send(responseBody);
   } catch (e) {
     console.error("Course content error:", e);
