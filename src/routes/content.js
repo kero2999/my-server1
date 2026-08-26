@@ -8,7 +8,6 @@ const { isChapterUnlocked } = require("../learning");
 
 const router = express.Router();
 const PUBLIC_MENTOR_IMAGE = "https://www.quadralevel.com/images/mentor-avatar.jpeg";
-const SUBTOPIC_IMAGE_BASE = "https://www.quadralevel.com/images/subtopic-thumbs";
 
 function courseIdentifier(courseSlug, courseId) {
   return String(courseSlug || courseId || "").trim();
@@ -31,12 +30,6 @@ function courseChapterImageUrl(courseSlug, chapterNumber) {
   if (!/^(marketing-launch|marketing-growth)$/.test(slug) || chapter > 9) return "";
   const assetPrefix = slug === "marketing-launch" ? "launch" : "growth";
   return `https://www.quadralevel.com/images/course-chapters/${assetPrefix}-ch${chapter}.webp`;
-}
-
-function injectSubtopicImages(html) {
-  const style = '<style id="ql-subtopic-image-style">.ql-subtopic-heading{position:relative;padding-right:68px;min-height:52px;display:flex;align-items:center}.ql-subtopic-thumb{position:absolute;right:0;top:50%;transform:translateY(-50%);width:54px;height:44px;object-fit:cover;border-radius:11px;border:1px solid rgba(201,168,106,.48);box-shadow:0 6px 16px rgba(0,0,0,.18);background:#0b1c31}@media(max-width:640px){.ql-subtopic-heading{padding-right:58px;min-height:44px}.ql-subtopic-thumb{width:46px;height:38px;border-radius:9px}}</style>';
-  const script = '<script>(function(){var base=' + JSON.stringify(SUBTOPIC_IMAGE_BASE) + ';var rules=[{key:"email",words:["email","newsletter","البريد","النشرة","رسائل البريد"]},{key:"social",words:["social","سوشيال","التواصل الاجتماعي","منصات اجتماعية","المجتمع"]},{key:"seo",words:["seo","search engine","محركات البحث","الظهور في محركات","البحث العضوي"]},{key:"paid",words:["paid","ads","advertis","campaign","الإعلانات","الإعلان","الحملات","الترويج","performance marketing","إعادة الاستهداف"]},{key:"funnel",words:["funnel","conversion","landing","journey","قمع","رحلة العميل","التحويل","الشراء","الوعي","الاهتمام","التقييم","النية","الاحتفاظ","الولاء","المدافعة","صفحة الهبوط","مسار العميل"]},{key:"brand",words:["brand","branding","العلامة التجارية","الهوية","الشعار","الألوان","التموضع","positioning","وعد العلامة"]},{key:"writing",words:["content","copywriting","storytelling","aida","cta","المحتوى","كتابة","الإعلانات النصية","الخطاف","القصة","دعوة لاتخاذ"]},{key:"idea",words:["psychology","psychological","brain","emotional","النفس","العاطفي","المشاعر","الدوافع","المخاوف","الرغبات","الانحياز"]},{key:"team",words:["customer","buyer persona","audience","العميل","الجمهور","شخصية العميل","الاحتياج","الرغبة","المشكلة","نقاط الألم"]},{key:"laptop",words:["product","price","place","4ps","7ps","marketing mix","المنتج","السعر","التوزيع","المزيج التسويقي","الخدمة"]},{key:"mobile",words:["digital","internet","platform","mobile","الرقمي","الإنترنت","المنصات الرقمية","الهاتف","التطبيق"]},{key:"analytics",words:["analytics","metrics","data","measure","مؤشرات","قياس","النتائج","التحليل","الأرقام"]},{key:"planning",words:["strategy","market","competitor","swot","pestel","استراتيجية","السوق","المنافسين","التخطيط","الخطة"]}];function keyFor(text){var value=String(text||"").toLowerCase();for(var i=0;i<rules.length;i++){for(var j=0;j<rules[i].words.length;j++){if(value.indexOf(rules[i].words[j].toLowerCase())!==-1)return rules[i].key;}}return "strategy";}function mount(){document.querySelectorAll("h2,h3").forEach(function(heading){if(heading.dataset.qlSubtopicImage)return;var key=keyFor(heading.textContent);var image=document.createElement("img");image.className="ql-subtopic-thumb";image.src=base+"/"+key+".webp";image.alt="";image.setAttribute("aria-hidden","true");image.title="صورة توضيحية من Unsplash";image.loading="lazy";image.decoding="async";heading.classList.add("ql-subtopic-heading");heading.dataset.qlSubtopicImage=key;heading.appendChild(image);});}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",mount,{once:true});else mount();})();</script>';
-  return html.replace(/<\/head>/i, style + '</head>').replace(/<\/body>/i, script + '</body>');
 }
 
 function safeRelativePath(value) {
@@ -90,7 +83,6 @@ function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "", courseId
       const mentorHelper = '<script>function openChapterMentor(){var fab=document.getElementById("mentor-fab");if(fab){fab.click();return;}if(window.LMSMentor){window.LMSMentor.mount(typeof CHAPTER_NUM==="number"?CHAPTER_NUM:1);setTimeout(function(){var mountedFab=document.getElementById("mentor-fab");if(mountedFab)mountedFab.click();},80);}}</script>';
       sanitized = sanitized.replace(/<\/body>/i, mentorHelper + '</body>');
     }
-    sanitized = injectSubtopicImages(sanitized);
     const hasMentorScript = /<script\b[^>]*\bsrc=(['"])[^'"]*mentor\.js\1/i.test(sanitized);
     if (!hasMentorScript) {
       const mentorBootstrap = '<script>(function(){function mount(){if(window.LMSMentor&&!document.getElementById("mentor-fab"))window.LMSMentor.mount(typeof CHAPTER_NUM==="number"?CHAPTER_NUM:1);}function load(){if(window.LMSMentor){mount();return;}var script=document.createElement("script");script.src="https://www.quadralevel.com/js/mentor.js";script.async=false;script.onload=mount;document.head.appendChild(script);}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",load,{once:true});else load();})();</script>';
