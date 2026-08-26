@@ -8,7 +8,6 @@ const { isChapterUnlocked } = require("../learning");
 
 const router = express.Router();
 const PUBLIC_MENTOR_IMAGE = "https://www.quadralevel.com/images/mentor-avatar.jpeg";
-const PUBLIC_MENTOR_SCRIPT = "https://www.quadralevel.com/js/mentor.js";
 
 function courseDashboardUrl(courseSlug) {
   const slug = String(courseSlug || "").trim();
@@ -36,7 +35,6 @@ function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "") {
   if (isChapter) {
     const dashboardUrl = courseDashboardUrl(courseSlug);
     sanitized = sanitized
-      .replace(/<script\b([^>]*?)\bsrc=(['"])(?:\/?|\.\/)?js\/mentor\.js\2([^>]*)>\s*<\/script>/gi, '<script$1src="' + PUBLIC_MENTOR_SCRIPT + '"$3></script>')
       .replace(/<a(\b[^>]*?)href=(['"])(?:\.\.\/|\.\/)*dashboard\.html(?:\?[^'"]*)?\2/gi, '<a$1href="' + dashboardUrl + '" target="_top"')
       .replace(/location\.replace\(\s*(['"])(?:\.\.\/|\.\/)*dashboard\.html(?:\?[^'"]*)?\1\s*\)/gi, 'location.replace("' + dashboardUrl + '")');
     const hasChapterMentorAccess = /mentor-top-btn|mentor-topbar/i.test(sanitized);
@@ -50,7 +48,7 @@ function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "") {
       const mentorHelper = '<script>function openChapterMentor(){var fab=document.getElementById("mentor-fab");if(fab){fab.click();return;}if(window.LMSMentor){window.LMSMentor.mount(typeof CHAPTER_NUM==="number"?CHAPTER_NUM:0);setTimeout(function(){var mountedFab=document.getElementById("mentor-fab");if(mountedFab)mountedFab.click();},80);}}</script>';
       sanitized = sanitized.replace(/<\/body>/i, mentorHelper + '</body>');
     }
-    const mentorImageFix = '<script>(function(){var image="' + PUBLIC_MENTOR_IMAGE + '";function sync(){document.querySelectorAll("#mentor-fab img,#mentor-panel img,.mentor-topbar img,.mentor-avatar-small,.mh-icon img").forEach(function(node){if(node.getAttribute("src")!==image)node.src=image;});}function boot(){sync();if(window.MutationObserver){new MutationObserver(sync).observe(document.documentElement,{childList:true,subtree:true});}}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot,{once:true});else boot();})();</script>';
+    const mentorImageFix = '<script>(function(){var image="' + PUBLIC_MENTOR_IMAGE + '";function sync(){document.querySelectorAll(`#mentor-fab img,#mentor-panel img,.mentor-topbar img,.mentor-avatar-small,.mh-icon img,img[src*="kero"],img[src*="mentor"]`).forEach(function(node){if(node.getAttribute("src")!==image)node.src=image;});}function boot(){sync();if(window.MutationObserver){new MutationObserver(sync).observe(document.documentElement,{childList:true,subtree:true});}}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot,{once:true});else boot();})();</script>';
     sanitized = sanitized.replace(/<\/body>/i, mentorImageFix + '</body>');
   }
   return Buffer.from(sanitized, "utf8");
