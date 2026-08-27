@@ -1,6 +1,7 @@
 const supabase = require("./db");
 
 const { getCountryConfig, getCourseVariants, normalizeCountryCode } = require("./country-service");
+const { getGraduationProjectBrief } = require("./graduation-project-briefs");
 
 const PASSED_PROJECT_STATUSES = new Set(["passed", "approved", "completed"]);
 
@@ -124,6 +125,7 @@ async function buildLearning({ userId, course, access, country, preview = false 
   }
 
   const project = projects[0] || null;
+  const projectDefinition = getGraduationProjectBrief(course);
   const latestSubmission = project ? submissions.find((submission) => submission.project_id === project.id) || null : null;
   const allQuizzesPassed = chapters.length > 0 && chapters.every((chapter) => chapter.quiz && chapter.result?.passed);
   const quizScores = chapters.map((chapter) => chapter.result?.score).filter((score) => Number.isFinite(score));
@@ -151,8 +153,12 @@ async function buildLearning({ userId, course, access, country, preview = false 
     project: project ? {
       id: project.id,
       projectKey: project.project_key,
-      title: projectVariant(project)?.title || project.title,
-      instructions: [project.instructions, projectVariant(project)?.instructions || resolvedCountry.projectContext].filter(Boolean).join("\n\n"),
+      title: projectVariant(project)?.title || projectDefinition?.title || project.title,
+      instructions: [projectDefinition?.instructions || project.instructions, projectVariant(project)?.instructions || resolvedCountry.projectContext].filter(Boolean).join("\n\n"),
+      brief: projectDefinition?.brief || null,
+      deliverables: projectDefinition?.deliverables || [],
+      rubric: projectDefinition?.rubric || [],
+      briefVersion: projectDefinition?.version || null,
       passingScore: project.passing_score == null ? 70 : Number(project.passing_score),
       ready: Boolean(preview || allQuizzesPassed),
       preview: Boolean(preview),
@@ -171,6 +177,12 @@ async function evaluateProject({ course, project, student, text }) {
     throw error;
   }
   const model = process.env.OPENAI_MODEL || "gpt-5-mini";
+  const rubricText = Array.isArray(project.rubric) && project.rubric.length
+    ? project.rubric.map((item) => `- ${item.title}: ${item.points} نقطة — ${item.description}`).join("\n")
+    : "استخدم المعايير العامة لفهم الحالة والتطبيق والاستراتيجية والوضوح.";
+  const deliverablesText = Array.isArray(project.deliverables) && project.deliverables.length
+    ? project.deliverables.map((item) => `- ${item.title}: ${item.description}`).join("\n")
+    : "راجع تعليمات المشروع وحدد المخرجات المطلوبة منها.";
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -183,11 +195,11 @@ async function evaluateProject({ course, project, student, text }) {
       messages: [
         {
           role: "system",
-          content: "أنت مقيّم أكاديمي عادل لمشاريع تخرج في التسويق. قيّم النص المقدم فقط وفق المعايير المحددة، ولا تمنح درجة نجاح لمجرد أن النص طويل. أعد JSON مطابقًا للمخطط فقط، باللغة العربية البسيطة.",
+          content: "أنت مقيّم أكاديمي عادل لمشاريع تخرج في التسويق. قيّم النص المقدم فقط مقابل Brief المشروع ومخرجاته وRubric التقييم. لا تمنح درجة نجاح لمجرد أن النص طويل أو يحتوي كلمات تسويقية عامة. تحقق من منطق الخطة وملاءمتها للميزانية والمدة وبيانات الحالة. وزّع الدرجات بحيث تكون understanding من 25 وapplication من 30 وstrategy من 25 وclarity من 20، ويكون مجموعها هو score. أعد JSON مطابقًا للمخطط فقط، باللغة العربية البسيطة.",
         },
         {
           role: "user",
-          content: `الكورس: ${course.title}\nعنوان المشروع: ${project.title}\nتعليمات المشروع:\n${project.instructions}\nدرجة النجاح: ${project.passing_score || 70}\nاسم الطالب: ${student?.full_name || "الطالب"}\n\nمشروع الطالب:\n${text}`,
+          content: `الكورس: ${course.title}\nعنوان المشروع: ${project.title}\nتعليمات المشروع:\n${project.instructions}\n\nمعلومات الحالة الافتراضية:\n${JSON.stringify(project.brief || {}, null, 2)}\n\nالمخرجات المطلوبة:\n${deliverablesText}\n\nRubric التقييم:\n${rubricText}\n\nدرجة النجاح: ${project.passing_score || 70}\nاسم الطالب: ${student?.full_name || "الطالب"}\n\nمشروع الطالب:\n${text}`,
         },
       ],
       response_format: {

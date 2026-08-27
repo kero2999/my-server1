@@ -611,7 +611,7 @@ router.post("/:courseId/projects/:projectId/submit", requireAuth, projectSubmitL
 
     let evaluation;
     try {
-      const localizedProject = learning.project && Number(learning.project.id) === Number(project.id) ? { ...project, title: learning.project.title, instructions: learning.project.instructions } : project;
+      const localizedProject = learning.project && Number(learning.project.id) === Number(project.id) ? { ...project, ...learning.project, title: learning.project.title, instructions: learning.project.instructions } : project;
       evaluation = await evaluateProject({ course, project: localizedProject, student: user, text });
     } catch (error) {
       console.error("Project evaluation failed:", error);
