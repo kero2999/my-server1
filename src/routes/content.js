@@ -6,6 +6,7 @@ const { authenticate } = require("../middleware/auth");
 const { findPublishedCourse, getAccess, resolveEntryFile } = require("./courses");
 const { isChapterUnlocked } = require("../learning");
 const { getUserCountry, getCourseVariants } = require("../country-service");
+const { injectContentDialect } = require("../content-dialect");
 
 const router = express.Router();
 const PUBLIC_MENTOR_IMAGE = "https://www.quadralevel.com/images/mentor-avatar.jpeg";
@@ -233,9 +234,11 @@ router.get("/:courseId/*", async (req, res) => {
     }
 
     const sourceBuffer = Buffer.from(await stored.data.arrayBuffer());
+    const contentType = mime.lookup(requestedPath) || "application/octet-stream";
+    const isHtmlContent = /text\/html/i.test(contentType);
     res.set({
-      "Content-Type": mime.lookup(requestedPath) || "application/octet-stream",
-      "Cache-Control": access.accessType === "enrolled" ? "private, max-age=300" : "private, no-store",
+      "Content-Type": contentType,
+      "Cache-Control": isHtmlContent || access.accessType !== "enrolled" ? "private, no-store" : "private, max-age=300",
       "Referrer-Policy": "same-origin",
       "X-Content-Type-Options": "nosniff",
     });
@@ -250,12 +253,14 @@ router.get("/:courseId/*", async (req, res) => {
       res.append("Set-Cookie", `${contentCookieName(req.params.courseId)}=${encodeURIComponent(identity.accessToken)}; Path=/api/content/${encodeURIComponent(req.params.courseId)}; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=None`);
     }
     let responseBody = sourceBuffer;
-    if (/text\/html/i.test(mime.lookup(requestedPath) || "")) {
+    if (isHtmlContent) {
       const country = await getUserCountry(identity.userId);
       const variants = await getCourseVariants(course.id, country.countryCode);
       const lessonVariant = requestedChapter > 0 ? variants.lessons.get(`ch${requestedChapter}`) : null;
-      const htmlBuffer = lessonVariant?.content_html ? Buffer.from(String(lessonVariant.content_html), "utf8") : sourceBuffer;
-      responseBody = prepareCourseHtml(htmlBuffer, requestedPath, course.slug, course.id, country);
+      const hasExplicitLessonVariant = Boolean(lessonVariant?.content_html);
+      const htmlBuffer = hasExplicitLessonVariant ? Buffer.from(String(lessonVariant.content_html), "utf8") : sourceBuffer;
+      const preparedHtml = prepareCourseHtml(htmlBuffer, requestedPath, course.slug, course.id, country);
+      responseBody = hasExplicitLessonVariant ? preparedHtml : injectContentDialect(preparedHtml, country);
     }
     res.send(responseBody);
   } catch (e) {
