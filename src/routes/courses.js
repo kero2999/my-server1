@@ -2,10 +2,11 @@ const express = require("express");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const supabase = require("../db");
-const { requireAuth } = require("../middleware/auth");
+const { requireAuth, authenticate } = require("../middleware/auth");
 const { rateLimit } = require("../middleware/rate-limit");
 const { buildLearning, evaluateProject, isChapterUnlocked } = require("../learning");
 const { findCampaignTrial, campaignTrialStatus, findCampaignByCourse } = require("../campaign-service");
+const { getActiveCountryConfig, getCoursePrices, getUserCountry, normalizeCountryCode } = require("../country-service");
 const router = express.Router();
 
 const DEFAULT_TRIAL_MINUTES = 10;
@@ -24,16 +25,34 @@ function courseFilter(query, identifier) {
     : query.eq("slug", String(identifier));
 }
 
-function publicCourse(row) {
+async function resolveRequestCountry(req) {
+  const authenticatedUserId = authenticate(req);
+  if (authenticatedUserId) return getUserCountry(authenticatedUserId);
+  const requested = normalizeCountryCode(req.query?.country || req.headers["x-country-code"]) || "EG";
+  try { return await getActiveCountryConfig(requested); } catch (error) { if (error?.code === "COUNTRY_NOT_ACTIVE") return getActiveCountryConfig("EG"); throw error; }
+}
+
+function publicCourse(row, pricing, country) {
   if (!row) return null;
+  const pricingConfigured = Boolean(pricing && pricing.price_cents != null && pricing.currency);
+  const isEgypt = (country?.countryCode || "EG") === "EG";
+  const priceCents = pricingConfigured ? Number(pricing.price_cents) : (isEgypt ? Number(row.price_cents || 0) : null);
+  const currency = pricingConfigured ? pricing.currency : (row.currency || "EGP");
   return {
     id: row.id,
     slug: row.slug,
     title: row.title,
     description: row.description,
     thumbnailUrl: row.thumbnail_url,
-    priceCents: row.price_cents,
-    currency: row.currency,
+    priceCents,
+    currency,
+    currencySymbol: pricingConfigured ? (country?.currencySymbol || currency) : currency,
+    basePriceCents: Number(row.price_cents || 0),
+    baseCurrency: row.currency || "EGP",
+    pricingConfigured,
+    countryCode: country?.countryCode || "EG",
+    countryName: country?.countryName || "مصر",
+    locale: country?.locale || "ar-EG",
     category: row.categories || null,
     instructor: row.instructor,
     status: row.status,
@@ -234,6 +253,7 @@ router.get("/", async (req, res) => {
       .eq("status", "published")
       .order("created_at", { ascending: false });
 
+    const country = await resolveRequestCountry(req);
     if (req.query.category) {
       const { data: category } = await supabase
         .from("categories")
@@ -249,8 +269,9 @@ router.get("/", async (req, res) => {
 
     const { data, error } = await query;
     if (error) throw error;
-    res.set("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
-    res.json({ ok: true, courses: (data || []).map(publicCourse) });
+    const prices = await getCoursePrices((data || []).map((course) => course.id), country.countryCode);
+    res.set({ "Cache-Control": "private, no-store", Vary: "Authorization, X-Country-Code" });
+    res.json({ ok: true, country: { countryCode: country.countryCode, countryName: country.countryName, currency: country.currency, currencySymbol: country.currencySymbol, locale: country.locale }, courses: (data || []).map((course) => publicCourse(course, prices.get(Number(course.id)), country)) });
   } catch (e) {
     accessError(res, e);
   }
@@ -261,8 +282,10 @@ router.get("/:courseId", async (req, res) => {
   try {
     const course = await findPublishedCourse(req.params.courseId);
     if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
-    res.set("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
-    res.json({ ok: true, course: publicCourse(course) });
+    const country = await resolveRequestCountry(req);
+    const prices = await getCoursePrices([course.id], country.countryCode);
+    res.set({ "Cache-Control": "private, no-store", Vary: "Authorization, X-Country-Code" });
+    res.json({ ok: true, country: { countryCode: country.countryCode, countryName: country.countryName, currency: country.currency, currencySymbol: country.currencySymbol, locale: country.locale }, course: publicCourse(course, prices.get(Number(course.id)), country) });
   } catch (e) {
     accessError(res, e);
   }
@@ -275,8 +298,11 @@ router.get("/:courseId/learning", requireAuth, async (req, res) => {
     if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
     const access = await getAccess(req.userId, course.id);
     if (!access.canAccess) return res.status(403).json({ ok: false, error: "ابدأ التجربة أو اشترِ الكورس للوصول إلى لوحة التعلم." });
-    const learning = await buildLearning({ userId: req.userId, course, access });
-    res.json({ ok: true, learning: { ...learning, course: publicCourse(course) } });
+    const country = await getUserCountry(req.userId);
+    const prices = await getCoursePrices([course.id], country.countryCode);
+    const learning = await buildLearning({ userId: req.userId, course, access, country });
+    res.set("Cache-Control", "private, no-store");
+    res.json({ ok: true, learning: { ...learning, course: publicCourse(course, prices.get(Number(course.id)), country) } });
   } catch (e) {
     accessError(res, e);
   }
@@ -312,7 +338,10 @@ router.get("/:courseId/access", requireAuth, async (req, res) => {
     const course = await findPublishedCourse(req.params.courseId);
     if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
     const access = await getAccess(req.userId, course.id);
-    res.json({ ok: true, course: publicCourse(course), access });
+    const country = await getUserCountry(req.userId);
+    const prices = await getCoursePrices([course.id], country.countryCode);
+    res.set("Cache-Control", "private, no-store");
+    res.json({ ok: true, country: { countryCode: country.countryCode, countryName: country.countryName, currency: country.currency, currencySymbol: country.currencySymbol, locale: country.locale }, course: publicCourse(course, prices.get(Number(course.id)), country), access });
   } catch (e) {
     accessError(res, e);
   }
@@ -525,7 +554,8 @@ router.post("/:courseId/projects/:projectId/submit", requireAuth, projectSubmitL
     const { data: project, error: projectError } = await projectQuery.maybeSingle();
     if (projectError) throw projectError;
     if (!project) return res.status(404).json({ ok: false, error: "المشروع غير موجود." });
-    const learning = await buildLearning({ userId: req.userId, course, access });
+    const country = await getUserCountry(req.userId);
+    const learning = await buildLearning({ userId: req.userId, course, access, country });
     if (!learning.overall.allQuizzesPassed) return res.status(403).json({ ok: false, error: "أكمل واجتز اختبارات جميع الفصول أولًا." });
 
     const { data: user, error: userError } = await supabase.from("users").select("email, full_name").eq("id", req.userId).maybeSingle();
@@ -534,7 +564,8 @@ router.post("/:courseId/projects/:projectId/submit", requireAuth, projectSubmitL
 
     let evaluation;
     try {
-      evaluation = await evaluateProject({ course, project, student: user, text });
+      const localizedProject = learning.project && Number(learning.project.id) === Number(project.id) ? { ...project, title: learning.project.title, instructions: learning.project.instructions } : project;
+      evaluation = await evaluateProject({ course, project: localizedProject, student: user, text });
     } catch (error) {
       console.error("Project evaluation failed:", error);
       if (error.code === "AI_EVALUATOR_NOT_CONFIGURED") {
@@ -592,6 +623,8 @@ router.get("/:courseId/certificate", requireAuth, async (req, res) => {
     if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
     const access = await getAccess(req.userId, course.id);
     if (!access.enrolled) return res.status(403).json({ ok: false, error: "اشترِ الكورس أولًا للحصول على الشهادة." });
+    const country = await getUserCountry(req.userId);
+    const prices = await getCoursePrices([course.id], country.countryCode);
 
     const [{ data: lessons, error: lessonsError }, { data: quizzes, error: quizzesError }, { data: projects, error: projectsError }] = await Promise.all([
       supabase.from("lessons").select("id").eq("course_id", course.id),
@@ -622,7 +655,7 @@ router.get("/:courseId/certificate", requireAuth, async (req, res) => {
     const { data: student, error: studentError } = await supabase.from("users").select("id, full_name, email").eq("id", req.userId).maybeSingle();
     if (studentError) throw studentError;
     const certificateDetails = {
-      course: publicCourse(course),
+      course: publicCourse(course, prices.get(Number(course.id)), country),
       student,
       scores: { quizAverage, projectScore: projectSubmission ? Number(projectSubmission.score || 0) : 0 },
     };

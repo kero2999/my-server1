@@ -5,6 +5,7 @@ const { requireAuth } = require("../middleware/auth");
 const { rateLimit } = require("../middleware/rate-limit");
 const { PROJECT_PROMPTS } = require("../mentor-projects");
 const supabase = require("../db");
+const { getCountryConfig, getUserCountry, normalizeCountryCode } = require("../country-service");
 
 const router = express.Router();
 
@@ -52,7 +53,7 @@ function normalizeMessages(value) {
    KERO SYSTEM PROMPT
    ========================================================= */
 
-function buildSystemPrompt(chapterNum) {
+function buildSystemPrompt(chapterNum, country = null) {
 
   const chapter =
     COURSE_CONTENT[String(chapterNum)];
@@ -72,6 +73,17 @@ function buildSystemPrompt(chapterNum) {
       )
       .join("\n");
 
+
+  const countryContext = country ? `
+
+# سياق الدولة والسوق الحالي
+الدولة: ${country.countryName}
+اللهجة المطلوبة: ${country.dialect}
+${country.mentorContext?.languageInstruction || "استخدم العربية الواضحة المناسبة للمستخدم."}
+${country.mentorContext?.marketInstruction || "استخدم أمثلة مناسبة لسوق المستخدم عند الحاجة."}
+${country.mentorContext?.priceInstruction || "لا تفترض سعرًا حقيقيًا؛ أي رقم سعري يكون مثالًا فقط."}
+أمثلة سوقية مناسبة: ${(country.mentorContext?.marketExamples || []).join("، ")}
+${country.lessonContexts?.[chapterNum] || ""}` : "";
 
   const chapterBlock = chapter
 
@@ -333,8 +345,10 @@ Marketing Strategy
 "أنا فهمت المعلومة وأقدر أستخدمها بنفسي."
 
 
-${chapterBlock}
-`;
+  ${countryContext}
+
+  ${chapterBlock}
+  `;
 }
 
 
@@ -344,7 +358,8 @@ ${chapterBlock}
 
 async function callMentorModel(
   chapter,
-  messages
+  messages,
+  country
 ) {
 
   const apiRes =
@@ -380,7 +395,8 @@ async function callMentorModel(
               role: "system",
               content:
                 buildSystemPrompt(
-                  chapter
+                  chapter,
+                  country
                 ),
             },
 
@@ -480,10 +496,12 @@ router.post(
       }
 
 
+      const country = await getUserCountry(req.userId);
       const reply =
         await callMentorModel(
           chapter,
-          messages
+          messages,
+          country
         );
 
 
@@ -542,6 +560,9 @@ router.post(
         req.headers[
           "x-trial-session"
         ];
+
+      const requestedCountry = normalizeCountryCode(req.body?.countryCode || req.body?.country_code);
+      const country = await getCountryConfig(requestedCountry || "EG");
 
 
       if (
@@ -634,7 +655,8 @@ router.post(
       const reply =
         await callMentorModel(
           chapter,
-          messages
+          messages,
+          country
         );
 
 
@@ -764,8 +786,8 @@ router.post(
         "ash";
 
 
+            const country = await getUserCountry(req.userId);
       const ttsBody = {
-
         model:
           ttsModel,
 
@@ -791,7 +813,7 @@ router.post(
       ) {
 
         ttsBody.instructions =
-          "Speak as a male Arabic marketing instructor named Kero. Use a warm, confident, friendly and professional male voice. Speak clearly at a moderate pace. Sound like a helpful personal mentor, not like a robot.";
+          `Speak as a male Arabic marketing instructor named Kero. Use a warm, confident, friendly and professional male voice. Speak clearly at a moderate pace. Sound like a helpful personal mentor, not like a robot. Use the user's country context: ${country.countryName}, ${country.dialect}.`;
       }
 
 

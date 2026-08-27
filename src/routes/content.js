@@ -5,6 +5,7 @@ const supabase = require("../db");
 const { authenticate } = require("../middleware/auth");
 const { findPublishedCourse, getAccess, resolveEntryFile } = require("./courses");
 const { isChapterUnlocked } = require("../learning");
+const { getUserCountry, getCourseVariants } = require("../country-service");
 
 const router = express.Router();
 const PUBLIC_MENTOR_IMAGE = "https://www.quadralevel.com/images/mentor-avatar.jpeg";
@@ -40,7 +41,11 @@ function safeRelativePath(value) {
   return parts.join("/");
 }
 
-function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "", courseId = "") {
+function escapeHtml(value) {
+  return String(value == null ? "" : value).replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[character]));
+}
+
+function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "", courseId = "", country = null) {
   const html = buffer.toString("utf8");
   // The outer Marketplace gateway has already authenticated this request.
   // Disable the legacy bundle's origin-local auth redirect inside the iframe.
@@ -52,6 +57,10 @@ function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "", courseId
   const chapterMatch = String(requestedPath || "").match(/(?:^|\/)ch(\d+)\.html$/i);
   const chapterNumber = chapterMatch ? Number(chapterMatch[1]) : /(?:^|\/)index\.html$/i.test(String(requestedPath || "")) ? 1 : 0;
   const isChapter = chapterNumber > 0;
+  const uiMessages = country?.uiMessages || {};
+  const lessonContext = country?.lessonContexts?.[chapterNumber] || "";
+  const countryBootstrap = country ? '<script id="ql-country-bootstrap">(function(){var profile=' + JSON.stringify({ countryCode: country.countryCode, countryName: country.countryName, dialect: country.dialect, currency: country.currency, currencySymbol: country.currencySymbol, locale: country.locale }) + ';window.LMSCountry=window.LMSCountry||{};window.LMSCountry.getCode=function(){return profile.countryCode;};window.LMSCountry.getProfile=function(){return profile;};})();</script>' : "";
+  if (countryBootstrap && !/id=(['"])ql-country-bootstrap\1/i.test(sanitized)) sanitized = sanitized.replace(/<\/head>/i, countryBootstrap + '</head>');
   if (isChapter) {
     const dashboardUrl = courseDashboardUrl(courseSlug, courseId);
     const quizUrl = courseQuizUrl(courseSlug, courseId, chapterNumber);
@@ -65,16 +74,21 @@ function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "", courseId
       sanitized = sanitized.replace(/<\/head>/i, chapterVisualStyle + '</head>');
       sanitized = sanitized.replace(/<body\b[^>]*>/i, '$&' + chapterVisual);
     }
+    if (lessonContext && !/id=(['"])ql-country-context\1/i.test(sanitized)) {
+      const contextStyle = '<style id="ql-country-context-style">.ql-country-context{width:min(1120px,calc(100% - 32px));margin:18px auto;padding:12px 16px;border-inline-start:4px solid #c9a86a;border-radius:12px;background:rgba(201,168,106,.1);color:rgba(255,255,255,.8);font:500 13px/1.8 Tajawal,sans-serif}@media(max-width:640px){.ql-country-context{width:calc(100% - 20px);font-size:12px}}</style>';
+      const contextBlock = '<aside id="ql-country-context" class="ql-country-context"><strong>' + escapeHtml(uiMessages.marketLabel || "مثال من السوق المحلي") + ':</strong> ' + escapeHtml(lessonContext) + '</aside>';
+      sanitized = sanitized.replace(/<\/head>/i, contextStyle + '</head>').replace(/<body\b[^>]*>/i, '$&' + contextBlock);
+    }
     const hasChapterNavigation = /class=(['"])[^>]*\bsite-floatnav\b[^>]*\1/i.test(sanitized);
     if (!hasChapterNavigation) {
       const chapterNavStyle = '<style id="chapter-nav-style">.site-floatnav{position:fixed;bottom:22px;left:22px;z-index:2000;display:flex;gap:8px;align-items:center;flex-wrap:wrap;max-width:90vw}.site-floatnav a{display:flex;align-items:center;gap:8px;background:rgba(11,11,12,.92);backdrop-filter:blur(10px);border:2px solid #c9a86a;color:#c9a86a;padding:10px 16px;border-radius:25px;font-family:Tajawal,sans-serif;font-weight:700;font-size:.85rem;text-decoration:none;transition:all .3s}.site-floatnav a:hover{background:#c9a86a;color:#0b0b0c;transform:translateY(-3px)}.site-floatnav a.quiz-link{border-color:#3f8f7d;color:#3f8f7d}.site-floatnav a.quiz-link:hover{background:#3f8f7d;color:#0b0b0c}@media(max-width:640px){.site-floatnav{left:10px;bottom:10px;gap:6px}.site-floatnav a{padding:8px 10px;font-size:.75rem}.site-floatnav a span.label{display:none}}</style>';
-      const chapterNav = '<nav class="site-floatnav" aria-label="تنقل الكورس"><a href="' + dashboardUrl + '" target="_top"><i class="fas fa-house"></i><span class="label">لوحتي</span></a><a class="quiz-link" href="' + quizUrl + '" target="_top"><i class="fas fa-clipboard-check"></i><span class="label">الاختبار</span></a></nav>';
+      const chapterNav = '<nav class="site-floatnav" aria-label="تنقل الكورس"><a href="' + dashboardUrl + '" target="_top"><i class="fas fa-house"></i><span class="label">' + escapeHtml(uiMessages.dashboard || "لوحتي") + '</span></a><a class="quiz-link" href="' + quizUrl + '" target="_top"><i class="fas fa-clipboard-check"></i><span class="label">' + escapeHtml(uiMessages.quiz || "الاختبار") + '</span></a></nav>';
       sanitized = sanitized.replace(/<\/head>/i, chapterNavStyle + '</head>');
       sanitized = sanitized.replace(/<body\b[^>]*>/i, '$&' + chapterNav);
     }
     const hasChapterMentorAccess = /mentor-top-btn|mentor-topbar/i.test(sanitized);
     if (!hasChapterMentorAccess) {
-      const mentorTopbar = '<div class="mentor-topbar"><img src="' + PUBLIC_MENTOR_IMAGE + '" alt="Kero Mentor"><div><strong>Mentor</strong><span>اسأل عن هذا الفصل</span></div><button type="button" onclick="openChapterMentor()"><i class="fas fa-comments"></i><span class="mentor-label">افتح المحادثة</span></button></div>';
+      const mentorTopbar = '<div class="mentor-topbar"><img src="' + PUBLIC_MENTOR_IMAGE + '" alt="Kero Mentor"><div><strong>Kero Mentor</strong><span>' + escapeHtml(uiMessages.mentorContext || "اسأل عن هذا الفصل") + '</span></div><button type="button" onclick="openChapterMentor()"><i class="fas fa-comments"></i><span class="mentor-label">' + escapeHtml(uiMessages.mentorOpen || "افتح المحادثة") + '</span></button></div>';
       const mentorTopbarStyle = '<style id="mentor-top-access-style">.mentor-topbar{position:fixed;top:14px;right:18px;z-index:1100;display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid rgba(255,215,0,.45);border-radius:18px;background:rgba(10,14,39,.9);backdrop-filter:blur(12px);box-shadow:0 10px 28px rgba(0,0,0,.28);color:#fff}.mentor-topbar img{width:38px;height:38px;border-radius:12px;object-fit:cover;border:1px solid rgba(255,215,0,.5)}.mentor-topbar div{display:flex;flex-direction:column;gap:2px;min-width:105px}.mentor-topbar strong{color:#ffd700;font-size:14px}.mentor-topbar span{color:rgba(255,255,255,.72);font-size:11px}.mentor-topbar button{border:1px solid #ffd700;background:transparent;color:#ffd700;border-radius:999px;padding:7px 11px;font:700 12px Tajawal,sans-serif;cursor:pointer;transition:transform .2s,background .2s,color .2s}.mentor-topbar button:hover{transform:translateY(-2px);background:#ffd700;color:#0a0e27}@media(max-width:640px){.mentor-topbar{top:10px;right:10px;left:10px;justify-content:flex-start;padding:7px 9px}.mentor-topbar div{flex:1;min-width:0}.mentor-topbar .mentor-label{display:none}.mentor-topbar button{width:40px;height:34px;padding:0}.mentor-topbar button i{margin:0}}</style>';
       sanitized = sanitized.replace(/<\/head>/i, mentorTopbarStyle + '</head>');
       sanitized = sanitized.replace(/<body\b[^>]*>/i, '$&' + mentorTopbar);
@@ -218,7 +232,7 @@ router.get("/:courseId/*", async (req, res) => {
       requestedPath = stored.path;
     }
 
-    const buffer = Buffer.from(await stored.data.arrayBuffer());
+    const sourceBuffer = Buffer.from(await stored.data.arrayBuffer());
     res.set({
       "Content-Type": mime.lookup(requestedPath) || "application/octet-stream",
       "Cache-Control": access.accessType === "enrolled" ? "private, max-age=300" : "private, no-store",
@@ -235,7 +249,14 @@ router.get("/:courseId/*", async (req, res) => {
       }
       res.append("Set-Cookie", `${contentCookieName(req.params.courseId)}=${encodeURIComponent(identity.accessToken)}; Path=/api/content/${encodeURIComponent(req.params.courseId)}; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=None`);
     }
-    const responseBody = /text\/html/i.test(mime.lookup(requestedPath) || "") ? prepareCourseHtml(buffer, requestedPath, course.slug, course.id) : buffer;
+    let responseBody = sourceBuffer;
+    if (/text\/html/i.test(mime.lookup(requestedPath) || "")) {
+      const country = await getUserCountry(identity.userId);
+      const variants = await getCourseVariants(course.id, country.countryCode);
+      const lessonVariant = requestedChapter > 0 ? variants.lessons.get(`ch${requestedChapter}`) : null;
+      const htmlBuffer = lessonVariant?.content_html ? Buffer.from(String(lessonVariant.content_html), "utf8") : sourceBuffer;
+      responseBody = prepareCourseHtml(htmlBuffer, requestedPath, course.slug, course.id, country);
+    }
     res.send(responseBody);
   } catch (e) {
     console.error("Course content error:", e);
