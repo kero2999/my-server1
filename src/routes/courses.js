@@ -3,6 +3,7 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const supabase = require("../db");
 const { requireAuth, authenticate } = require("../middleware/auth");
+const { requireAdmin } = require("../middleware/admin");
 const { rateLimit } = require("../middleware/rate-limit");
 const { buildLearning, evaluateProject, isChapterUnlocked } = require("../learning");
 const { findCampaignTrial, campaignTrialStatus, findCampaignByCourse } = require("../campaign-service");
@@ -14,6 +15,10 @@ const userKey = (req) => String(req.userId || req.ip || "unknown");
 const trialStartLimiter = rateLimit({ name: "course-trial-start", windowMs: 15 * 60 * 1000, max: 3, keyGenerator: userKey });
 const quizSubmitLimiter = rateLimit({ name: "quiz-submit", windowMs: 10 * 60 * 1000, max: 20, keyGenerator: userKey });
 const projectSubmitLimiter = rateLimit({ name: "project-submit", windowMs: 15 * 60 * 1000, max: 3, keyGenerator: userKey });
+
+function previewEntitlement() {
+  return { canAccess: true, enrolled: false, accessType: "preview", trial: null, campaignTrial: null };
+}
 
 function isNumericId(value) {
   return /^\d+$/.test(String(value || ""));
@@ -286,6 +291,48 @@ router.get("/:courseId", async (req, res) => {
     const prices = await getCoursePrices([course.id], country.countryCode);
     res.set({ "Cache-Control": "private, no-store", Vary: "Authorization, X-Country-Code" });
     res.json({ ok: true, country: { countryCode: country.countryCode, countryName: country.countryName, currency: country.currency, currencySymbol: country.currencySymbol, locale: country.locale }, course: publicCourse(course, prices.get(Number(course.id)), country) });
+  } catch (e) {
+    accessError(res, e);
+  }
+});
+
+// GET /api/courses/:courseId/preview — admin-only preview of the full learning flow.
+// This never changes progress, quiz attempts, project submissions, or certificates.
+router.get("/:courseId/preview", requireAdmin, async (req, res) => {
+  try {
+    const course = await findPublishedCourse(req.params.courseId);
+    if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
+    const country = await getUserCountry(req.userId);
+    const prices = await getCoursePrices([course.id], country.countryCode);
+    const learning = await buildLearning({ userId: req.userId, course, access: previewEntitlement(), country, preview: true });
+    res.set("Cache-Control", "private, no-store");
+    res.json({ ok: true, preview: true, learning: { ...learning, preview: true, access: previewEntitlement(), course: publicCourse(course, prices.get(Number(course.id)), country) } });
+  } catch (e) {
+    accessError(res, e);
+  }
+});
+
+// GET /api/courses/:courseId/certificate/preview — admin-only certificate design preview.
+// It is deliberately separate from the real certificate issuance endpoint below.
+router.get("/:courseId/certificate/preview", requireAdmin, async (req, res) => {
+  try {
+    const course = await findPublishedCourse(req.params.courseId);
+    if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
+    const country = await getUserCountry(req.userId);
+    const prices = await getCoursePrices([course.id], country.countryCode);
+    const learning = await buildLearning({ userId: req.userId, course, access: previewEntitlement(), country, preview: true });
+    if (!learning.project) return res.status(404).json({ ok: false, error: "لم يتم إعداد مشروع تخرج لهذا الكورس بعد." });
+    const { data: student, error: studentError } = await supabase.from("users").select("id, full_name, email").eq("id", req.userId).maybeSingle();
+    if (studentError) throw studentError;
+    res.set("Cache-Control", "private, no-store");
+    res.json({
+      ok: true,
+      preview: true,
+      certificate: { is_preview: true, certificate_number: "PREVIEW-ONLY", verification_code: null, issued_at: null },
+      course: publicCourse(course, prices.get(Number(course.id)), country),
+      student,
+      scores: { quizAverage: Number(learning.overall?.quizAverage || 0), projectScore: 0 },
+    });
   } catch (e) {
     accessError(res, e);
   }

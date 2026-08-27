@@ -47,7 +47,7 @@ async function isChapterUnlocked(userId, courseId, chapter) {
   return { unlocked: Boolean(passedAttempt), requiredQuiz: quiz };
 }
 
-async function buildLearning({ userId, course, access, country }) {
+async function buildLearning({ userId, course, access, country, preview = false }) {
   const [lessonsResult, quizzesResult, projectsResult, progressResult, attemptsResult, submissionsResult, userResult] = await Promise.all([
     supabase.from("lessons").select("id, lesson_key, title, position, is_preview").eq("course_id", course.id).order("position", { ascending: true }),
     supabase.from("quizzes").select("id, quiz_key, title, passing_score, questions").eq("course_id", course.id).order("id", { ascending: true }),
@@ -154,11 +154,13 @@ async function buildLearning({ userId, course, access, country }) {
       title: projectVariant(project)?.title || project.title,
       instructions: [project.instructions, projectVariant(project)?.instructions || resolvedCountry.projectContext].filter(Boolean).join("\n\n"),
       passingScore: project.passing_score == null ? 70 : Number(project.passing_score),
-      ready: allQuizzesPassed,
+      ready: Boolean(preview || allQuizzesPassed),
+      preview: Boolean(preview),
       passed: projectPassed,
       submission: latestSubmission,
     } : null,
-    certificateReady: Boolean(access?.enrolled && allQuizzesPassed && projectPassed),
+    preview: Boolean(preview),
+    certificateReady: Boolean(!preview && access?.enrolled && allQuizzesPassed && projectPassed),
   };
 }
 
