@@ -52,6 +52,7 @@ function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "", courseId
   // Disable the legacy bundle's origin-local auth redirect inside the iframe.
   let sanitized = html
     .replace(/(<html\b[^>]*?)\sdata-protected=(['"])true\2/i, '$1 data-protected="false"')
+    .replace(/<script\b[^>]*\bsw-register\.js[^>]*>\s*<\/script>/gi, '')
     .replace(/<script\b[^>]*\bsrc=(['"])[^'"]*auth\.js\1[^>]*>\s*<\/script>/gi, '')
     .replace(/<script\b[^>]*>[\s\S]*?lms_session_v1[\s\S]*?<\/script>/gi, '');
 
