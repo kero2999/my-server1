@@ -6,6 +6,7 @@ const { BrevoClient } = require("@getbrevo/brevo");
 const supabase = require("../db");
 const { requireAuth } = require("../middleware/auth");
 const { rateLimit } = require("../middleware/rate-limit");
+const { normalizeCountryCode } = require("../country-service");
 
 const router = express.Router();
 const accountKey = (req) => `${req.ip || "unknown"}:${String(req.body?.email || "").trim().toLowerCase().slice(0, 160)}`;
@@ -38,6 +39,7 @@ function publicUser(u) {
     email: u.email,
     status: u.whop_status, // legacy status retained during marketplace migration
     role: u.role || "user",
+    countryCode: normalizeCountryCode(u.country_code) || null,
   };
 }
 
@@ -45,6 +47,7 @@ function publicUser(u) {
 router.post("/register", registerLimiter, async (req, res) => {
   try {
     const { fullName, email, password } = req.body || {};
+    const countryCode = normalizeCountryCode(req.body?.countryCode || req.body?.country_code);
     if (typeof fullName !== "string" || typeof email !== "string" || typeof password !== "string" || !fullName.trim() || !email.trim() || !password) {
       return res.status(400).json({ ok: false, error: "من فضلك املأ جميع الحقول." });
     }
@@ -83,6 +86,7 @@ router.post("/register", registerLimiter, async (req, res) => {
         password_hash: passwordHash,
         whop_status: status,
         whop_membership_id: membershipId,
+        ...(countryCode ? { country_code: countryCode } : {}),
       })
       .select()
       .single();

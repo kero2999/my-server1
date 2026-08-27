@@ -5,6 +5,7 @@ const { requireAuth } = require("../middleware/auth");
 const { rateLimit } = require("../middleware/rate-limit");
 const { createCheckout } = require("../paymob");
 const { CAMPAIGN_KEY, findCampaignByCourse, findCampaignTrial, publicCampaignSettings } = require("../campaign-service");
+const { getUserCountry } = require("../country-service");
 
 const router = express.Router();
 const checkoutLimiter = rateLimit({ name: "payment-checkout", windowMs: 10 * 60 * 1000, max: 5, keyGenerator: (req) => String(req.userId || req.ip || "unknown") });
@@ -32,6 +33,8 @@ router.post("/course/:courseId/campaign/create", requireAuth, checkoutLimiter, a
     const campaign = await findCampaignByCourse(course.id);
     if (!campaign || campaign.campaign_key !== CAMPAIGN_KEY) return res.status(404).json({ ok: false, error: "الحملة غير مهيأة لهذا الكورس." });
     if (!campaign.enabled) return res.status(409).json({ ok: false, error: "الحملة غير مفعلة حاليًا." });
+    const campaignCountry = await getUserCountry(req.userId);
+    if (campaignCountry.countryCode !== "EG") return res.status(409).json({ ok: false, error: "دفع الحملة متاح حاليًا بالجنيه المصري فقط. غيّر الدولة إلى مصر أو انتظر تفعيل بوابة الدفع المحلية." });
 
     const { data: existingEnrollment, error: enrollmentError } = await supabase
       .from("enrollments")
@@ -100,6 +103,8 @@ router.post("/course/:courseId/create", requireAuth, checkoutLimiter, async (req
   try {
     const course = await findPublishedCourse(req.params.courseId);
     if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
+    const purchaseCountry = await getUserCountry(req.userId);
+    if (purchaseCountry.countryCode !== "EG") return res.status(409).json({ ok: false, error: "الدفع المحلي لهذه الدولة قيد الإعداد حاليًا. يمكنك تصفح المحتوى، وسيظهر السعر من لوحة الإدارة عند اكتمال بوابة الدفع." });
 
     const { data: existingEnrollment, error: enrollmentError } = await supabase
       .from("enrollments")

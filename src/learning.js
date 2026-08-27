@@ -1,5 +1,7 @@
 const supabase = require("./db");
 
+const { getCountryConfig, getCourseVariants, normalizeCountryCode } = require("./country-service");
+
 const PASSED_PROJECT_STATUSES = new Set(["passed", "approved", "completed"]);
 
 function chapterNumber(value) {
@@ -45,7 +47,7 @@ async function isChapterUnlocked(userId, courseId, chapter) {
   return { unlocked: Boolean(passedAttempt), requiredQuiz: quiz };
 }
 
-async function buildLearning({ userId, course, access }) {
+async function buildLearning({ userId, course, access, country }) {
   const [lessonsResult, quizzesResult, projectsResult, progressResult, attemptsResult, submissionsResult, userResult] = await Promise.all([
     supabase.from("lessons").select("id, lesson_key, title, position, is_preview").eq("course_id", course.id).order("position", { ascending: true }),
     supabase.from("quizzes").select("id, quiz_key, title, passing_score, questions").eq("course_id", course.id).order("id", { ascending: true }),
@@ -61,6 +63,11 @@ async function buildLearning({ userId, course, access }) {
   const lessons = lessonsResult.data || [];
   const quizzes = quizzesResult.data || [];
   const projects = projectsResult.data || [];
+  const resolvedCountry = country || await getCountryConfig("EG");
+  const variants = await getCourseVariants(course.id, resolvedCountry.countryCode);
+  const lessonVariant = (lesson) => variants.lessons.get(lesson.lesson_key) || null;
+  const quizVariant = (quiz) => variants.quizzes.get(quiz.quiz_key) || null;
+  const projectVariant = (project) => variants.projects.get(project.project_key) || null;
   const progress = progressResult.data || [];
   const attempts = attemptsResult.data || [];
   const submissions = submissionsResult.data || [];
@@ -81,6 +88,8 @@ async function buildLearning({ userId, course, access }) {
   for (let n = 1; n <= maxChapter; n += 1) {
     const lesson = lessons.find((item) => chapterNumber(item.lesson_key) === n) || null;
     const quiz = quizByKey.get(`quiz-${n}`) || quizzes.find((item) => chapterNumber(item.quiz_key) === n) || null;
+    const lessonLocal = lesson ? lessonVariant(lesson) : null;
+    const quizLocal = quiz ? quizVariant(quiz) : null;
     const attempt = quiz ? bestAttempt(attemptsByQuiz.get(quiz.id) || []) : null;
     const previous = chapters[n - 2];
     const unlocked = n === 1 || Boolean(previous && previous.result && previous.result.passed);
@@ -88,7 +97,8 @@ async function buildLearning({ userId, course, access }) {
     chapters.push({
       number: n,
       lessonKey: lesson ? lesson.lesson_key : `ch${n}`,
-      title: lesson?.title || quiz?.title || `الفصل ${n}`,
+      title: lessonLocal?.title || quizLocal?.title || lesson?.title || quiz?.title || `الفصل ${n}`,
+      countryContext: lessonLocal?.summary || lessonLocal?.market_examples || resolvedCountry.lessonContexts?.[n] || "",
       position: lesson?.position || n,
       isPreview: Boolean(lesson?.is_preview),
       unlocked,
@@ -98,11 +108,12 @@ async function buildLearning({ userId, course, access }) {
       quiz: quiz ? {
         id: quiz.id,
         quizKey: quiz.quiz_key,
-        title: quiz.title,
+        title: quizLocal?.title || quiz.title,
         passingScore: Number(quiz.passing_score || 70),
-        questionCount: quizQuestions(quiz.questions).length,
-        requiredCorrect: Math.ceil((quizQuestions(quiz.questions).length * Number(quiz.passing_score || 70)) / 100),
-        questions: quizQuestions(quiz.questions),
+        questionCount: quizQuestions(quizLocal?.questions || quiz.questions).length,
+        requiredCorrect: Math.ceil((quizQuestions(quizLocal?.questions || quiz.questions).length * Number(quiz.passing_score || 70)) / 100),
+        scenarioContext: quizLocal?.scenario_context || resolvedCountry.quizContexts?.[n] || "",
+        questions: quizQuestions(quizLocal?.questions || quiz.questions),
       } : null,
       result: attempt ? {
         score: Number(attempt.score || 0),
@@ -120,7 +131,14 @@ async function buildLearning({ userId, course, access }) {
   const projectPassed = Boolean(latestSubmission && PASSED_PROJECT_STATUSES.has(latestSubmission.status));
 
   return {
-    course,
+    course: { ...course, countryCode: resolvedCountry.countryCode, countryName: resolvedCountry.countryName, countryLocale: resolvedCountry.locale, countryCurrency: resolvedCountry.currency, countryCurrencySymbol: resolvedCountry.currencySymbol },
+    country: {
+      countryCode: resolvedCountry.countryCode,
+      countryName: resolvedCountry.countryName,
+      locale: resolvedCountry.locale,
+      currency: resolvedCountry.currency,
+      currencySymbol: resolvedCountry.currencySymbol,
+    },
     access,
     student: userResult.data || null,
     chapters,
@@ -133,8 +151,8 @@ async function buildLearning({ userId, course, access }) {
     project: project ? {
       id: project.id,
       projectKey: project.project_key,
-      title: project.title,
-      instructions: project.instructions,
+      title: projectVariant(project)?.title || project.title,
+      instructions: [project.instructions, projectVariant(project)?.instructions || resolvedCountry.projectContext].filter(Boolean).join("\n\n"),
       passingScore: project.passing_score == null ? 70 : Number(project.passing_score),
       ready: allQuizzesPassed,
       passed: projectPassed,
