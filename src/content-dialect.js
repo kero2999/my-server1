@@ -130,6 +130,19 @@ function rewriteContentText(code, text) {
   return output;
 }
 
+const HTML_SKIP_TAGS = new Set(["script", "style", "noscript", "template", "textarea", "pre", "code", "svg"]);
+
+function rewriteHtmlTextNodes(code, html) {
+  const source = String(html ?? "");
+  if (!source) return source;
+  const tokenRe = /<!--[\s\S]*?-->|<(script|style|noscript|template|textarea|pre|code|svg)\b[\s\S]*?<\/\1\s*>|<[^>]+>|[^<]+/gi;
+  return source.replace(tokenRe, (token) => {
+    if (token.startsWith("<!--") || /^<(script|style|noscript|template|textarea|pre|code|svg)\b/i.test(token)) return token;
+    if (token.startsWith("<")) return token;
+    return rewriteContentText(code, token);
+  });
+}
+
 function safeScriptJson(value) {
   return JSON.stringify(value).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
 }
@@ -159,6 +172,7 @@ module.exports = {
   DIALECT_RULES,
   DIALECT_LABELS,
   rewriteContentText,
+  rewriteHtmlTextNodes,
   dialectPayload,
   injectContentDialect,
 };
