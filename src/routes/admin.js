@@ -114,6 +114,73 @@ router.get("/courses", async (req, res) => {
   }
 });
 
+router.get("/courses/:courseId/content-diagnostics", async (req, res) => {
+  try {
+    const id = numericId(req.params.courseId);
+    if (!id) return res.status(400).json({ ok: false, error: "معرف الكورس غير صالح." });
+    const { data: course, error: courseError } = await supabase
+      .from("courses")
+      .select("id, slug, title, status, entry_file, content_bucket, content_prefix, current_version_id, updated_at")
+      .eq("id", id)
+      .maybeSingle();
+    if (courseError) throw courseError;
+    if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
+
+    let version = null;
+    if (course.current_version_id) {
+      const { data, error } = await supabase
+        .from("course_versions")
+        .select("id, course_id, version_label, created_at, is_published, storage_bucket, storage_prefix, manifest")
+        .eq("id", course.current_version_id)
+        .maybeSingle();
+      if (error) throw error;
+      version = data || null;
+    }
+
+    const manifestFiles = Array.isArray(version?.manifest?.files) ? version.manifest.files.map(String) : [];
+    const expectedFiles = ["index.html", ...Array.from({ length: 9 }, (_, index) => `ch${index + 1}.html`)];
+    const storageChecks = {};
+    if (course.content_bucket && course.content_prefix) {
+      await Promise.all(expectedFiles.map(async (file) => {
+        const { data, error } = await supabase.storage.from(course.content_bucket).download(`${course.content_prefix}/${file}`);
+        storageChecks[file] = !error && Boolean(data);
+      }));
+    }
+    const manifest = version?.manifest || {};
+    res.set("Cache-Control", "private, no-store");
+    res.json({
+      ok: true,
+      course: {
+        id: course.id,
+        slug: course.slug,
+        title: course.title,
+        status: course.status,
+        entryFile: course.entry_file,
+        hasContentPrefix: Boolean(course.content_bucket && course.content_prefix),
+        currentVersionId: course.current_version_id,
+        updatedAt: course.updated_at,
+      },
+      version: version ? {
+        id: version.id,
+        courseId: version.course_id,
+        versionLabel: version.version_label,
+        createdAt: version.created_at,
+        isPublished: Boolean(version.is_published),
+        bucket: version.storage_bucket,
+        prefixMatchesCourse: version.storage_prefix === course.content_prefix,
+        manifestEntryFile: manifest.entryFile || null,
+        manifestFileCount: manifestFiles.length,
+        manifestHasIndex: manifestFiles.includes("index.html"),
+        manifestHasChapters: expectedFiles.slice(1).every((file) => manifestFiles.includes(file)),
+      } : null,
+      storageChecks,
+    });
+  } catch (e) {
+    console.error("Admin content diagnostics error:", e);
+    res.status(500).json({ ok: false, error: "تعذر قراءة تشخيص محتوى الكورس." });
+  }
+});
+
 router.post("/courses", async (req, res) => {
   try {
     const title = String(req.body.title || "").trim();
