@@ -6,7 +6,7 @@ const { authenticate } = require("../middleware/auth");
 const { findPublishedCourse, getAccess, resolveEntryFile } = require("./courses");
 const { isChapterUnlocked } = require("../learning");
 const { getUserCountry, getCourseVariants } = require("../country-service");
-const { injectContentDialect } = require("../content-dialect");
+const { injectContentDialect, rewriteHtmlTextNodes } = require("../content-dialect");
 
 const router = express.Router();
 const PUBLIC_MENTOR_IMAGE = "https://www.quadralevel.com/images/mentor-avatar.jpeg";
@@ -261,7 +261,9 @@ router.get("/:courseId/*", async (req, res) => {
       const hasExplicitLessonVariant = Boolean(lessonVariant?.content_html);
       const htmlBuffer = hasExplicitLessonVariant ? Buffer.from(String(lessonVariant.content_html), "utf8") : sourceBuffer;
       const preparedHtml = prepareCourseHtml(htmlBuffer, requestedPath, course.slug, course.id, country);
-      responseBody = hasExplicitLessonVariant ? preparedHtml : injectContentDialect(preparedHtml, country);
+      const isEgyptianMarketingLaunch = String(course.slug || "").trim().toLowerCase() === "marketing-launch" && country.countryCode === "EG" && requestedChapter > 0;
+      const serverLocalizedHtml = isEgyptianMarketingLaunch ? rewriteHtmlTextNodes("EG", preparedHtml) : preparedHtml;
+      responseBody = hasExplicitLessonVariant ? serverLocalizedHtml : injectContentDialect(serverLocalizedHtml, country);
     }
     res.send(responseBody);
   } catch (e) {
