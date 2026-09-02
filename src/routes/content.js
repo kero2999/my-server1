@@ -259,11 +259,14 @@ router.get("/:courseId/*", async (req, res) => {
       const variants = await getCourseVariants(course.id, country.countryCode);
       const lessonVariant = requestedChapter > 0 ? variants.lessons.get(`ch${requestedChapter}`) : null;
       const hasExplicitLessonVariant = Boolean(lessonVariant?.content_html);
-      const htmlBuffer = hasExplicitLessonVariant ? Buffer.from(String(lessonVariant.content_html), "utf8") : sourceBuffer;
-      const preparedHtml = prepareCourseHtml(htmlBuffer, requestedPath, course.slug, course.id, country);
       const isEgyptianMarketingLaunch = String(course.slug || "").trim().toLowerCase() === "marketing-launch" && country.countryCode === "EG" && requestedChapter > 0;
+      // The published ZIP is the source of truth for the Egyptian Marketing Launch
+      // course. Older DB lesson variants may otherwise mask newly uploaded chapters.
+      const usePublishedSource = isEgyptianMarketingLaunch || !hasExplicitLessonVariant;
+      const htmlBuffer = usePublishedSource ? sourceBuffer : Buffer.from(String(lessonVariant.content_html), "utf8");
+      const preparedHtml = prepareCourseHtml(htmlBuffer, requestedPath, course.slug, course.id, country);
       const serverLocalizedHtml = isEgyptianMarketingLaunch ? rewriteHtmlTextNodes("EG", preparedHtml) : preparedHtml;
-      responseBody = hasExplicitLessonVariant ? serverLocalizedHtml : injectContentDialect(serverLocalizedHtml, country);
+      responseBody = usePublishedSource ? injectContentDialect(serverLocalizedHtml, country) : serverLocalizedHtml;
     }
     res.send(responseBody);
   } catch (e) {
