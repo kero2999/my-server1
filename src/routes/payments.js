@@ -187,7 +187,7 @@ router.post("/course/:courseId/create", requireAuth, checkoutLimiter, async (req
     if (payment && payment.id) {
       await supabase.from("payments").update({ status: "failed", updated_at: new Date().toISOString() }).eq("id", payment.id);
     }
-    if (e.message === "PAYMOB_API_KEY_MISSING" || e.message === "PAYMOB_INTEGRATION_ID_MISSING" || e.message === "PAYMOB_IFRAME_ID_MISSING") {
+    if (e.message === "PAYMOB_API_KEY_MISSING" || e.message === "PAYMOB_INTEGRATION_ID_MISSING" || e.message === "PAYMOB_WALLET_INTEGRATION_ID_MISSING" || e.message === "PAYMOB_IFRAME_ID_MISSING") {
       return res.status(503).json({ ok: false, error: "الدفع غير مفعّل بعد على السيرفر. أضف إعدادات Paymob أولًا." });
     }
     if (e.message === "PAYMOB_INTEGRATION_ID_INVALID") {
