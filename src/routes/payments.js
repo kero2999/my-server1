@@ -164,11 +164,13 @@ router.post("/course/:courseId/create", requireAuth, checkoutLimiter, async (req
     if (paymentError) throw paymentError;
     payment = insertedPayment;
 
+    const paymentMethod = req.body && req.body.paymentMethod === "wallet" ? "wallet" : "card";
     const checkout = await createCheckout({
       amountCents,
       currency: course.currency || "EGP",
       merchantOrderId,
       user: { email: user.email, fullName: user.full_name },
+      paymentMethod,
     });
 
     const { error: updateError } = await supabase
