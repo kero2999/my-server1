@@ -41,9 +41,10 @@ function normalizedBilling(user) {
   };
 }
 
-async function createCheckout({ amountCents, currency, merchantOrderId, user }) {
+async function createCheckout({ amountCents, currency, merchantOrderId, user, paymentMethod = "card" }) {
   const apiKey = required("PAYMOB_API_KEY");
-  const integrationId = Number(required("PAYMOB_INTEGRATION_ID"));
+  const integrationEnv = paymentMethod === "wallet" ? "PAYMOB_WALLET_INTEGRATION_ID" : "PAYMOB_INTEGRATION_ID";
+  const integrationId = Number(required(integrationEnv));
   const iframeId = required("PAYMOB_IFRAME_ID");
   if (!Number.isInteger(integrationId)) throw new Error("PAYMOB_INTEGRATION_ID_INVALID");
 
