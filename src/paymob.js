@@ -41,7 +41,7 @@ function normalizedBilling(user) {
   };
 }
 
-async function createCheckout({ amountCents, currency, merchantOrderId, user, paymentMethod = "card" }) {
+async function createCheckout({ amountCents, currency, merchantOrderId, user, paymentMethod = "card", walletPhone }) {
   const apiKey = required("PAYMOB_API_KEY");
   const integrationEnv = paymentMethod === "wallet" ? "PAYMOB_WALLET_INTEGRATION_ID" : "PAYMOB_INTEGRATION_ID";
   const integrationId = Number(required(integrationEnv));
@@ -67,6 +67,21 @@ async function createCheckout({ amountCents, currency, merchantOrderId, user, pa
     integration_id: integrationId,
     lock_order_when_paid: true,
   });
+
+  if (paymentMethod === "wallet") {
+    const identifier = String(walletPhone || "").trim();
+    if (!/^01[0125]\d{8}$/.test(identifier)) throw new Error("PAYMOB_WALLET_PHONE_INVALID");
+    const walletPayment = await paymobRequest("/acceptance/payments/pay", {
+      source: { identifier, subtype: "WALLET" },
+      payment_token: paymentKey.token,
+    });
+    return {
+      providerOrderId: String(order.id),
+      paymentToken: paymentKey.token,
+      checkoutUrl: walletPayment.redirect_url || walletPayment.redirectUrl || null,
+      walletPending: !walletPayment.redirect_url && !walletPayment.redirectUrl,
+    };
+  }
 
   return {
     providerOrderId: String(order.id),
