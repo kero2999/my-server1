@@ -8,6 +8,7 @@ const content = require("../data/course-content-marketing-leadership.json");
 const { getMentorProjectPrompt } = require("../src/mentor-projects");
 const { getGraduationProjectBrief } = require("../src/graduation-project-briefs");
 const { prepareCourseHtml } = require("../src/routes/content");
+const { chapterCountryContext } = require("../src/learning");
 const mentorRouter = require("../src/routes/mentor");
 if (typeof mentorRouter !== "function") throw new Error("Mentor router failed to load");
 
@@ -42,6 +43,31 @@ if (!prepared.includes(expectedDashboard)) throw new Error("Dashboard URL was no
 if (!prepared.includes(expectedQuiz)) throw new Error("Quiz URL was not rewritten");
 if (!prepared.includes('target="_top"')) throw new Error("Rewritten navigation must escape the course iframe");
 if (/href=["']quiz\.html/i.test(prepared)) throw new Error("Legacy local quiz link remains in prepared HTML");
+
+const egypt = {
+  countryCode: "EG",
+  countryName: "مصر",
+  dialect: "العربية المصرية",
+  currency: "EGP",
+  currencySymbol: "ج.م",
+  locale: "ar-EG",
+  uiMessages: { marketLabel: "مثال من السوق المصري" },
+  lessonContexts: { 1: "مثال محلي من المستوى الأول" },
+};
+if (chapterCountryContext({ slug: "marketing-leadership" }, null, egypt, 1) !== "") {
+  throw new Error("Marketing Leadership dashboard must not inherit generic local examples");
+}
+if (chapterCountryContext({ slug: "marketing-launch" }, null, egypt, 1) !== egypt.lessonContexts[1]) {
+  throw new Error("Existing courses must retain their local examples");
+}
+const leadershipWithCountry = prepareCourseHtml(sourceHtml, "index.html", "marketing-leadership", 77, egypt);
+if (leadershipWithCountry.includes('id="ql-country-context"')) {
+  throw new Error("Marketing Leadership chapter must not inject a generic local example");
+}
+const launchWithCountry = prepareCourseHtml(sourceHtml, "index.html", "marketing-launch", 4, egypt);
+if (!launchWithCountry.includes('id="ql-country-context"')) {
+  throw new Error("Marketing Launch local example behavior changed unexpectedly");
+}
 
 const sqlPath = path.join(__dirname, "..", "marketing-leadership-setup.sql");
 const sql = fs.readFileSync(sqlPath, "utf8");
