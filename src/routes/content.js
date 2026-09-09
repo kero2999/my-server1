@@ -60,7 +60,8 @@ function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "", courseId
   const chapterNumber = chapterMatch ? Number(chapterMatch[1]) : /(?:^|\/)index\.html$/i.test(String(requestedPath || "")) ? 1 : 0;
   const isChapter = chapterNumber > 0;
   const uiMessages = country?.uiMessages || {};
-  const lessonContext = country?.lessonContexts?.[chapterNumber] || "";
+  const hideGenericCountryExamples = String(courseSlug || "").trim().toLowerCase() === "marketing-leadership";
+  const lessonContext = hideGenericCountryExamples ? "" : country?.lessonContexts?.[chapterNumber] || "";
   const countryBootstrap = country ? '<script id="ql-country-bootstrap">(function(){var profile=' + JSON.stringify({ countryCode: country.countryCode, countryName: country.countryName, dialect: country.dialect, currency: country.currency, currencySymbol: country.currencySymbol, locale: country.locale }) + ';window.LMSCountry=window.LMSCountry||{};window.LMSCountry.getCode=function(){return profile.countryCode;};window.LMSCountry.getProfile=function(){return profile;};})();</script>' : "";
   if (countryBootstrap && !/id=(['"])ql-country-bootstrap\1/i.test(sanitized)) sanitized = sanitized.replace(/<\/head>/i, countryBootstrap + '</head>');
   if (isChapter) {

@@ -48,6 +48,11 @@ async function isChapterUnlocked(userId, courseId, chapter) {
   return { unlocked: Boolean(passedAttempt), requiredQuiz: quiz };
 }
 
+function chapterCountryContext(course, lessonLocal, resolvedCountry, chapterNumber) {
+  if (String(course?.slug || "").trim().toLowerCase() === "marketing-leadership") return "";
+  return lessonLocal?.summary || lessonLocal?.market_examples || resolvedCountry?.lessonContexts?.[chapterNumber] || "";
+}
+
 async function buildLearning({ userId, course, access, country, preview = false }) {
   const [lessonsResult, quizzesResult, projectsResult, progressResult, attemptsResult, submissionsResult, userResult] = await Promise.all([
     supabase.from("lessons").select("id, lesson_key, title, position, is_preview").eq("course_id", course.id).order("position", { ascending: true }),
@@ -99,7 +104,7 @@ async function buildLearning({ userId, course, access, country, preview = false 
       number: n,
       lessonKey: lesson ? lesson.lesson_key : `ch${n}`,
       title: lessonLocal?.title || quizLocal?.title || lesson?.title || quiz?.title || `الفصل ${n}`,
-      countryContext: lessonLocal?.summary || lessonLocal?.market_examples || resolvedCountry.lessonContexts?.[n] || "",
+      countryContext: chapterCountryContext(course, lessonLocal, resolvedCountry, n),
       position: lesson?.position || n,
       isPreview: Boolean(lesson?.is_preview),
       unlocked,
@@ -249,6 +254,7 @@ async function evaluateProject({ course, project, student, text }) {
 
 module.exports = {
   PASSED_PROJECT_STATUSES,
+  chapterCountryContext,
   buildLearning,
   evaluateProject,
   isChapterUnlocked,
