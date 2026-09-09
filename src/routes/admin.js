@@ -137,8 +137,28 @@ router.get("/courses/:courseId/content-diagnostics", async (req, res) => {
       version = data || null;
     }
 
-    const manifestFiles = Array.isArray(version?.manifest?.files) ? version.manifest.files.map(String) : [];
-    const expectedFiles = ["index.html", ...Array.from({ length: 9 }, (_, index) => `ch${index + 1}.html`)];
+    const { data: lessonRows, error: lessonsError } = await supabase
+      .from("lessons")
+      .select("lesson_key, position")
+      .eq("course_id", course.id)
+      .order("position", { ascending: true });
+    if (lessonsError) throw lessonsError;
+
+    const manifest = version?.manifest || {};
+    const manifestFiles = Array.isArray(manifest.files) ? manifest.files.map(String) : [];
+    const configuredEntry = String(course.entry_file || manifest.entryFile || "index.html").trim() || "index.html";
+    const lessonFiles = (lessonRows || []).map((lesson) => {
+      const position = Number(lesson.position);
+      if (position === 1 && /(?:^|\/)index\.html$/i.test(configuredEntry)) return configuredEntry;
+      const lessonKey = String(lesson.lesson_key || "").trim();
+      if (/^(?:.*\/)?ch\d+\.html$/i.test(lessonKey)) return lessonKey;
+      return Number.isInteger(position) && position > 0 ? `ch${position}.html` : "";
+    }).filter(Boolean);
+    const manifestChapterFiles = manifestFiles
+      .filter((file) => /(?:^|\/)ch\d+\.html$/i.test(file))
+      .sort((left, right) => Number(left.match(/ch(\d+)\.html$/i)?.[1] || 0) - Number(right.match(/ch(\d+)\.html$/i)?.[1] || 0));
+    const expectedFiles = Array.from(new Set([configuredEntry, ...lessonFiles, ...manifestChapterFiles].filter(Boolean)));
+    const expectedChapterFiles = expectedFiles.filter((file) => file !== configuredEntry && /\.html$/i.test(file));
     const storageChecks = {};
     if (course.content_bucket && course.content_prefix) {
       await Promise.all(expectedFiles.map(async (file) => {
@@ -146,7 +166,6 @@ router.get("/courses/:courseId/content-diagnostics", async (req, res) => {
         storageChecks[file] = !error && Boolean(data);
       }));
     }
-    const manifest = version?.manifest || {};
     res.set("Cache-Control", "private, no-store");
     res.json({
       ok: true,
@@ -170,8 +189,10 @@ router.get("/courses/:courseId/content-diagnostics", async (req, res) => {
         prefixMatchesCourse: version.storage_prefix === course.content_prefix,
         manifestEntryFile: manifest.entryFile || null,
         manifestFileCount: manifestFiles.length,
-        manifestHasIndex: manifestFiles.includes("index.html"),
-        manifestHasChapters: expectedFiles.slice(1).every((file) => manifestFiles.includes(file)),
+        manifestHasIndex: manifestFiles.includes(configuredEntry),
+        manifestHasChapters: expectedChapterFiles.every((file) => manifestFiles.includes(file)),
+        expectedChapterCount: (lessonRows || []).length || expectedFiles.length,
+        expectedFiles,
       } : null,
       storageChecks,
     });

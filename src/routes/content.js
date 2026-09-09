@@ -69,7 +69,9 @@ function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "", courseId
     const chapterImageUrl = courseChapterImageUrl(courseSlug, chapterNumber);
     sanitized = sanitized
       .replace(/<a(\b[^>]*?)href=(['"])(?:\.\.\/|\.\/)*dashboard\.html(?:\?[^'"]*)?\2/gi, '<a$1href="' + dashboardUrl + '" target="_top"')
-      .replace(/location\.replace\(\s*(['"])(?:\.\.\/|\.\/)*dashboard\.html(?:\?[^'"]*)?\1\s*\)/gi, 'location.replace("' + dashboardUrl + '")');
+      .replace(/<a(\b[^>]*?)href=(['"])(?:\.\.\/|\.\/)*quiz\.html(?:\?[^'"]*)?\2/gi, '<a$1href="' + quizUrl + '" target="_top"')
+      .replace(/location\.replace\(\s*(['"])(?:\.\.\/|\.\/)*dashboard\.html(?:\?[^'"]*)?\1\s*\)/gi, 'location.replace("' + dashboardUrl + '")')
+      .replace(/location\.replace\(\s*(['"])(?:\.\.\/|\.\/)*quiz\.html(?:\?[^'"]*)?\1\s*\)/gi, 'location.replace("' + quizUrl + '")');
     if (chapterImageUrl && !/id=(['"])ql-chapter-visual\1/i.test(sanitized)) {
       const chapterVisualStyle = '<style id="ql-chapter-visual-style">.ql-chapter-visual{width:min(1120px,calc(100% - 32px));margin:28px auto 30px;border:1px solid rgba(201,168,106,.34);border-radius:24px;overflow:hidden;background:#0b1c31;box-shadow:0 18px 42px rgba(0,0,0,.18)}.ql-chapter-visual img{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover}.ql-chapter-visual figcaption{padding:8px 16px;color:rgba(255,255,255,.7);font:500 12px/1.7 Tajawal,sans-serif;text-align:center}@media(max-width:640px){.ql-chapter-visual{width:calc(100% - 20px);margin:18px auto 24px;border-radius:16px}.ql-chapter-visual figcaption{padding:6px 10px;font-size:11px}}</style>';
       const chapterVisual = '<figure id="ql-chapter-visual" class="ql-chapter-visual"><img src="' + chapterImageUrl + '" alt="صورة توضيحية لموضوع الفصل" loading="eager" decoding="async" fetchpriority="high"><figcaption>صورة توضيحية لموضوع الفصل</figcaption></figure>';

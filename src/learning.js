@@ -12,7 +12,7 @@ function chapterNumber(value) {
 
 function quizQuestions(questions) {
   return (Array.isArray(questions) ? questions : []).map((question) => ({
-    q: String(question.q || question.question || ""),
+    q: String(question.q || question.question || question.prompt || ""),
     options: Array.isArray(question.options) ? question.options.map((option) => String(option)) : [],
   })).filter((question) => question.q && question.options.length >= 2);
 }
