@@ -3,24 +3,61 @@ const path = require("path");
 const fs = require("fs");
 const { requireAuth } = require("../middleware/auth");
 const { rateLimit } = require("../middleware/rate-limit");
-const { PROJECT_PROMPTS } = require("../mentor-projects");
+const { getMentorProjectPrompt } = require("../mentor-projects");
 const supabase = require("../db");
 const { getCountryConfig, getUserCountry, normalizeCountryCode } = require("../country-service");
+const { getAccess } = require("./courses");
 
 const router = express.Router();
 
-const COURSE_CONTENT = JSON.parse(
-  fs.readFileSync(
-    path.join(
-      __dirname,
-      "..",
-      "..",
-      "data",
-      "course-content.json"
-    ),
-    "utf-8"
-  )
-);
+function readCourseContent(filename) {
+  return JSON.parse(
+    fs.readFileSync(
+      path.join(__dirname, "..", "..", "data", filename),
+      "utf-8"
+    )
+  );
+}
+
+const COURSE_CONTENT_BY_SLUG = {
+  "marketing-launch": readCourseContent("course-content.json"),
+  "marketing-growth": readCourseContent("course-content.json"),
+  "marketing-leadership": readCourseContent("course-content-marketing-leadership.json"),
+};
+
+const COURSE_TITLES = {
+  "marketing-launch": "Marketing Launch",
+  "marketing-growth": "Marketing Growth",
+  "marketing-leadership": "Marketing Leadership",
+};
+
+function normalizeCourseSlug(value) {
+  const slug = String(value || "marketing-launch").trim().toLowerCase();
+  return COURSE_CONTENT_BY_SLUG[slug] ? slug : "marketing-launch";
+}
+
+async function authorizeCourseContext(userId, requestedCourseSlug) {
+  const courseSlug = normalizeCourseSlug(requestedCourseSlug);
+  const [{ data: course, error: courseError }, { data: user, error: userError }] = await Promise.all([
+    supabase.from("courses").select("id, status").eq("slug", courseSlug).maybeSingle(),
+    supabase.from("users").select("role").eq("id", userId).maybeSingle(),
+  ]);
+  if (courseError) throw courseError;
+  if (userError) throw userError;
+  if (user?.role === "admin") return courseSlug;
+  if (!course || course.status !== "published") {
+    const error = new Error("mentor_course_forbidden");
+    error.code = "MENTOR_COURSE_FORBIDDEN";
+    throw error;
+  }
+  const access = await getAccess(userId, course.id);
+  if (!access.canAccess) {
+    const error = new Error("mentor_course_forbidden");
+    error.code = "MENTOR_COURSE_FORBIDDEN";
+    throw error;
+  }
+  return courseSlug;
+}
 
 const MODEL =
   process.env.OPENAI_MODEL || "gpt-5-mini";
@@ -53,23 +90,27 @@ function normalizeMessages(value) {
    KERO SYSTEM PROMPT
    ========================================================= */
 
-function buildSystemPrompt(chapterNum, country = null) {
+function buildSystemPrompt(chapterNum, country = null, requestedCourseSlug = "marketing-launch") {
+
+  const courseSlug = normalizeCourseSlug(requestedCourseSlug);
+  const courseContent = COURSE_CONTENT_BY_SLUG[courseSlug];
+  const courseTitle = COURSE_TITLES[courseSlug];
 
   const chapter =
-    COURSE_CONTENT[String(chapterNum)];
+    courseContent[String(chapterNum)];
 
   const project =
-    PROJECT_PROMPTS[String(chapterNum)];
+    getMentorProjectPrompt(courseSlug, chapterNum);
 
   const courseOutline =
-    Object.keys(COURSE_CONTENT)
+    Object.keys(courseContent)
       .sort(
         (a, b) =>
           Number(a) - Number(b)
       )
       .map(
         (n) =>
-          `الفصل ${n}: ${COURSE_CONTENT[n].title}`
+          `الفصل ${n}: ${courseContent[n].title}`
       )
       .join("\n");
 
@@ -99,7 +140,7 @@ ${chapter.content}`
 
 # هويتك
 
-إنت Kero، المدرب الذكي الشخصي للطالب داخل منصة "4 Levels" لتعليم التسويق والتسويق الرقمي.
+إنت Kero، المدرب الذكي الشخصي للطالب داخل منصة QuadraLevel في كورس "${courseTitle}".
 
 هدفك مش مجرد إعطاء إجابات، بل تحويل المعرفة إلى:
 فهم + تفكير + تطبيق عملي.
@@ -107,7 +148,7 @@ ${chapter.content}`
 مبدؤك:
 "مش مهم تحفظ المعلومة… المهم تعرف تستخدمها."
 
-إنت دائمًا Kero، مرشد كورس 4 Levels التسويقي تحديدًا.
+إنت دائمًا Kero، مرشد كورس "${courseTitle}" تحديدًا، ولا تخلط محتواه بكورس آخر.
 
 ممنوع تسأل الطالب:
 "عن أنهي كورس بتتكلم؟"
@@ -359,7 +400,8 @@ Marketing Strategy
 async function callMentorModel(
   chapter,
   messages,
-  country
+  country,
+  courseSlug
 ) {
 
   const apiRes =
@@ -396,7 +438,8 @@ async function callMentorModel(
               content:
                 buildSystemPrompt(
                   chapter,
-                  country
+                  country,
+                  courseSlug
                 ),
             },
 
@@ -468,6 +511,7 @@ router.post(
     try {
 
       const chapter = normalizeChapter(req.body?.chapter);
+      const courseSlug = await authorizeCourseContext(req.userId, req.body?.courseSlug || req.body?.course_slug);
       const messages = normalizeMessages(req.body?.messages);
 
       if (!messages) {
@@ -501,7 +545,8 @@ router.post(
         await callMentorModel(
           chapter,
           messages,
-          country
+          country,
+          courseSlug
         );
 
 
@@ -514,6 +559,11 @@ router.post(
     } catch (e) {
 
       console.error(e);
+
+
+      if (e.code === "MENTOR_COURSE_FORBIDDEN") {
+        return res.status(403).json({ ok: false, error: "لا تملك صلاحية استخدام Mentor لهذا الكورس." });
+      }
 
 
       if (
@@ -582,6 +632,8 @@ router.post(
 
 
       const chapter = normalizeChapter(req.body?.chapter);
+      const requestedCourseSlug = normalizeCourseSlug(req.body?.courseSlug || req.body?.course_slug);
+      const courseSlug = requestedCourseSlug === "marketing-leadership" ? "marketing-launch" : requestedCourseSlug;
       const messages = normalizeMessages(req.body?.messages);
 
       if (!messages) {
@@ -656,7 +708,8 @@ router.post(
         await callMentorModel(
           chapter,
           messages,
-          country
+          country,
+          courseSlug
         );
 
 

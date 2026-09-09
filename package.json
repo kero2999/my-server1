@@ -6,7 +6,8 @@
   "type": "commonjs",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "node --watch src/index.js"
+    "dev": "node --watch src/index.js",
+    "check:marketing-leadership": "node scripts/check-marketing-leadership-integration.js"
   },
   "dependencies": {
     "@getbrevo/brevo": "^6.0.3",
