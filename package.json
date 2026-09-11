@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
-    "check:marketing-leadership": "node scripts/check-marketing-leadership-integration.js"
+    "check:marketing-leadership": "node scripts/check-marketing-leadership-integration.js",
+    "check:marketing-mastery": "node scripts/check-marketing-mastery-integration.js"
   },
   "dependencies": {
     "@getbrevo/brevo": "^6.0.3",
