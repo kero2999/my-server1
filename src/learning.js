@@ -49,7 +49,7 @@ async function isChapterUnlocked(userId, courseId, chapter) {
 }
 
 function chapterCountryContext(course, lessonLocal, resolvedCountry, chapterNumber) {
-  if (String(course?.slug || "").trim().toLowerCase() === "marketing-leadership") return "";
+  if (["marketing-mastery", "marketing-leadership"].includes(String(course?.slug || "").trim().toLowerCase())) return "";
   return lessonLocal?.summary || lessonLocal?.market_examples || resolvedCountry?.lessonContexts?.[chapterNumber] || "";
 }
 

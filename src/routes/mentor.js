@@ -22,12 +22,14 @@ function readCourseContent(filename) {
 const COURSE_CONTENT_BY_SLUG = {
   "marketing-launch": readCourseContent("course-content.json"),
   "marketing-growth": readCourseContent("course-content.json"),
+  "marketing-mastery": readCourseContent("course-content-marketing-mastery.json"),
   "marketing-leadership": readCourseContent("course-content-marketing-leadership.json"),
 };
 
 const COURSE_TITLES = {
   "marketing-launch": "Marketing Launch",
   "marketing-growth": "Marketing Growth",
+  "marketing-mastery": "Marketing Mastery",
   "marketing-leadership": "Marketing Leadership",
 };
 
@@ -633,7 +635,9 @@ router.post(
 
       const chapter = normalizeChapter(req.body?.chapter);
       const requestedCourseSlug = normalizeCourseSlug(req.body?.courseSlug || req.body?.course_slug);
-      const courseSlug = requestedCourseSlug === "marketing-leadership" ? "marketing-launch" : requestedCourseSlug;
+      const courseSlug = ["marketing-mastery", "marketing-leadership"].includes(requestedCourseSlug)
+        ? "marketing-launch"
+        : requestedCourseSlug;
       const messages = normalizeMessages(req.body?.messages);
 
       if (!messages) {
