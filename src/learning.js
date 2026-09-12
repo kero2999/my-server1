@@ -96,6 +96,7 @@ async function buildLearning({ userId, course, access, country, preview = false 
     const quiz = quizByKey.get(`quiz-${n}`) || quizzes.find((item) => chapterNumber(item.quiz_key) === n) || null;
     const lessonLocal = lesson ? lessonVariant(lesson) : null;
     const quizLocal = quiz ? quizVariant(quiz) : null;
+    const preserveUploadedMarketingLaunchTitles = String(course.slug || '').trim().toLowerCase() === 'marketing-launch';
     const attempt = quiz ? bestAttempt(attemptsByQuiz.get(quiz.id) || []) : null;
     const previous = chapters[n - 2];
     const unlocked = n === 1 || Boolean(previous && previous.result && previous.result.passed);
@@ -103,7 +104,9 @@ async function buildLearning({ userId, course, access, country, preview = false 
     chapters.push({
       number: n,
       lessonKey: lesson ? lesson.lesson_key : `ch${n}`,
-      title: lessonLocal?.title || quizLocal?.title || lesson?.title || quiz?.title || `الفصل ${n}`,
+      title: preserveUploadedMarketingLaunchTitles
+        ? (lesson?.title || quiz?.title || `الفصل ${n}`)
+        : (lessonLocal?.title || quizLocal?.title || lesson?.title || quiz?.title || `الفصل ${n}`),
       countryContext: chapterCountryContext(course, lessonLocal, resolvedCountry, n),
       position: lesson?.position || n,
       isPreview: Boolean(lesson?.is_preview),

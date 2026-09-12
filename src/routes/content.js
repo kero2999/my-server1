@@ -271,8 +271,11 @@ router.get("/:courseId/*", async (req, res) => {
       const htmlBuffer = usePublishedSource ? sourceBuffer : Buffer.from(String(lessonVariant.content_html), "utf8");
       const preparedHtml = prepareCourseHtml(htmlBuffer, requestedPath, course.slug, course.id, country);
       const dialectCountry = isEgyptianMarketingLaunch ? { ...country, countryCode: "FUSHA", dialect: "العربية الفصحى" } : country;
-      const serverLocalizedHtml = isEgyptianMarketingLaunch ? rewriteHtmlTextNodes("FUSHA", preparedHtml) : preparedHtml;
-      responseBody = usePublishedSource ? injectContentDialect(serverLocalizedHtml, dialectCountry) : serverLocalizedHtml;
+      const preserveUploadedMarketingLaunch = usePublishedSource && String(course.slug || "").trim().toLowerCase() === "marketing-launch";
+      const serverLocalizedHtml = isEgyptianMarketingLaunch && !preserveUploadedMarketingLaunch ? rewriteHtmlTextNodes("FUSHA", preparedHtml) : preparedHtml;
+      responseBody = usePublishedSource
+        ? (preserveUploadedMarketingLaunch ? preparedHtml : injectContentDialect(serverLocalizedHtml, dialectCountry))
+        : serverLocalizedHtml;
     }
     res.send(responseBody);
   } catch (e) {
