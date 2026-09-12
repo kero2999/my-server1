@@ -1,17 +1,24 @@
 const jwt = require("jsonwebtoken");
 
-function requireAuth(req, res, next) {
+function authenticate(req) {
   const header = req.headers.authorization || "";
-  const token = header.startsWith("Bearer ") ? header.slice(7) : null;
-  if (!token) return res.status(401).json({ ok: false, error: "غير مصرّح — سجّل دخولك أولاً." });
-
+  const token = header.startsWith("Bearer ") ? header.slice(7).trim() : null;
+  if (!token) return null;
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    req.userId = payload.userId;
-    next();
+    return payload.userId || null;
   } catch (e) {
-    return res.status(401).json({ ok: false, error: "الجلسة منتهية، سجّل دخولك مرة أخرى." });
+    return null;
   }
 }
 
-module.exports = { requireAuth };
+function requireAuth(req, res, next) {
+  const userId = authenticate(req);
+  if (!userId) {
+    return res.status(401).json({ ok: false, error: "الجلسة منتهية أو غير صالحة، سجّل دخولك مرة أخرى." });
+  }
+  req.userId = userId;
+  next();
+}
+
+module.exports = { requireAuth, authenticate };

@@ -11,4 +11,40 @@ const PROJECT_PROMPTS = {
   9: "اطلب من الطالب: يقترح خطة تسويق رقمي مبسطة (3 خطوات) لمشروع صغير — يختار فيها القنوات الرقمية المناسبة ويشرح ليه اختارها بالذات لجمهوره.",
 };
 
-module.exports = { PROJECT_PROMPTS };
+const COURSE_PROJECT_PROMPTS = {
+  "marketing-mastery": {
+    1: "ابنِ صفحة استراتيجية من فقرة واحدة لمشروع تختاره: التشخيص، الجمهور، الهدف الرقمي، والقرار الذي ستتوقف عن تنفيذه.",
+    2: "قسّم سوق منتج تعرفه إلى ثلاث شرائح، وحدد لكل شريحة الحاجة الأساسية ودليلًا من Voice of Customer وطريقة اختبار حجم الفرصة.",
+    3: "اكتب Positioning Statement وValue Proposition لمنتج تختاره، ثم قارنها ببديل مباشر ووضح سببًا قابلًا للإثبات للاختيار.",
+    4: "صمّم Offer متكاملًا يتضمن النتيجة والمنتج والBonus وتقليل المخاطرة والسعر، ثم وضح أثره المتوقع على هامش المساهمة.",
+    5: "ارسم Funnel من الوعي حتى الشراء والاحتفاظ، وحدد ثلاث Micro-Conversions وأكبر تسريب ورسالة Retargeting مناسبة له.",
+    6: "ابدأ من هدف إيراد افتراضي، ونفّذ Reverse Funnel Planning لحساب المبيعات والزيارات والانطباعات والميزانية وBreak-even ROAS.",
+    7: "اكتب فرضية CRO قابلة للاختبار لصفحة هبوط، وحدد Primary Metric وGuardrail Metric وما القرار عند نجاح أو فشل الاختبار.",
+    8: "صمّم Measurement Plan من عشر Metrics، وصنّف كل Metric إلى Leading أو Lagging وحدد مصدر البيانات وصاحب القرار.",
+    9: "قسّم قاعدة عملاء افتراضية باستخدام RFM، ثم صمّم Automation سلوكية لكل شريحة لرفع Activation أو Retention.",
+    10: "حوّل مشكلة عميل واحدة إلى Content Pillar، ثم اكتب Hook ورسالة وProof وCTA لثلاث مراحل مختلفة من الوعي.",
+    11: "اقترح ثلاثة Growth Experiments ورتّبها بإطار ICE، ثم صمّم Growth Loop يوضح كيف تغذي النتيجة بداية دورة جديدة.",
+    12: "ارسم خريطة نظام تسويقي متكامل، ثم اكتب أول ستة إجراءات في خطة 30/60/90 يومًا مع KPI وقرار لكل إجراء.",
+  },
+  "marketing-leadership": {
+    1: "اختَر قرارًا تسويقيًا حقيقيًا، وطبّق عليه: Observe → Understand → Prioritize → Decide → Align → Execute → Measure → Learn → Adapt.",
+    2: "حلّل Business Model لشركة تعرفها، ثم اكتب في ثلاث نقاط كيف يجب أن تخدم استراتيجية التسويق طريقة ربح الشركة.",
+    3: "أنشئ لوحة Market Intelligence مختصرة تتضمن TAM وSAM وSOM وثلاثة منافسين وWhite Space واحدة قابلة للاختبار.",
+    4: "اكتب Positioning Statement لبراند تختاره، وحدد دليلًا واحدًا يجعل الاختلاف Meaningful وصعب التقليد.",
+    5: "اختر منتجًا وحدد Surface Pain وFunctional Pain وEmotional Pain وIdentity Pain، ثم اربط كل مستوى برسالة تسويقية أخلاقية.",
+    6: "ابنِ نموذجًا ماليًا مبسطًا لحملة يتضمن CAC وLTV وContribution Margin وBreak-even ROAS وقرارك بشأن زيادة الميزانية.",
+    7: "صمّم RACI لعملية إطلاق حملة، وحدد Owner واضحًا لكل KPI وثلاثة SOPs يحتاجها الفريق.",
+    8: "صمّم حملة Omnichannel لها Big Idea واحدة، ووضّح دور كل قناة ومؤشرها دون تكرار الرسالة حرفيًا.",
+    9: "اقترح Growth Loop لمشروع رقمي، وحدد North Star Metric وشرطين يجب تحققهما قبل التوسع في الميزانية.",
+    10: "ارسم MarTech Stack مبسطًا، ثم اختر عملية واحدة لأتمتتها وحدد أين يلزم Human-in-the-Loop.",
+    11: "أنشئ Crisis Playbook مختصرًا يتضمن مستويات الخطورة، فريق الاستجابة، أول رسالة، وRoot Cause Analysis بعد الأزمة.",
+    12: "اكتب أول خمس قرارات في خطة 30/60/90 يومًا كمدير تسويق جديد، مع Owner وKPI لكل قرار.",
+  },
+};
+
+function getMentorProjectPrompt(courseSlug, chapter) {
+  const scoped = COURSE_PROJECT_PROMPTS[String(courseSlug || "")];
+  return scoped?.[String(chapter)] || scoped?.[Number(chapter)] || PROJECT_PROMPTS[String(chapter)] || null;
+}
+
+module.exports = { PROJECT_PROMPTS, COURSE_PROJECT_PROMPTS, getMentorProjectPrompt };

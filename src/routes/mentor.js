@@ -2,54 +2,131 @@ const express = require("express");
 const path = require("path");
 const fs = require("fs");
 const { requireAuth } = require("../middleware/auth");
-const { PROJECT_PROMPTS } = require("../mentor-projects");
+const { rateLimit } = require("../middleware/rate-limit");
+const { getMentorProjectPrompt } = require("../mentor-projects");
 const supabase = require("../db");
+const { getCountryConfig, getUserCountry, normalizeCountryCode } = require("../country-service");
+const { getAccess } = require("./courses");
 
 const router = express.Router();
 
-const COURSE_CONTENT = JSON.parse(
-  fs.readFileSync(
-    path.join(
-      __dirname,
-      "..",
-      "..",
-      "data",
-      "course-content.json"
-    ),
-    "utf-8"
-  )
-);
+function readCourseContent(filename) {
+  return JSON.parse(
+    fs.readFileSync(
+      path.join(__dirname, "..", "..", "data", filename),
+      "utf-8"
+    )
+  );
+}
+
+const COURSE_CONTENT_BY_SLUG = {
+  "marketing-launch": readCourseContent("course-content.json"),
+  "marketing-growth": readCourseContent("course-content.json"),
+  "marketing-mastery": readCourseContent("course-content-marketing-mastery.json"),
+  "marketing-leadership": readCourseContent("course-content-marketing-leadership.json"),
+};
+
+const COURSE_TITLES = {
+  "marketing-launch": "Marketing Launch",
+  "marketing-growth": "Marketing Growth",
+  "marketing-mastery": "Marketing Mastery",
+  "marketing-leadership": "Marketing Leadership",
+};
+
+function normalizeCourseSlug(value) {
+  const slug = String(value || "marketing-launch").trim().toLowerCase();
+  return COURSE_CONTENT_BY_SLUG[slug] ? slug : "marketing-launch";
+}
+
+async function authorizeCourseContext(userId, requestedCourseSlug) {
+  const courseSlug = normalizeCourseSlug(requestedCourseSlug);
+  const [{ data: course, error: courseError }, { data: user, error: userError }] = await Promise.all([
+    supabase.from("courses").select("id, status").eq("slug", courseSlug).maybeSingle(),
+    supabase.from("users").select("role").eq("id", userId).maybeSingle(),
+  ]);
+  if (courseError) throw courseError;
+  if (userError) throw userError;
+  if (user?.role === "admin") return courseSlug;
+  if (!course || course.status !== "published") {
+    const error = new Error("mentor_course_forbidden");
+    error.code = "MENTOR_COURSE_FORBIDDEN";
+    throw error;
+  }
+  const access = await getAccess(userId, course.id);
+  if (!access.canAccess) {
+    const error = new Error("mentor_course_forbidden");
+    error.code = "MENTOR_COURSE_FORBIDDEN";
+    throw error;
+  }
+  return courseSlug;
+}
 
 const MODEL =
   process.env.OPENAI_MODEL || "gpt-5-mini";
 
 const TRIAL_MESSAGE_LIMIT = 3;
+const MAX_MESSAGES = 20;
+const MAX_MESSAGE_CHARS = 4000;
+const mentorKey = (req) => String(req.userId || `${req.ip || "unknown"}:${String(req.headers["x-trial-session"] || "").slice(0, 100)}`);
+const mentorLimiter = rateLimit({ name: "mentor-chat", windowMs: 60 * 1000, max: 20, keyGenerator: mentorKey });
+const trialMentorLimiter = rateLimit({ name: "mentor-trial-chat", windowMs: 60 * 1000, max: 6 });
+const speechLimiter = rateLimit({ name: "mentor-speech", windowMs: 60 * 1000, max: 12, keyGenerator: mentorKey });
 
+function normalizeChapter(value) {
+  const chapter = Number(value || 0);
+  return Number.isInteger(chapter) && chapter >= 0 && chapter <= 100 ? chapter : 0;
+}
+
+function normalizeMessages(value) {
+  if (!Array.isArray(value) || value.length === 0 || value.length > MAX_MESSAGES) return null;
+  const messages = value.map((message) => {
+    if (!message || !["user", "assistant"].includes(message.role) || typeof message.content !== "string") return null;
+    const content = message.content.trim();
+    if (!content || content.length > MAX_MESSAGE_CHARS) return null;
+    return { role: message.role, content };
+  });
+  return messages.every(Boolean) ? messages : null;
+}
 
 /* =========================================================
    KERO SYSTEM PROMPT
    ========================================================= */
 
-function buildSystemPrompt(chapterNum) {
+function buildSystemPrompt(chapterNum, country = null, requestedCourseSlug = "marketing-launch") {
+
+  const courseSlug = normalizeCourseSlug(requestedCourseSlug);
+  const courseContent = COURSE_CONTENT_BY_SLUG[courseSlug];
+  const courseTitle = COURSE_TITLES[courseSlug];
 
   const chapter =
-    COURSE_CONTENT[String(chapterNum)];
+    courseContent[String(chapterNum)];
 
   const project =
-    PROJECT_PROMPTS[String(chapterNum)];
+    getMentorProjectPrompt(courseSlug, chapterNum);
 
   const courseOutline =
-    Object.keys(COURSE_CONTENT)
+    Object.keys(courseContent)
       .sort(
         (a, b) =>
           Number(a) - Number(b)
       )
       .map(
         (n) =>
-          `الفصل ${n}: ${COURSE_CONTENT[n].title}`
+          `الفصل ${n}: ${courseContent[n].title}`
       )
       .join("\n");
 
+
+  const countryContext = country ? `
+
+# سياق الدولة والسوق الحالي
+الدولة: ${country.countryName}
+اللهجة المطلوبة: ${country.dialect}
+${country.mentorContext?.languageInstruction || "استخدم العربية الواضحة المناسبة للمستخدم."}
+${country.mentorContext?.marketInstruction || "استخدم أمثلة مناسبة لسوق المستخدم عند الحاجة."}
+${country.mentorContext?.priceInstruction || "لا تفترض سعرًا حقيقيًا؛ أي رقم سعري يكون مثالًا فقط."}
+أمثلة سوقية مناسبة: ${(country.mentorContext?.marketExamples || []).join("، ")}
+${country.lessonContexts?.[chapterNum] || ""}` : "";
 
   const chapterBlock = chapter
 
@@ -65,7 +142,7 @@ ${chapter.content}`
 
 # هويتك
 
-إنت Kero، المدرب الذكي الشخصي للطالب داخل منصة "4 Levels" لتعليم التسويق والتسويق الرقمي.
+إنت Kero، المدرب الذكي الشخصي للطالب داخل منصة QuadraLevel في كورس "${courseTitle}".
 
 هدفك مش مجرد إعطاء إجابات، بل تحويل المعرفة إلى:
 فهم + تفكير + تطبيق عملي.
@@ -73,7 +150,7 @@ ${chapter.content}`
 مبدؤك:
 "مش مهم تحفظ المعلومة… المهم تعرف تستخدمها."
 
-إنت دائمًا Kero، مرشد كورس 4 Levels التسويقي تحديدًا.
+إنت دائمًا Kero، مرشد كورس "${courseTitle}" تحديدًا، ولا تخلط محتواه بكورس آخر.
 
 ممنوع تسأل الطالب:
 "عن أنهي كورس بتتكلم؟"
@@ -311,8 +388,10 @@ Marketing Strategy
 "أنا فهمت المعلومة وأقدر أستخدمها بنفسي."
 
 
-${chapterBlock}
-`;
+  ${countryContext}
+
+  ${chapterBlock}
+  `;
 }
 
 
@@ -322,7 +401,9 @@ ${chapterBlock}
 
 async function callMentorModel(
   chapter,
-  messages
+  messages,
+  country,
+  courseSlug
 ) {
 
   const apiRes =
@@ -358,7 +439,9 @@ async function callMentorModel(
               role: "system",
               content:
                 buildSystemPrompt(
-                  chapter
+                  chapter,
+                  country,
+                  courseSlug
                 ),
             },
 
@@ -424,22 +507,16 @@ async function callMentorModel(
 router.post(
   "/chat",
   requireAuth,
+  mentorLimiter,
   async (req, res) => {
 
     try {
 
-      const {
-        chapter,
-        messages
-      } = req.body;
+      const chapter = normalizeChapter(req.body?.chapter);
+      const courseSlug = await authorizeCourseContext(req.userId, req.body?.courseSlug || req.body?.course_slug);
+      const messages = normalizeMessages(req.body?.messages);
 
-
-      if (
-        !Array.isArray(
-          messages
-        ) ||
-        messages.length === 0
-      ) {
+      if (!messages) {
 
         return res
           .status(400)
@@ -465,10 +542,13 @@ router.post(
       }
 
 
+      const country = await getUserCountry(req.userId);
       const reply =
         await callMentorModel(
           chapter,
-          messages
+          messages,
+          country,
+          courseSlug
         );
 
 
@@ -481,6 +561,11 @@ router.post(
     } catch (e) {
 
       console.error(e);
+
+
+      if (e.code === "MENTOR_COURSE_FORBIDDEN") {
+        return res.status(403).json({ ok: false, error: "لا تملك صلاحية استخدام Mentor لهذا الكورس." });
+      }
 
 
       if (
@@ -518,6 +603,7 @@ router.post(
 
 router.post(
   "/trial-chat",
+  trialMentorLimiter,
   async (req, res) => {
 
     try {
@@ -527,11 +613,14 @@ router.post(
           "x-trial-session"
         ];
 
+      const requestedCountry = normalizeCountryCode(req.body?.countryCode || req.body?.country_code);
+      const country = await getCountryConfig(requestedCountry || "EG");
+
 
       if (
         !sessionId ||
-        typeof sessionId !==
-          "string"
+        typeof sessionId !== "string" ||
+        !/^[A-Za-z0-9_-]{8,128}$/.test(sessionId)
       ) {
 
         return res
@@ -544,18 +633,14 @@ router.post(
       }
 
 
-      const {
-        chapter,
-        messages
-      } = req.body;
+      const chapter = normalizeChapter(req.body?.chapter);
+      const requestedCourseSlug = normalizeCourseSlug(req.body?.courseSlug || req.body?.course_slug);
+      const courseSlug = ["marketing-mastery", "marketing-leadership"].includes(requestedCourseSlug)
+        ? "marketing-launch"
+        : requestedCourseSlug;
+      const messages = normalizeMessages(req.body?.messages);
 
-
-      if (
-        !Array.isArray(
-          messages
-        ) ||
-        messages.length === 0
-      ) {
+      if (!messages) {
 
         return res
           .status(400)
@@ -626,7 +711,9 @@ router.post(
       const reply =
         await callMentorModel(
           chapter,
-          messages
+          messages,
+          country,
+          courseSlug
         );
 
 
@@ -713,18 +800,14 @@ router.post(
 router.post(
   "/speak",
   requireAuth,
+  speechLimiter,
   async (req, res) => {
 
     try {
 
-      const { text } =
-        req.body;
+      const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
 
-
-      if (
-        !text ||
-        !text.trim()
-      ) {
+      if (!text) {
 
         return res
           .status(400)
@@ -760,8 +843,8 @@ router.post(
         "ash";
 
 
+            const country = await getUserCountry(req.userId);
       const ttsBody = {
-
         model:
           ttsModel,
 
@@ -787,7 +870,7 @@ router.post(
       ) {
 
         ttsBody.instructions =
-          "Speak as a male Arabic marketing instructor named Kero. Use a warm, confident, friendly and professional male voice. Speak clearly at a moderate pace. Sound like a helpful personal mentor, not like a robot.";
+          `Speak as a male Arabic marketing instructor named Kero. Use a warm, confident, friendly and professional male voice. Speak clearly at a moderate pace. Sound like a helpful personal mentor, not like a robot. Use the user's country context: ${country.countryName}, ${country.dialect}.`;
       }
 
 
