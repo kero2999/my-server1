@@ -94,7 +94,9 @@ const BRIEFS = {
       { key: "cro_analytics", title: "7. CRO والتحليلات", description: "اقترح فرضيات CRO وخطة قياس ولوحة KPIs تربط الإعلان بالموقع والمبيعات والاحتفاظ." },
       { key: "retention", title: "8. الاحتفاظ وCRM", description: "صمّم Activation وRFM Segmentation وأتمتة سلوكية وخطة لرفع الشراء المتكرر." },
       { key: "content", title: "9. المحتوى والإبداع", description: "ابنِ Content & Creative System يربط الأعمدة والرسائل والـHooks بالمراحل والأهداف." },
-      { key: "growth", title: "10. تجارب النمو والنظام النهائي", description: "رتّب ثلاث تجارب بإطار ICE، وصمّم Growth Loop، ثم حوّل النظام إلى خطة 30/60/90 يومًا." }
+      { key: "growth", title: "10. تجارب النمو والنظام النهائي", description: "رتّب ثلاث تجارب بإطار ICE، وصمّم Growth Loop، ثم حوّل النظام إلى خطة 30/60/90 يومًا." },
+      { key: "growth_loop", title: "11. حلقة النمو والاعتماد المتوازن", description: "صمّم Growth Loop يقلل الاعتماد على Meta ويشرح كيف ينتج كل مستخدم أو عملية قيمة لاكتساب أو احتفاظ جديد." },
+      { key: "roadmap", title: "12. خريطة 90 يومًا", description: "حوّل النظام الكامل إلى خطة 30/60/90 توضّح المالك والمؤشر والقرار عند النجاح أو التعثر." }
     ],
     rubric: [
       { key: "strategy_diagnosis", title: "الاستراتيجية والتشخيص", points: 10, description: "تشخيص منطقي وأهداف رقمية وافتراضات قابلة للاختبار وأولويات واضحة." },
@@ -130,7 +132,11 @@ const BRIEFS = {
       { key: "operations", title: "5. الفريق ونظام التشغيل", description: "صمّم الأدوار وRACI وKPI Ownership والاجتماعات والـSOPs اللازمة لإزالة العمل في جزر منفصلة." },
       { key: "growth", title: "6. القنوات والنمو والتوسع", description: "صمّم خطة Omnichannel واختبارات نمو مرتبة بالأولوية، وحدد North Star Metric ومؤشرات Leading وLagging." },
       { key: "technology_risk", title: "7. التكنولوجيا والذكاء الاصطناعي والمخاطر", description: "حدّد MarTech وAI Automation المناسبة، وHuman-in-the-Loop، وسجل المخاطر وخطة التعامل مع أزمة محتملة." },
-      { key: "roadmap", title: "8. خطة 30/60/90 يومًا", description: "حوّل التحليل إلى Roadmap تنفيذية توضح المالك والموعد والمؤشر وقرار Stop/Start/Continue." }
+      { key: "roadmap", title: "8. خطة 30/60/90 يومًا", description: "حوّل التحليل إلى Roadmap تنفيذية توضح المالك والموعد والمؤشر وقرار Stop/Start/Continue." },
+      { key: "change", title: "9. قيادة التغيير والرسائل", description: "ضع خطة لتوحيد الرسائل وإدارة مقاومة الفرق مع الحفاظ على استمرارية القنوات." },
+      { key: "crisis", title: "10. الأزمات والتصعيد", description: "أنشئ سجل مخاطر ومسار تصعيد يوضح من يقرر ومتى وكيف تحمي الثقة والربحية." },
+      { key: "investment", title: "11. الاستثمار والتوسع", description: "حدد شروط الاستثمار أو الإيقاف للتجارب، وربطها بالميزانية والربحية والطاقة التشغيلية." },
+      { key: "executive_roadmap", title: "12. خريطة القيادة 30/60/90", description: "قدّم خطة تنفيذ تنفيذية تربط الناس والعمليات والميزانية والنتائج، مع Stop/Start/Continue." }
     ],
     rubric: [
       { key: "strategic_diagnosis", title: "التشخيص الاستراتيجي", points: 15, description: "فهم جذور المشكلة وتحديد الـBottleneck والافتراضات الأهم بدل معالجة الأعراض فقط." },
