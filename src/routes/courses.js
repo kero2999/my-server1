@@ -11,6 +11,13 @@ const { getActiveCountryConfig, getCoursePrices, getUserCountry, normalizeCountr
 const router = express.Router();
 
 const DEFAULT_TRIAL_MINUTES = 10;
+const COURSE_DISPLAY_ORDER = [
+  "marketing-launch",
+  "marketing-growth",
+  "marketing-mastery",
+  "marketing-leadership",
+];
+const COURSE_DISPLAY_RANK = new Map(COURSE_DISPLAY_ORDER.map((slug, index) => [slug, index]));
 const userKey = (req) => String(req.userId || req.ip || "unknown");
 const trialStartLimiter = rateLimit({ name: "course-trial-start", windowMs: 15 * 60 * 1000, max: 3, keyGenerator: userKey });
 const quizSubmitLimiter = rateLimit({ name: "quiz-submit", windowMs: 10 * 60 * 1000, max: 20, keyGenerator: userKey });
@@ -35,6 +42,19 @@ async function resolveRequestCountry(req) {
   if (authenticatedUserId) return getUserCountry(authenticatedUserId);
   const requested = normalizeCountryCode(req.query?.country || req.headers["x-country-code"]) || "EG";
   try { return await getActiveCountryConfig(requested); } catch (error) { if (error?.code === "COUNTRY_NOT_ACTIVE") return getActiveCountryConfig("EG"); throw error; }
+}
+
+function sortCoursesForDisplay(courses) {
+  return [...(courses || [])].sort((left, right) => {
+    const leftRank = COURSE_DISPLAY_RANK.has(String(left?.slug || ""))
+      ? COURSE_DISPLAY_RANK.get(String(left.slug))
+      : COURSE_DISPLAY_ORDER.length;
+    const rightRank = COURSE_DISPLAY_RANK.has(String(right?.slug || ""))
+      ? COURSE_DISPLAY_RANK.get(String(right.slug))
+      : COURSE_DISPLAY_ORDER.length;
+    if (leftRank !== rightRank) return leftRank - rightRank;
+    return new Date(left?.created_at || 0).getTime() - new Date(right?.created_at || 0).getTime();
+  });
 }
 
 function publicCourse(row, pricing, country) {
@@ -276,7 +296,8 @@ router.get("/", async (req, res) => {
     if (error) throw error;
     const prices = await getCoursePrices((data || []).map((course) => course.id), country.countryCode);
     res.set({ "Cache-Control": "private, no-store", Vary: "Authorization, X-Country-Code" });
-    res.json({ ok: true, country: { countryCode: country.countryCode, countryName: country.countryName, currency: country.currency, currencySymbol: country.currencySymbol, locale: country.locale }, courses: (data || []).map((course) => publicCourse(course, prices.get(Number(course.id)), country)) });
+    const orderedCourses = sortCoursesForDisplay(data);
+    res.json({ ok: true, country: { countryCode: country.countryCode, countryName: country.countryName, currency: country.currency, currencySymbol: country.currencySymbol, locale: country.locale }, courses: orderedCourses.map((course) => publicCourse(course, prices.get(Number(course.id)), country)) });
   } catch (e) {
     accessError(res, e);
   }
