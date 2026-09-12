@@ -151,7 +151,37 @@ function getGraduationProjectBrief(courseOrSlug) {
   return slug ? BRIEFS[slug] || null : null;
 }
 
+function validateGraduationProjectBrief(projectDefinition, expectedChapterCount) {
+  const errors = [];
+  if (!projectDefinition) {
+    errors.push("MISSING_PROJECT_BRIEF");
+    return { valid: false, errors, expectedChapterCount: Number(expectedChapterCount) || 0, deliverableCount: 0 };
+  }
+  for (const field of ["brief", "title", "instructions", "rubric"]) {
+    if (!projectDefinition[field] || (Array.isArray(projectDefinition[field]) && projectDefinition[field].length === 0)) {
+      errors.push(`MISSING_${field.toUpperCase()}`);
+    }
+  }
+  for (const field of ["case", "goals", "route"]) {
+    if (!projectDefinition.brief?.[field] || String(projectDefinition.brief[field]).trim().length < 20) {
+      errors.push(`MISSING_BRIEF_${field.toUpperCase()}`);
+    }
+  }
+  const deliverableCount = Array.isArray(projectDefinition.deliverables) ? projectDefinition.deliverables.length : 0;
+  const chapterCount = Number(expectedChapterCount) || 0;
+  if (chapterCount > 0 && deliverableCount !== chapterCount) {
+    errors.push(`DELIVERABLE_COUNT_MISMATCH:${deliverableCount}/${chapterCount}`);
+  }
+  if (Array.isArray(projectDefinition.deliverables)) {
+    projectDefinition.deliverables.forEach((item, index) => {
+      if (!item?.title || !item?.description) errors.push(`INVALID_DELIVERABLE:${index + 1}`);
+    });
+  }
+  return { valid: errors.length === 0, errors, expectedChapterCount: chapterCount, deliverableCount };
+}
+
 module.exports = {
   BRIEFS,
   getGraduationProjectBrief,
+  validateGraduationProjectBrief,
 };

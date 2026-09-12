@@ -1,7 +1,7 @@
 const supabase = require("./db");
 
 const { getCountryConfig, getCourseVariants, normalizeCountryCode } = require("./country-service");
-const { getGraduationProjectBrief } = require("./graduation-project-briefs");
+const { getGraduationProjectBrief, validateGraduationProjectBrief } = require("./graduation-project-briefs");
 
 const PASSED_PROJECT_STATUSES = new Set(["passed", "approved", "completed"]);
 
@@ -134,6 +134,7 @@ async function buildLearning({ userId, course, access, country, preview = false 
 
   const project = projects[0] || null;
   const projectDefinition = getGraduationProjectBrief(course);
+  const projectBriefValidation = validateGraduationProjectBrief(projectDefinition, chapters.length);
   const latestSubmission = project ? submissions.find((submission) => submission.project_id === project.id) || null : null;
   const allQuizzesPassed = chapters.length > 0 && chapters.every((chapter) => chapter.quiz && chapter.result?.passed);
   const quizScores = chapters.map((chapter) => chapter.result?.score).filter((score) => Number.isFinite(score));
@@ -167,6 +168,7 @@ async function buildLearning({ userId, course, access, country, preview = false 
       deliverables: projectDefinition?.deliverables || [],
       rubric: projectDefinition?.rubric || [],
       briefVersion: projectDefinition?.version || null,
+      briefValidation: projectBriefValidation,
       passingScore: project.passing_score == null ? 70 : Number(project.passing_score),
       ready: Boolean(preview || allQuizzesPassed),
       preview: Boolean(preview),
