@@ -121,6 +121,16 @@ async function findTrial(userId, courseId) {
   return data;
 }
 
+async function isAdminUser(userId) {
+  const { data, error } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.role === "admin";
+}
+
 function trialStatus(trial) {
   if (!trial) return { started: false, active: false, remainingSeconds: 0, kind: "free" };
   const remainingSeconds = Math.max(
@@ -242,11 +252,24 @@ async function resolveEntryFile(course) {
 }
 
 async function getAccess(userId, courseId) {
-  const [enrollment, trial, campaignTrial] = await Promise.all([
+  const [enrollment, trial, campaignTrial, admin] = await Promise.all([
     findEnrollment(userId, courseId),
     findTrial(userId, courseId),
     findCampaignTrial(userId, courseId),
+    isAdminUser(userId),
   ]);
+  if (admin) {
+    return {
+      enrolled: false,
+      enrollment: null,
+      admin: true,
+      trial: null,
+      freeTrial: { started: false, active: false, remainingSeconds: 0, kind: "admin" },
+      campaignTrial: { started: false, active: false, remainingSeconds: 0, kind: "admin" },
+      canAccess: true,
+      accessType: "admin",
+    };
+  }
   const activeEnrollment = enrollment && enrollment.status === "active";
   const freeTrial = trialStatus(trial);
   const paidTrial = campaignTrialStatus(campaignTrial);
@@ -259,6 +282,7 @@ async function getAccess(userId, courseId) {
     trial: primaryTrial,
     freeTrial,
     campaignTrial: paidTrial,
+    admin: false,
     canAccess: Boolean(activeEnrollment || activeTrial),
     accessType: activeEnrollment ? "enrolled" : paidTrial.active ? "campaign_trial" : freeTrial.active ? "trial" : "none",
   };
@@ -624,7 +648,7 @@ router.post("/:courseId/projects/:projectId/submit", requireAuth, projectSubmitL
     if (!project) return res.status(404).json({ ok: false, error: "المشروع غير موجود." });
     const country = await getUserCountry(req.userId);
     const learning = await buildLearning({ userId: req.userId, course, access, country });
-    if (!learning.overall.allQuizzesPassed) return res.status(403).json({ ok: false, error: "أكمل واجتز اختبارات جميع الفصول أولًا." });
+    if (!learning.overall.allQuizzesPassed && !access.admin) return res.status(403).json({ ok: false, error: "أكمل واجتز اختبارات جميع الفصول أولًا." });
 
     const { data: user, error: userError } = await supabase.from("users").select("email, full_name").eq("id", req.userId).maybeSingle();
     if (userError) throw userError;
