@@ -76,3 +76,50 @@ platform/
 │   └── sw-register.js
 └── icons/
 ```
+
+
+## Marketplace foundation
+
+تمت إضافة أساس Marketplace بصورة additive، مع الحفاظ على مسارات المصادقة والمرشد الحالية:
+
+- `supabase-marketplace-migration.sql` يضيف الجداول الخاصة بالتصنيفات والكورسات والإصدارات والـenrollments والمدفوعات والتجربة والتقدم والاختبارات والمشروعات والشهادات.
+- `src/routes/courses.js` يوفّر Platform API موحدًا للكتالوج والوصول والتجربة والتقدم.
+- `src/routes/payments.js` ينشئ Payment Pending اعتمادًا على السعر الموجود في قاعدة البيانات، ثم يطلب Checkout من Paymob.
+- `src/routes/webhooks.js` يستقبل `POST /api/webhooks/paymob` ويتحقق من HMAC ثم ينشئ Enrollment idempotently بعد النجاح.
+- `src/routes/admin.js` يوفّر API محميًا بدور `admin` لإدارة التصنيفات والكورسات ورفع ZIP ونشر الإصدارات.
+- `src/paymob.js` يحتوي تكامل Paymob server-side؛ لا تضع أي مفاتيح Paymob في الفرونت إند.
+
+### تشغيل الـMigration
+
+شغّل `supabase-schema.sql` مرة واحدة على مشروع Supabase القديم، ثم شغّل `supabase-marketplace-migration.sql`. لا تحذف الجداول القديمة. يجب أيضًا إنشاء Storage bucket باسم قيمة `COURSE_FILES_BUCKET`، ويُفضّل أن يكون Private.
+
+### إعداد Render
+
+أضف في Render المتغيرات `COURSE_FILES_BUCKET`, `PAYMOB_API_BASE_URL`, `PAYMOB_API_KEY`, `PAYMOB_INTEGRATION_ID`, `PAYMOB_IFRAME_ID`, و`PAYMOB_HMAC_SECRET`، إضافة إلى متغيرات Supabase و`JWT_SECRET` و`FRONTEND_URL`. الكود الحالي يستخدم `OPENAI_API_KEY` و`BREVO_API_KEY` للوظائف الموجودة، وليس `ANTHROPIC_API_KEY` أو `RESEND_API_KEY`.
+
+### المسارات الجديدة
+
+```text
+GET    /api/courses
+GET    /api/courses/:courseId
+GET    /api/courses/:courseId/access
+POST   /api/courses/:courseId/trial/start
+GET    /api/courses/:courseId/progress
+PUT    /api/courses/:courseId/progress
+POST   /api/courses/:courseId/lessons/:lessonKey/complete
+POST   /api/payments/course/:courseId/create
+POST   /api/webhooks/paymob
+GET    /api/admin/categories
+POST   /api/admin/categories
+GET    /api/admin/courses
+POST   /api/admin/courses
+PATCH  /api/admin/courses/:courseId
+POST   /api/admin/courses/:courseId/upload-zip
+POST   /api/admin/courses/:courseId/publish
+```
+
+### ملاحظات مهمة
+
+الواجهة الحالية أضيف إليها `courses.html` و`course.html` و`admin.html` و`js/platform-api.js`. هذه الصفحات تحتاج إلى تشغيل Migration ووجود كورس منشور في جدول `courses` حتى تظهر بيانات فعلية. صفحة تفاصيل الكورس لا تفتح ملفات ZIP بعد؛ خطوة Course Player وتوقيع روابط الملفات ستأتي بعد تثبيت Storage وطريقة استخراج ZIP في بيئة Render.
+
+يجب اختبار Paymob أولًا في Sandbox. لا تعتبر redirect أو صفحة success دليلًا على الدفع؛ تفعيل الـEnrollment يجب أن يحدث فقط داخل Webhook الموثق بـHMAC بعد مطابقة `provider_order_id`, `amount_cents`, و`currency`.
