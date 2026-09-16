@@ -13,6 +13,29 @@ function chapterNumber(value) {
   return match ? Number(match[1]) : 0;
 }
 
+const MARKETING_GROWTH_MODERN_TITLES = [
+  "",
+  "البحث التسويقي",
+  "التحليل المتقدم للعميل",
+  "تحليل المنافسين",
+  "التموضع التسويقي",
+  "استراتيجية العرض",
+  "القمع التسويقي",
+  "توليد العملاء المحتملين",
+  "تحسين التحويل",
+  "التسويق المدفوع",
+  "الأتمتة التسويقية",
+  "الاحتفاظ بالعملاء والنمو",
+  "النظام التسويقي المتكامل",
+];
+
+function chapterTitle(courseSlug, number, lessonTitle, quizTitle) {
+  if (String(courseSlug || "").trim().toLowerCase() === "marketing-growth" && MARKETING_GROWTH_MODERN_TITLES[number]) {
+    return MARKETING_GROWTH_MODERN_TITLES[number];
+  }
+  return lessonTitle || quizTitle || `الفصل ${number}`;
+}
+
 function quizQuestions(questions) {
   return (Array.isArray(questions) ? questions : []).map((question) => ({
     q: String(question.q || question.question || question.prompt || ""),
@@ -145,7 +168,7 @@ async function buildLearning({ userId, course, access, country, preview = false 
       number: n,
       lessonKey: lesson ? lesson.lesson_key : `ch${n}`,
       title: preserveUploadedCourseTitles
-        ? (lesson?.title || quiz?.title || `الفصل ${n}`)
+        ? chapterTitle(course.slug, n, lesson?.title, quiz?.title)
         : (lessonLocal?.title || quizLocal?.title || lesson?.title || quiz?.title || `الفصل ${n}`),
       countryContext: chapterCountryContext(course, lessonLocal, resolvedCountry, n),
       position: lesson?.position || n,
@@ -165,7 +188,7 @@ async function buildLearning({ userId, course, access, country, preview = false 
         weaknesses: Array.isArray(assessment.weaknesses) ? assessment.weaknesses : [],
         finalFeedback: assessment.final_feedback || assessment.understanding_feedback || assessment.template_feedback || "",
       } : null,
-      practicalTask: `${buildCurrentChapterTask(course.slug, n, lesson?.title || quiz?.title || `الفصل ${n}`, quiz?.questions)}\n\nالحالة المختارة لهذا الفصل:\n${getChapterProjectBrief(course.slug, n)}`,
+      practicalTask: `${buildCurrentChapterTask(course.slug, n, chapterTitle(course.slug, n, lesson?.title || quiz?.title, quiz?.questions), quiz?.questions)}\n\nالحالة المختارة لهذا الفصل:\n${getChapterProjectBrief(course.slug, n)}`,
 
       chapterScoreRequired: 75,
       progress: Number(lessonProgress?.progress || 0),
