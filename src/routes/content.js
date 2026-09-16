@@ -266,8 +266,8 @@ router.get("/:courseId/*", async (req, res) => {
       const hasExplicitLessonVariant = Boolean(lessonVariant?.content_html);
       const courseSlug = String(course.slug || "").trim().toLowerCase();
       const isEgyptianMarketingLaunch = courseSlug === "marketing-launch" && country.countryCode === "EG" && requestedChapter > 0;
-      const preserveUploadedCourse = ["marketing-launch", "marketing-mastery"].includes(courseSlug);
-      // For uploaded Launch/Mastery content, the published ZIP is the source of truth.
+      const preserveUploadedCourse = ["marketing-launch", "marketing-growth", "marketing-mastery"].includes(courseSlug);
+      // For uploaded Launch/Growth/Mastery content, the published ZIP is the source of truth.
       // Do not let legacy lesson variants or dialect rewriting alter its wording.
       const usePublishedSource = preserveUploadedCourse || !hasExplicitLessonVariant || isEgyptianMarketingLaunch;
       const htmlBuffer = usePublishedSource ? sourceBuffer : Buffer.from(String(lessonVariant.content_html), "utf8");
