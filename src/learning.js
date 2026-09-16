@@ -133,7 +133,7 @@ async function buildLearning({ userId, course, access, country, preview = false 
     const quiz = quizByKey.get(`quiz-${n}`) || quizzes.find((item) => chapterNumber(item.quiz_key) === n) || null;
     const lessonLocal = lesson ? lessonVariant(lesson) : null;
     const quizLocal = quiz ? quizVariant(quiz) : null;
-    const preserveUploadedMarketingLaunchTitles = String(course.slug || '').trim().toLowerCase() === 'marketing-launch';
+    const preserveUploadedCourseTitles = ['marketing-launch', 'marketing-growth', 'marketing-mastery'].includes(String(course.slug || '').trim().toLowerCase());
     const attempt = quiz ? bestAttempt(attemptsByQuiz.get(quiz.id) || []) : null;
     const previous = chapters[n - 2];
     const assessment = latestAssessmentByChapter.get(n) || null;
@@ -142,7 +142,7 @@ async function buildLearning({ userId, course, access, country, preview = false 
     chapters.push({
       number: n,
       lessonKey: lesson ? lesson.lesson_key : `ch${n}`,
-      title: preserveUploadedMarketingLaunchTitles
+      title: preserveUploadedCourseTitles
         ? (lesson?.title || quiz?.title || `الفصل ${n}`)
         : (lessonLocal?.title || quizLocal?.title || lesson?.title || quiz?.title || `الفصل ${n}`),
       countryContext: chapterCountryContext(course, lessonLocal, resolvedCountry, n),
@@ -171,7 +171,7 @@ async function buildLearning({ userId, course, access, country, preview = false 
       quiz: quiz ? {
         id: quiz.id,
         quizKey: quiz.quiz_key,
-        title: quizLocal?.title || quiz.title,
+        title: preserveUploadedCourseTitles ? quiz.title : (quizLocal?.title || quiz.title),
         passingScore: Number(quiz.passing_score || 70),
         questionCount: quizQuestions(quizLocal?.questions || quiz.questions).length,
         requiredCorrect: Math.ceil((quizQuestions(quizLocal?.questions || quiz.questions).length * Number(quiz.passing_score || 70)) / 100),
