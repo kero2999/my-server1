@@ -2,6 +2,7 @@ const supabase = require("./db");
 
 const { getCountryConfig, getCourseVariants, normalizeCountryCode } = require("./country-service");
 const { getGraduationProjectBrief, validateGraduationProjectBrief } = require("./graduation-project-briefs");
+const { getChapterProjectBrief } = require("./chapter-projects");
 
 const PASSED_PROJECT_STATUSES = new Set(["passed", "approved", "completed"]);
 
@@ -16,16 +17,10 @@ function quizQuestions(questions) {
     options: Array.isArray(question.options) ? question.options.map((option) => String(option)) : [],
   })).filter((question) => question.q && question.options.length >= 2);
 }
-function buildCurrentChapterTask(courseSlug, title, questions) {
+function buildCurrentChapterTask(courseSlug, chapterNumber, title, questions) {
   const stems = quizQuestions(questions).slice(0, 3).map((question, index) => `${index + 1}) ${question.q}`).join("\n");
-  const projects = {
-    "marketing-launch": "مطعم «سفرة بلد» يقدّم وجبات مصرية منزلية بطابع عصري داخل مدينة واحدة، ويريد جذب أول عملائه وبناء عرض واضح يمكن تجربته وقياسه بميزانية محدودة.",
-    "marketing-growth": "متجر «بيتُك أرتب» يبيع منتجات تنظيم المنزل عبر الإنترنت، لديه زيارات جيدة لكن التحويل والشراء المتكرر أقل من المطلوب، ويحتاج إلى قرارات نمو قابلة للاختبار.",
-    "marketing-mastery": "منصة «مَسار» التعليمية تريد زيادة التسجيلات المدفوعة والاحتفاظ بالطلاب خلال 90 يومًا، وتملك بيانات أولية عن الحملات والتحويل وسلوك المستخدم.",
-    "marketing-leadership": "شركة «بوصلة ماركت» تنمو بسرعة وتحتاج إلى قيادة فريق تسويق متعدد القنوات، ضبط المسؤوليات والميزانية، وربط القرارات بالربحية والنمو المستدام.",
-  };
-  const brief = projects[String(courseSlug || "").trim().toLowerCase()] || "مشروع تجاري افتراضي يريد تحقيق نمو واضح بموارد وميزانية محدودة.";
-  return `Brief المشروع:\n${brief}\n\nالمطلوب منك في فصل «${title}»:\nطبّق فكرة هذا الفصل فقط على المشروع أعلاه. اكتب ماذا ستفعل، ولماذا، وكيف ستعرف أن النتيجة جيدة. لا تكتفِ بالتعريف النظري؛ قدّم قرارًا أو مثالًا أو مقياسًا عمليًا.\n\nمفاهيم هذا الفصل التي تساعدك:\n${stems || "المفاهيم الأساسية الواردة في شرح الفصل"}`;
+  const brief = getChapterProjectBrief(courseSlug, chapterNumber);
+  return `Brief الحالة التطبيقية:\n${brief}\n\nالمطلوب منك في فصل «${title}»:\nطبّق فكرة هذا الفصل فقط على الحالة أعلاه. اكتب ماذا ستفعل، ولماذا، وكيف ستعرف أن النتيجة جيدة. لا تكتفِ بالتعريف النظري؛ قدّم قرارًا أو مثالًا أو مقياسًا عمليًا.\n\nمفاهيم هذا الفصل التي تساعدك:\n${stems || "المفاهيم الأساسية الواردة في شرح الفصل"}`;
 }
 
 function bestAttempt(attempts) {
@@ -168,7 +163,8 @@ async function buildLearning({ userId, course, access, country, preview = false 
         weaknesses: Array.isArray(assessment.weaknesses) ? assessment.weaknesses : [],
         finalFeedback: assessment.final_feedback || assessment.understanding_feedback || assessment.template_feedback || "",
       } : null,
-      practicalTask: buildCurrentChapterTask(course.slug, lesson?.title || quiz?.title || `الفصل ${n}`, quiz?.questions),
+      practicalTask: `${buildCurrentChapterTask(course.slug, n, lesson?.title || quiz?.title || `الفصل ${n}`, quiz?.questions)}\n\nالحالة المختارة لهذا الفصل:\n${getChapterProjectBrief(course.slug, n)}`,
+
       chapterScoreRequired: 75,
       progress: Number(lessonProgress?.progress || 0),
       lessonCompleted: Boolean(lessonProgress?.completed),
