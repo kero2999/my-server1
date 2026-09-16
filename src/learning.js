@@ -2,6 +2,7 @@ const supabase = require("./db");
 
 const { getCountryConfig, getCourseVariants, normalizeCountryCode } = require("./country-service");
 const { getGraduationProjectBrief, validateGraduationProjectBrief } = require("./graduation-project-briefs");
+const { getMentorProjectPrompt } = require("./mentor-projects");
 
 const PASSED_PROJECT_STATUSES = new Set(["passed", "approved", "completed"]);
 
@@ -20,6 +21,20 @@ function quizQuestions(questions) {
 function bestAttempt(attempts) {
   if (!attempts.length) return null;
   return attempts.slice().sort((a, b) => Number(b.score || 0) - Number(a.score || 0) || new Date(b.attempted_at) - new Date(a.attempted_at))[0];
+}
+
+async function loadChapterAssessments(userId, courseId) {
+  const { data, error } = await supabase
+    .from("chapter_assessments")
+    .select("id, chapter_number, attempt_number, template_score, template_feedback, questions, answers, understanding_score, understanding_feedback, chapter_score, quiz_score, passed, weaknesses, status, created_at, updated_at")
+    .eq("user_id", userId)
+    .eq("course_id", courseId)
+    .order("created_at", { ascending: false });
+  if (error) {
+    if (error.code === "42P01" || /chapter_assessments/i.test(error.message || "")) return null;
+    throw error;
+  }
+  return data || [];
 }
 
 async function isChapterUnlocked(userId, courseId, chapter) {
@@ -45,7 +60,18 @@ async function isChapterUnlocked(userId, courseId, chapter) {
     .limit(1)
     .maybeSingle();
   if (attemptError) throw attemptError;
-  return { unlocked: Boolean(passedAttempt), requiredQuiz: quiz };
+  const { data: assessment, error: assessmentError } = await supabase
+    .from("chapter_assessments")
+    .select("passed")
+    .eq("user_id", userId)
+    .eq("course_id", courseId)
+    .eq("chapter_number", n - 1)
+    .eq("passed", true)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (assessmentError && assessmentError.code !== "42P01" && !/chapter_assessments/i.test(assessmentError.message || "")) throw assessmentError;
+  return { unlocked: assessmentError ? Boolean(passedAttempt) : Boolean(assessment || passedAttempt && false), requiredQuiz: quiz };
 }
 
 function chapterCountryContext(course, lessonLocal, resolvedCountry, chapterNumber) {
@@ -77,6 +103,12 @@ async function buildLearning({ userId, course, access, country, preview = false 
   const progress = progressResult.data || [];
   const attempts = attemptsResult.data || [];
   const submissions = submissionsResult.data || [];
+  const chapterAssessments = await loadChapterAssessments(userId, course.id);
+  const assessmentSystemEnabled = Array.isArray(chapterAssessments);
+  const latestAssessmentByChapter = new Map();
+  (chapterAssessments || []).forEach((item) => {
+    if (!latestAssessmentByChapter.has(Number(item.chapter_number))) latestAssessmentByChapter.set(Number(item.chapter_number), item);
+  });
   const quizByKey = new Map(quizzes.map((quiz) => [quiz.quiz_key, quiz]));
   const attemptsByQuiz = new Map();
   attempts.forEach((attempt) => {
@@ -99,7 +131,8 @@ async function buildLearning({ userId, course, access, country, preview = false 
     const preserveUploadedMarketingLaunchTitles = String(course.slug || '').trim().toLowerCase() === 'marketing-launch';
     const attempt = quiz ? bestAttempt(attemptsByQuiz.get(quiz.id) || []) : null;
     const previous = chapters[n - 2];
-    const unlocked = Boolean(access?.admin) || n === 1 || Boolean(previous && previous.result && previous.result.passed);
+    const assessment = latestAssessmentByChapter.get(n) || null;
+    const unlocked = Boolean(access?.admin) || n === 1 || Boolean(previous && (assessmentSystemEnabled ? previous.assessment?.passed : previous.result?.passed));
     const lessonProgress = lesson ? progress.find((item) => item.lesson_key === lesson.lesson_key) : null;
     chapters.push({
       number: n,
@@ -111,7 +144,20 @@ async function buildLearning({ userId, course, access, country, preview = false 
       position: lesson?.position || n,
       isPreview: Boolean(lesson?.is_preview),
       unlocked,
-      completed: Boolean(attempt?.passed),
+      completed: assessmentSystemEnabled ? Boolean(assessment?.passed) : Boolean(attempt?.passed),
+      assessment: assessment ? {
+        id: assessment.id,
+        attemptNumber: assessment.attempt_number,
+        templateScore: Number(assessment.template_score || 0),
+        understandingScore: Number(assessment.understanding_score || 0),
+        chapterScore: Number(assessment.chapter_score || 0),
+        passed: Boolean(assessment.passed),
+        status: assessment.status,
+        feedback: assessment.understanding_feedback || assessment.template_feedback || "",
+        weaknesses: Array.isArray(assessment.weaknesses) ? assessment.weaknesses : [],
+      } : null,
+      practicalTask: getMentorProjectPrompt(course.slug, n),
+      chapterScoreRequired: 75,
       progress: Number(lessonProgress?.progress || 0),
       lessonCompleted: Boolean(lessonProgress?.completed),
       quiz: quiz ? {
@@ -137,6 +183,7 @@ async function buildLearning({ userId, course, access, country, preview = false 
   const projectBriefValidation = validateGraduationProjectBrief(projectDefinition, chapters.length);
   const latestSubmission = project ? submissions.find((submission) => submission.project_id === project.id) || null : null;
   const allQuizzesPassed = chapters.length > 0 && chapters.every((chapter) => chapter.quiz && chapter.result?.passed);
+  const allChaptersPassed = chapters.length > 0 && (assessmentSystemEnabled ? chapters.every((chapter) => Boolean(chapter.assessment?.passed)) : chapters.every((chapter) => Boolean(chapter.result?.passed)));
   const quizScores = chapters.map((chapter) => chapter.result?.score).filter((score) => Number.isFinite(score));
   const quizAverage = quizScores.length ? Math.round((quizScores.reduce((sum, score) => sum + score, 0) / quizScores.length) * 100) / 100 : 0;
   const projectPassed = Boolean(latestSubmission && PASSED_PROJECT_STATUSES.has(latestSubmission.status));
@@ -158,6 +205,8 @@ async function buildLearning({ userId, course, access, country, preview = false 
       totalChapters: chapters.length,
       quizAverage,
       allQuizzesPassed,
+      allChaptersPassed,
+      assessmentSystemEnabled,
     },
     project: project ? {
       id: project.id,
@@ -170,7 +219,7 @@ async function buildLearning({ userId, course, access, country, preview = false 
       briefVersion: projectDefinition?.version || null,
       briefValidation: projectBriefValidation,
       passingScore: project.passing_score == null ? 70 : Number(project.passing_score),
-      ready: Boolean(preview || access?.admin || allQuizzesPassed),
+      ready: Boolean(preview || access?.admin || allChaptersPassed),
       preview: Boolean(preview),
       passed: projectPassed,
       submission: latestSubmission,
