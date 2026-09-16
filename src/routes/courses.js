@@ -7,6 +7,10 @@ const { requireAdmin } = require("../middleware/admin");
 const { rateLimit } = require("../middleware/rate-limit");
 const { buildLearning, evaluateProject, isChapterUnlocked } = require("../learning");
 const { findCampaignTrial, campaignTrialStatus, findCampaignByCourse } = require("../campaign-service");
+const { getMentorProjectPrompt } = require("../mentor-projects");
+function getKeroStructured() {
+  return require("./mentor").callKeroStructured;
+}
 const { getActiveCountryConfig, getCoursePrices, getUserCountry, normalizeCountryCode } = require("../country-service");
 const router = express.Router();
 
@@ -383,6 +387,130 @@ router.get("/:courseId/certificate/preview", requireAdmin, async (req, res) => {
   }
 });
 
+const templateEvaluationSchema = {
+  type: "object",
+  properties: {
+    templateScore: { type: "number", minimum: 0, maximum: 100 },
+    feedback: { type: "string" },
+    questions: {
+      type: "array",
+      minItems: 3,
+      maxItems: 3,
+      items: {
+        type: "object",
+        properties: { question: { type: "string" }, focus: { type: "string" } },
+        required: ["question", "focus"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["templateScore", "feedback", "questions"],
+  additionalProperties: false,
+};
+
+const understandingEvaluationSchema = {
+  type: "object",
+  properties: {
+    understandingScore: { type: "number", minimum: 0, maximum: 100 },
+    feedback: { type: "string" },
+    weaknesses: { type: "array", items: { type: "string" } },
+  },
+  required: ["understandingScore", "feedback", "weaknesses"],
+  additionalProperties: false,
+};
+
+function chapterParam(value) {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 && number <= 100 ? number : null;
+}
+
+function normalizeAssessment(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    chapterNumber: Number(row.chapter_number),
+    attemptNumber: Number(row.attempt_number || 1),
+    templateScore: Number(row.template_score || 0),
+    templateFeedback: row.template_feedback || "",
+    questions: Array.isArray(row.questions) ? row.questions : [],
+    answers: Array.isArray(row.answers) ? row.answers : [],
+    understandingScore: row.understanding_score == null ? null : Number(row.understanding_score),
+    understandingFeedback: row.understanding_feedback || "",
+    chapterScore: row.chapter_score == null ? null : Number(row.chapter_score),
+    quizScore: row.quiz_score == null ? null : Number(row.quiz_score),
+    passed: Boolean(row.passed),
+    weaknesses: Array.isArray(row.weaknesses) ? row.weaknesses : [],
+    status: row.status,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+router.post("/:courseId/chapters/:chapterNumber/assessment/start", requireAuth, async (req, res) => {
+  try {
+    const course = await findPublishedCourse(req.params.courseId);
+    if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
+    const chapter = chapterParam(req.params.chapterNumber);
+    if (!chapter) return res.status(400).json({ ok: false, error: "رقم الفصل غير صالح." });
+    const access = await getAccess(req.userId, course.id);
+    if (!access.canAccess) return res.status(403).json({ ok: false, error: "لا تملك صلاحية الوصول إلى هذا الكورس." });
+    const text = String(req.body?.templateText || "").trim();
+    if (text.length < 40) return res.status(400).json({ ok: false, error: "اكتب إجابة تطبيقية لا تقل عن 40 حرفًا." });
+    const country = await getUserCountry(req.userId);
+    const learning = await buildLearning({ userId: req.userId, course, access, country });
+    const chapterData = learning.chapters[chapter - 1];
+    if (!chapterData || !chapterData.unlocked) return res.status(403).json({ ok: false, error: "هذا الفصل مقفول حتى تنجح في تقييم الفصل السابق بنسبة 75% أو أكثر." });
+    const task = chapterData.practicalTask || getMentorProjectPrompt(course.slug, chapter) || "طبّق أهم فكرة في الفصل على حالة عملية.";
+    const instruction = `قيّم Template الطالب ثم أنشئ 3 أسئلة قصيرة جديدة تقيس الفهم الحقيقي للفصل.\nالكورس: ${course.title}\nالفصل: ${chapterData.title}\nالمهمة العملية: ${task}\nإجابة الطالب:\n${text}\n\nأعط درجة Template من 100 وملاحظات دقيقة. الأسئلة يجب أن تكون قصيرة، مرتبطة مباشرة بمحتوى الفصل، ولا تعتمد على حفظ نص السؤال.`;
+    const evaluation = await getKeroStructured()(chapter, instruction, country, course.slug, "chapter_template_evaluation", templateEvaluationSchema);
+    const { data: previousRows, error: previousError } = await supabase.from("chapter_assessments").select("id, attempt_number").eq("user_id", req.userId).eq("course_id", course.id).eq("chapter_number", chapter).order("attempt_number", { ascending: false }).limit(1);
+    if (previousError) throw previousError;
+    const attemptNumber = Number(previousRows?.[0]?.attempt_number || 0) + 1;
+    const { data: assessment, error } = await supabase.from("chapter_assessments").insert({ user_id: req.userId, course_id: course.id, chapter_number: chapter, attempt_number: attemptNumber, template_text: text, template_score: Number(evaluation.templateScore || 0), template_feedback: String(evaluation.feedback || ""), questions: evaluation.questions, status: "questions_pending" }).select().single();
+    if (error) throw error;
+    res.status(201).json({ ok: true, task, assessment: normalizeAssessment(assessment) });
+  } catch (e) {
+    console.error("Chapter assessment start error:", e);
+    if (["empty_reply", "upstream_error", "invalid_structured_reply"].includes(e.message)) return res.status(502).json({ ok: false, error: "تعذر على Kero تقييم الإجابة الآن. حاول مرة أخرى." });
+    accessError(res, e);
+  }
+});
+
+router.post("/:courseId/chapters/:chapterNumber/assessment/:assessmentId/submit", requireAuth, async (req, res) => {
+  try {
+    const course = await findPublishedCourse(req.params.courseId);
+    if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
+    const chapter = chapterParam(req.params.chapterNumber);
+    if (!chapter) return res.status(400).json({ ok: false, error: "رقم الفصل غير صالح." });
+    const access = await getAccess(req.userId, course.id);
+    if (!access.canAccess) return res.status(403).json({ ok: false, error: "لا تملك صلاحية الوصول إلى هذا الكورس." });
+    const { data: assessment, error: assessmentError } = await supabase.from("chapter_assessments").select("*").eq("id", Number(req.params.assessmentId)).eq("user_id", req.userId).eq("course_id", course.id).eq("chapter_number", chapter).maybeSingle();
+    if (assessmentError) throw assessmentError;
+    if (!assessment) return res.status(404).json({ ok: false, error: "محاولة التقييم غير موجودة." });
+    if (assessment.status === "evaluated") return res.status(409).json({ ok: false, error: "تم تقييم هذه المحاولة بالفعل. ابدأ محاولة جديدة إذا احتجت." });
+    const answers = Array.isArray(req.body?.answers) ? req.body.answers.map((answer) => String(answer || "").trim()) : [];
+    if (answers.length !== 3 || answers.some((answer) => answer.length < 5)) return res.status(400).json({ ok: false, error: "أجب عن أسئلة Kero الثلاثة بإجابات واضحة." });
+    const country = await getUserCountry(req.userId);
+    const learning = await buildLearning({ userId: req.userId, course, access, country });
+    const chapterData = learning.chapters[chapter - 1];
+    const quizScore = Number(chapterData?.result?.score || 0);
+    const questionText = JSON.stringify(assessment.questions || [], null, 2);
+    const instruction = `قيّم إجابات الطالب عن أسئلة الفهم الثلاثة بعد قراءة Template السابق.\nالفصل: ${chapterData?.title || chapter}\nTemplate الطالب:\n${assessment.template_text}\nالأسئلة:\n${questionText}\nالإجابات:\n${JSON.stringify(answers, null, 2)}\n\nأعط درجة فهم من 100، وملاحظات محايدة، وحدد نقاط الضعف التي تمنع الطالب من الوصول إلى 75%.`;
+    const evaluation = await getKeroStructured()(chapter, instruction, country, course.slug, "chapter_understanding_evaluation", understandingEvaluationSchema);
+    const templateScore = Number(assessment.template_score || 0);
+    const understandingScore = Number(evaluation.understandingScore || 0);
+    const chapterScore = Math.round(((quizScore + templateScore + understandingScore) / 3) * 100) / 100;
+    const passed = chapterScore >= 75;
+    const { data: updated, error: updateError } = await supabase.from("chapter_assessments").update({ answers, understanding_score: understandingScore, understanding_feedback: String(evaluation.feedback || ""), chapter_score: chapterScore, quiz_score: quizScore, passed, weaknesses: Array.isArray(evaluation.weaknesses) ? evaluation.weaknesses : [], status: "evaluated", updated_at: new Date().toISOString() }).eq("id", assessment.id).eq("user_id", req.userId).select().single();
+    if (updateError) throw updateError;
+    res.json({ ok: true, assessment: normalizeAssessment(updated), nextUnlocked: passed });
+  } catch (e) {
+    console.error("Chapter understanding submit error:", e);
+    if (["empty_reply", "upstream_error", "invalid_structured_reply"].includes(e.message)) return res.status(502).json({ ok: false, error: "تعذر على Kero تقييم إجاباتك الآن. حاول مرة أخرى." });
+    accessError(res, e);
+  }
+});
+
 // GET /api/courses/:courseId/access — authoritative entitlement/trial state.
 router.get("/:courseId/learning", requireAuth, async (req, res) => {
   try {
@@ -648,7 +776,7 @@ router.post("/:courseId/projects/:projectId/submit", requireAuth, projectSubmitL
     if (!project) return res.status(404).json({ ok: false, error: "المشروع غير موجود." });
     const country = await getUserCountry(req.userId);
     const learning = await buildLearning({ userId: req.userId, course, access, country });
-    if (!learning.overall.allQuizzesPassed && !access.admin) return res.status(403).json({ ok: false, error: "أكمل واجتز اختبارات جميع الفصول أولًا." });
+    if (!learning.overall.allChaptersPassed && !access.admin) return res.status(403).json({ ok: false, error: "أكمل ونجّح تقييمات جميع الفصول بنسبة 75% أو أكثر أولًا." });
 
     const { data: user, error: userError } = await supabase.from("users").select("email, full_name").eq("id", req.userId).maybeSingle();
     if (userError) throw userError;
@@ -726,12 +854,13 @@ router.get("/:courseId/certificate", requireAuth, async (req, res) => {
     if (lessonsError || quizzesError || projectsError) throw lessonsError || quizzesError || projectsError;
 
     const lessonIds = (lessons || []).map((lesson) => lesson.id);
-    const [{ data: progress, error: progressError }, { data: attempts, error: attemptsError }, { data: submissions, error: submissionsError }] = await Promise.all([
+    const [{ data: progress, error: progressError }, { data: attempts, error: attemptsError }, { data: submissions, error: submissionsError }, { data: assessments, error: assessmentsError }] = await Promise.all([
       supabase.from("course_progress").select("lesson_id, completed").eq("user_id", req.userId).eq("course_id", course.id),
       supabase.from("quiz_attempts").select("quiz_id, score, passed, attempted_at").eq("user_id", req.userId).eq("course_id", course.id).eq("passed", true),
       supabase.from("project_submissions").select("project_id, status, score, submitted_at").eq("user_id", req.userId).eq("course_id", course.id).in("status", ["completed", "approved", "passed"]),
+      supabase.from("chapter_assessments").select("chapter_number, passed, chapter_score").eq("user_id", req.userId).eq("course_id", course.id).eq("passed", true),
     ]);
-    if (progressError || attemptsError || submissionsError) throw progressError || attemptsError || submissionsError;
+    if (progressError || attemptsError || submissionsError || (assessmentsError && assessmentsError.code !== "42P01" && !/chapter_assessments/i.test(assessmentsError.message || ""))) throw progressError || attemptsError || submissionsError || assessmentsError;
 
     const completedLessonIds = new Set((progress || []).filter((item) => item.completed).map((item) => item.lesson_id));
     const passedQuizIds = new Set((attempts || []).map((item) => item.quiz_id));
@@ -753,8 +882,10 @@ router.get("/:courseId/certificate", requireAuth, async (req, res) => {
     };
     const lessonsOk = !lessonIds.length || lessonIds.every((id) => completedLessonIds.has(id));
     const quizzesOk = !(quizzes || []).length || (quizzes || []).every((quiz) => passedQuizIds.has(quiz.id));
+    const assessmentsByChapter = new Set((assessments || []).map((item) => Number(item.chapter_number)));
+    const chaptersOk = assessmentsError && (assessmentsError.code === "42P01" || /chapter_assessments/i.test(assessmentsError.message || "")) ? quizzesOk : ((quizzes || []).length ? assessmentsByChapter.size >= (quizzes || []).length : true);
     const projectsOk = !(projects || []).length || (projects || []).every((project) => completedProjectIds.has(project.id));
-    if (!lessonsOk || !quizzesOk || !projectsOk) return res.status(403).json({ ok: false, error: "لم تستوفِ شروط الشهادة بعد.", requirements: { lessons: lessonsOk, quizzes: quizzesOk, projects: projectsOk } });
+    if (!lessonsOk || !quizzesOk || !chaptersOk || !projectsOk) return res.status(403).json({ ok: false, error: "لم تستوفِ شروط الشهادة بعد.", requirements: { lessons: lessonsOk, quizzes: quizzesOk, chapterAssessments: chaptersOk, projects: projectsOk } });
 
     const { data: existing, error: existingError } = await supabase.from("certificates").select("certificate_number, verification_code, issued_at, course_id").eq("user_id", req.userId).eq("course_id", course.id).maybeSingle();
     if (existingError) throw existingError;

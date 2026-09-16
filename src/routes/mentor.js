@@ -399,6 +399,27 @@ Marketing Strategy
    OPENAI CHAT
    ========================================================= */
 
+async function callKeroStructured(chapter, instruction, country, courseSlug, schemaName, schema) {
+  const apiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + process.env.OPENAI_API_KEY },
+    body: JSON.stringify({
+      model: MODEL,
+      max_completion_tokens: 900,
+      messages: [
+        { role: "system", content: buildSystemPrompt(chapter, country, courseSlug) + "\\n\\nأنت الآن تنفذ تقييمًا تعليميًا منظمًا. قيّم الفهم والتطبيق بعدل، ولا تمنح درجات لمجرد طول الإجابة. أعد JSON فقط وفق المخطط." },
+        { role: "user", content: instruction },
+      ],
+      response_format: { type: "json_schema", json_schema: { name: schemaName, strict: true, schema } },
+    }),
+  });
+  const data = await apiRes.json();
+  if (!apiRes.ok) { console.error("Kero structured API error:", data); throw new Error("upstream_error"); }
+  const raw = data.choices?.[0]?.message?.content?.trim() || "";
+  if (!raw) throw new Error("empty_reply");
+  try { return JSON.parse(raw); } catch (error) { console.error("Kero structured JSON parse error:", raw.slice(0, 500)); throw new Error("invalid_structured_reply"); }
+}
+
 async function callMentorModel(
   chapter,
   messages,
@@ -962,3 +983,4 @@ router.post(
 
 
 module.exports = router;
+module.exports.callKeroStructured = callKeroStructured;
