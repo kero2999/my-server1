@@ -99,7 +99,7 @@ async function buildLearning({ userId, course, access, country, preview = false 
     const preserveUploadedMarketingLaunchTitles = String(course.slug || '').trim().toLowerCase() === 'marketing-launch';
     const attempt = quiz ? bestAttempt(attemptsByQuiz.get(quiz.id) || []) : null;
     const previous = chapters[n - 2];
-    const unlocked = n === 1 || Boolean(previous && previous.result && previous.result.passed);
+    const unlocked = Boolean(access?.admin) || n === 1 || Boolean(previous && previous.result && previous.result.passed);
     const lessonProgress = lesson ? progress.find((item) => item.lesson_key === lesson.lesson_key) : null;
     chapters.push({
       number: n,
@@ -170,7 +170,7 @@ async function buildLearning({ userId, course, access, country, preview = false 
       briefVersion: projectDefinition?.version || null,
       briefValidation: projectBriefValidation,
       passingScore: project.passing_score == null ? 70 : Number(project.passing_score),
-      ready: Boolean(preview || allQuizzesPassed),
+      ready: Boolean(preview || access?.admin || allQuizzesPassed),
       preview: Boolean(preview),
       passed: projectPassed,
       submission: latestSubmission,
