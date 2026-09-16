@@ -392,6 +392,7 @@ const templateEvaluationSchema = {
   properties: {
     templateScore: { type: "number", minimum: 0, maximum: 100 },
     feedback: { type: "string" },
+    strengths: { type: "array", items: { type: "string" } },
     questions: {
       type: "array",
       minItems: 3,
@@ -404,7 +405,7 @@ const templateEvaluationSchema = {
       },
     },
   },
-  required: ["templateScore", "feedback", "questions"],
+  required: ["templateScore", "feedback", "strengths", "questions"],
   additionalProperties: false,
 };
 
@@ -413,9 +414,10 @@ const understandingEvaluationSchema = {
   properties: {
     understandingScore: { type: "number", minimum: 0, maximum: 100 },
     feedback: { type: "string" },
+    strengths: { type: "array", items: { type: "string" } },
     weaknesses: { type: "array", items: { type: "string" } },
   },
-  required: ["understandingScore", "feedback", "weaknesses"],
+  required: ["understandingScore", "feedback", "strengths", "weaknesses"],
   additionalProperties: false,
 };
 
@@ -439,7 +441,9 @@ function normalizeAssessment(row) {
     chapterScore: row.chapter_score == null ? null : Number(row.chapter_score),
     quizScore: row.quiz_score == null ? null : Number(row.quiz_score),
     passed: Boolean(row.passed),
+    strengths: Array.isArray(row.strengths) ? row.strengths : [],
     weaknesses: Array.isArray(row.weaknesses) ? row.weaknesses : [],
+    finalFeedback: row.final_feedback || row.understanding_feedback || row.template_feedback || "",
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -461,12 +465,12 @@ router.post("/:courseId/chapters/:chapterNumber/assessment/start", requireAuth, 
     const chapterData = learning.chapters[chapter - 1];
     if (!chapterData || !chapterData.unlocked) return res.status(403).json({ ok: false, error: "هذا الفصل مقفول حتى تنجح في تقييم الفصل السابق بنسبة 75% أو أكثر." });
     const task = chapterData.practicalTask || getMentorProjectPrompt(course.slug, chapter) || "طبّق أهم فكرة في الفصل على حالة عملية.";
-    const instruction = `قيّم Template الطالب ثم أنشئ 3 أسئلة قصيرة جديدة تقيس الفهم الحقيقي للفصل.\nالكورس: ${course.title}\nالفصل: ${chapterData.title}\nالمهمة العملية: ${task}\nإجابة الطالب:\n${text}\n\nأعط درجة Template من 100 وملاحظات دقيقة. الأسئلة يجب أن تكون قصيرة، مرتبطة مباشرة بمحتوى الفصل، ولا تعتمد على حفظ نص السؤال.`;
+    const instruction = `قيّم تطبيق الطالب على المهمة العملية التالية، ثم أنشئ 3 أسئلة قصيرة تقيس الفهم الحقيقي للفصل.\nالكورس: ${course.title}\nالفصل: ${chapterData.title}\nمحتوى الفصل العملي: ${task}\nإجابة الطالب:\n${text}\n\nقيّم مدى استخدام الطالب للمفاهيم الموجودة في الفصل، واطلب أدلة أو قرارات أو مقاييس محددة عند الحاجة. أعط درجة Template من 100، نقاط قوة واضحة، وملاحظات دقيقة قابلة للتنفيذ. الأسئلة يجب أن تكون مشتقة مباشرة من مفاهيم هذا الفصل، وليست عامة أو اختبار حفظ.`;
     const evaluation = await getKeroStructured()(chapter, instruction, country, course.slug, "chapter_template_evaluation", templateEvaluationSchema);
     const { data: previousRows, error: previousError } = await supabase.from("chapter_assessments").select("id, attempt_number").eq("user_id", req.userId).eq("course_id", course.id).eq("chapter_number", chapter).order("attempt_number", { ascending: false }).limit(1);
     if (previousError) throw previousError;
     const attemptNumber = Number(previousRows?.[0]?.attempt_number || 0) + 1;
-    const { data: assessment, error } = await supabase.from("chapter_assessments").insert({ user_id: req.userId, course_id: course.id, chapter_number: chapter, attempt_number: attemptNumber, template_text: text, template_score: Number(evaluation.templateScore || 0), template_feedback: String(evaluation.feedback || ""), questions: evaluation.questions, status: "questions_pending" }).select().single();
+    const { data: assessment, error } = await supabase.from("chapter_assessments").insert({ user_id: req.userId, course_id: course.id, chapter_number: chapter, attempt_number: attemptNumber, template_text: text, template_score: Number(evaluation.templateScore || 0), template_feedback: String(evaluation.feedback || ""), strengths: Array.isArray(evaluation.strengths) ? evaluation.strengths : [], questions: evaluation.questions, status: "questions_pending" }).select().single();
     if (error) throw error;
     res.status(201).json({ ok: true, task, assessment: normalizeAssessment(assessment) });
   } catch (e) {
@@ -495,13 +499,13 @@ router.post("/:courseId/chapters/:chapterNumber/assessment/:assessmentId/submit"
     const chapterData = learning.chapters[chapter - 1];
     const quizScore = Number(chapterData?.result?.score || 0);
     const questionText = JSON.stringify(assessment.questions || [], null, 2);
-    const instruction = `قيّم إجابات الطالب عن أسئلة الفهم الثلاثة بعد قراءة Template السابق.\nالفصل: ${chapterData?.title || chapter}\nTemplate الطالب:\n${assessment.template_text}\nالأسئلة:\n${questionText}\nالإجابات:\n${JSON.stringify(answers, null, 2)}\n\nأعط درجة فهم من 100، وملاحظات محايدة، وحدد نقاط الضعف التي تمنع الطالب من الوصول إلى 75%.`;
+    const instruction = `قيّم إجابات الطالب عن أسئلة الفهم الثلاثة بعد قراءة Template السابق.\nالفصل: ${chapterData?.title || chapter}\nTemplate الطالب:\n${assessment.template_text}\nالأسئلة:\n${questionText}\nالإجابات:\n${JSON.stringify(answers, null, 2)}\n\nأعط درجة فهم من 100، ونقاط قوة واضحة، وملاحظات محايدة، وحدد نقاط الضعف التي تمنع الطالب من الوصول إلى 75%. لا تمنح الدرجة بناءً على الأسلوب أو اللهجة؛ قيّم فقط الفهم، منطق القرار، التطبيق، والأدلة.`;
     const evaluation = await getKeroStructured()(chapter, instruction, country, course.slug, "chapter_understanding_evaluation", understandingEvaluationSchema);
     const templateScore = Number(assessment.template_score || 0);
     const understandingScore = Number(evaluation.understandingScore || 0);
     const chapterScore = Math.round(((quizScore + templateScore + understandingScore) / 3) * 100) / 100;
     const passed = chapterScore >= 75;
-    const { data: updated, error: updateError } = await supabase.from("chapter_assessments").update({ answers, understanding_score: understandingScore, understanding_feedback: String(evaluation.feedback || ""), chapter_score: chapterScore, quiz_score: quizScore, passed, weaknesses: Array.isArray(evaluation.weaknesses) ? evaluation.weaknesses : [], status: "evaluated", updated_at: new Date().toISOString() }).eq("id", assessment.id).eq("user_id", req.userId).select().single();
+    const { data: updated, error: updateError } = await supabase.from("chapter_assessments").update({ answers, understanding_score: understandingScore, understanding_feedback: String(evaluation.feedback || ""), final_feedback: String(evaluation.feedback || ""), strengths: Array.isArray(evaluation.strengths) ? evaluation.strengths : (Array.isArray(assessment.strengths) ? assessment.strengths : []), chapter_score: chapterScore, quiz_score: quizScore, passed, weaknesses: Array.isArray(evaluation.weaknesses) ? evaluation.weaknesses : [], status: "evaluated", updated_at: new Date().toISOString() }).eq("id", assessment.id).eq("user_id", req.userId).select().single();
     if (updateError) throw updateError;
     res.json({ ok: true, assessment: normalizeAssessment(updated), nextUnlocked: passed });
   } catch (e) {
