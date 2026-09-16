@@ -264,17 +264,19 @@ router.get("/:courseId/*", async (req, res) => {
       const variants = await getCourseVariants(course.id, country.countryCode);
       const lessonVariant = requestedChapter > 0 ? variants.lessons.get(`ch${requestedChapter}`) : null;
       const hasExplicitLessonVariant = Boolean(lessonVariant?.content_html);
-      const isEgyptianMarketingLaunch = String(course.slug || "").trim().toLowerCase() === "marketing-launch" && country.countryCode === "EG" && requestedChapter > 0;
-      // The published ZIP is the source of truth for the Egyptian Marketing Launch
-      // course. Older DB lesson variants may otherwise mask newly uploaded chapters.
-      const usePublishedSource = isEgyptianMarketingLaunch || !hasExplicitLessonVariant;
+      const courseSlug = String(course.slug || "").trim().toLowerCase();
+      const isEgyptianMarketingLaunch = courseSlug === "marketing-launch" && country.countryCode === "EG" && requestedChapter > 0;
+      const preserveUploadedCourse = ["marketing-launch", "marketing-mastery"].includes(courseSlug);
+      // For uploaded Launch/Mastery content, the published ZIP is the source of truth.
+      // Do not let legacy lesson variants or dialect rewriting alter its wording.
+      const usePublishedSource = preserveUploadedCourse || !hasExplicitLessonVariant || isEgyptianMarketingLaunch;
       const htmlBuffer = usePublishedSource ? sourceBuffer : Buffer.from(String(lessonVariant.content_html), "utf8");
       const preparedHtml = prepareCourseHtml(htmlBuffer, requestedPath, course.slug, course.id, country);
       const dialectCountry = isEgyptianMarketingLaunch ? { ...country, countryCode: "FUSHA", dialect: "العربية الفصحى" } : country;
-      const preserveUploadedMarketingLaunch = usePublishedSource && String(course.slug || "").trim().toLowerCase() === "marketing-launch";
-      const serverLocalizedHtml = isEgyptianMarketingLaunch && !preserveUploadedMarketingLaunch ? rewriteHtmlTextNodes("FUSHA", preparedHtml) : preparedHtml;
+      const preserveUploadedContent = usePublishedSource && preserveUploadedCourse;
+      const serverLocalizedHtml = isEgyptianMarketingLaunch && !preserveUploadedContent ? rewriteHtmlTextNodes("FUSHA", preparedHtml) : preparedHtml;
       responseBody = usePublishedSource
-        ? (preserveUploadedMarketingLaunch ? preparedHtml : injectContentDialect(serverLocalizedHtml, dialectCountry))
+        ? (preserveUploadedContent ? preparedHtml : injectContentDialect(serverLocalizedHtml, dialectCountry))
         : serverLocalizedHtml;
     }
     res.send(responseBody);
