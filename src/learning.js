@@ -7,7 +7,9 @@ const { getChapterProjectBrief } = require("./chapter-projects");
 const PASSED_PROJECT_STATUSES = new Set(["passed", "approved", "completed"]);
 
 function chapterNumber(value) {
-  const match = String(value || "").match(/(?:quiz-|ch(?:apter)?-?)(\d+)/i);
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "index" || normalized === "index.html") return 1;
+  const match = normalized.match(/(?:quiz-|ch(?:apter)?-?)(\d+)/i);
   return match ? Number(match[1]) : 0;
 }
 
