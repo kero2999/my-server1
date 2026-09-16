@@ -2,7 +2,6 @@ const supabase = require("./db");
 
 const { getCountryConfig, getCourseVariants, normalizeCountryCode } = require("./country-service");
 const { getGraduationProjectBrief, validateGraduationProjectBrief } = require("./graduation-project-briefs");
-const { getMentorProjectPrompt } = require("./mentor-projects");
 
 const PASSED_PROJECT_STATUSES = new Set(["passed", "approved", "completed"]);
 
@@ -17,6 +16,10 @@ function quizQuestions(questions) {
     options: Array.isArray(question.options) ? question.options.map((option) => String(option)) : [],
   })).filter((question) => question.q && question.options.length >= 2);
 }
+function buildCurrentChapterTask(title, questions) {
+  const stems = quizQuestions(questions).slice(0, 3).map((question, index) => `${index + 1}) ${question.q}`).join("\n");
+  return `طبّق ما تعلمته في فصل «${title}» على حالة عملية. اشرح قرارًا تسويقيًا محددًا، سبب اختيارك، خطوات التنفيذ، ومؤشرًا واحدًا على الأقل لقياس النجاح. استخدم المفاهيم التي يختبرها هذا الفصل، ومنها:\n${stems || "المفاهيم الأساسية الواردة في شرح الفصل"}`;
+}
 
 function bestAttempt(attempts) {
   if (!attempts.length) return null;
@@ -26,7 +29,7 @@ function bestAttempt(attempts) {
 async function loadChapterAssessments(userId, courseId) {
   const { data, error } = await supabase
     .from("chapter_assessments")
-    .select("id, chapter_number, attempt_number, template_score, template_feedback, questions, answers, understanding_score, understanding_feedback, chapter_score, quiz_score, passed, weaknesses, status, created_at, updated_at")
+    .select("id, chapter_number, attempt_number, template_score, template_feedback, questions, answers, understanding_score, understanding_feedback, chapter_score, quiz_score, passed, strengths, weaknesses, final_feedback, status, created_at, updated_at")
     .eq("user_id", userId)
     .eq("course_id", courseId)
     .order("created_at", { ascending: false });
@@ -154,9 +157,11 @@ async function buildLearning({ userId, course, access, country, preview = false 
         passed: Boolean(assessment.passed),
         status: assessment.status,
         feedback: assessment.understanding_feedback || assessment.template_feedback || "",
+        strengths: Array.isArray(assessment.strengths) ? assessment.strengths : [],
         weaknesses: Array.isArray(assessment.weaknesses) ? assessment.weaknesses : [],
+        finalFeedback: assessment.final_feedback || assessment.understanding_feedback || assessment.template_feedback || "",
       } : null,
-      practicalTask: getMentorProjectPrompt(course.slug, n),
+      practicalTask: buildCurrentChapterTask(lesson?.title || quiz?.title || `الفصل ${n}`, quiz?.questions),
       chapterScoreRequired: 75,
       progress: Number(lessonProgress?.progress || 0),
       lessonCompleted: Boolean(lessonProgress?.completed),
