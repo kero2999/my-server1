@@ -64,7 +64,11 @@ function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "", courseId
     .replace(/(<html\b[^>]*?)\sdata-protected=(['"])true\2/i, '$1 data-protected="false"')
     .replace(/<script\b[^>]*\bsw-register\.js[^>]*>\s*<\/script>/gi, '')
     .replace(/<script\b[^>]*\bsrc=(['"])[^'"]*auth\.js\1[^>]*>\s*<\/script>/gi, '')
-    .replace(/<script\b[^>]*>[\s\S]*?lms_session_v1[\s\S]*?<\/script>/gi, '');
+    .replace(/<script\b[^>]*>[\s\S]*?lms_session_v1[\s\S]*?<\/script>/gi, '')
+    // Older published responses may already contain our injected dialect/context blocks.
+    // Remove only those marked artifacts; never rewrite the uploaded text nodes.
+    .replace(/<script\b[^>]*id=(['"])ql-country-dialect\1[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<aside\b[^>]*id=(['"])ql-country-context\1[^>]*>[\s\S]*?<\/aside>/gi, '');
 
   const chapterMatch = String(requestedPath || "").match(/(?:^|\/)ch(\d+)\.html$/i);
   const chapterNumber = chapterMatch ? Number(chapterMatch[1]) : /(?:^|\/)index\.html$/i.test(String(requestedPath || "")) ? 1 : 0;
