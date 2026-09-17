@@ -398,6 +398,7 @@ const templateEvaluationSchema = {
   properties: {
     templateScore: { type: "number", minimum: 0, maximum: 100 },
     feedback: { type: "string" },
+    idealAnswer: { type: "string" },
     strengths: { type: "array", items: { type: "string" } },
     questions: {
       type: "array",
@@ -411,7 +412,7 @@ const templateEvaluationSchema = {
       },
     },
   },
-  required: ["templateScore", "feedback", "strengths", "questions"],
+  required: ["templateScore", "feedback", "idealAnswer", "strengths", "questions"],
   additionalProperties: false,
 };
 
@@ -420,10 +421,21 @@ const understandingEvaluationSchema = {
   properties: {
     understandingScore: { type: "number", minimum: 0, maximum: 100 },
     feedback: { type: "string" },
+    idealAnswers: {
+      type: "array",
+      minItems: 3,
+      maxItems: 3,
+      items: {
+        type: "object",
+        properties: { questionIndex: { type: "integer", minimum: 1, maximum: 3 }, answer: { type: "string" } },
+        required: ["questionIndex", "answer"],
+        additionalProperties: false,
+      },
+    },
     strengths: { type: "array", items: { type: "string" } },
     weaknesses: { type: "array", items: { type: "string" } },
   },
-  required: ["understandingScore", "feedback", "strengths", "weaknesses"],
+  required: ["understandingScore", "feedback", "idealAnswers", "strengths", "weaknesses"],
   additionalProperties: false,
 };
 
@@ -457,6 +469,18 @@ function normalizeAssessment(row) {
   };
 }
 
+function composeAssessmentFeedback(feedback, idealAnswer = "", idealAnswers = []) {
+  const suggestions = idealAnswers
+    .map((item) => `${Number(item?.questionIndex || 0)}) ${String(item?.answer || "").trim()}`)
+    .filter((item) => !/^\d+\)\s*$/.test(item))
+    .join("\n");
+  return [
+    String(feedback || "").trim(),
+    idealAnswer ? `إجابة نموذجية مقترحة للتعلم (ليست إجابة إلزامية):\n${String(idealAnswer).trim()}` : "",
+    suggestions ? `إجابات نموذجية مقترحة لأسئلة الفهم (للمراجعة):\n${suggestions}` : "",
+  ].filter(Boolean).join("\n\n");
+}
+
 router.post("/:courseId/chapters/:chapterNumber/assessment/start", requireAuth, async (req, res) => {
   try {
     const course = await findPublishedCourse(req.params.courseId);
@@ -483,12 +507,13 @@ router.post("/:courseId/chapters/:chapterNumber/assessment/start", requireAuth, 
     const task = chapterData.practicalTask || "طبّق المفاهيم الظاهرة في شرح الفصل على حالة عملية.";
     const reviewCriteria = chapterTemplate?.reviewCriteria?.map((criterion) => `- ${criterion}`).join("\n") || "- صحة تطبيق مفهوم الفصل\n- وضوح القرار\n- وجود نتيجة أو مقياس عملي";
     const currentQuizContext = (chapterData.quiz?.questions || []).slice(0, 3).map((question, index) => `${index + 1}) ${question.q}`).join("\n");
-    const instruction = `راجع تطبيق الطالب بنفسك ولا تنفذ المهمة بدلًا منه.\nالكورس: ${course.title}\nالفصل: ${chapterData.title}\nالمفهوم: ${chapterTemplate?.concept || chapterData.title}\nالمهارة: ${chapterTemplate?.skill || "تطبيق مفهوم الفصل"}\nالمهمة:\n${task}\nمعايير المراجعة:\n${reviewCriteria}\nمرجع مختصر من Quiz الفصل:\n${currentQuizContext || "غير متاح"}\nتطبيق الطالب:\n${reviewText}\n\nأعط درجة Template من 100 وFeedback قصيرًا عمليًا بصيغة Review ثم Correction. حدد ما تم جيدًا وما يحتاج تعديلًا دون كتابة الحل الكامل للطالب. أنشئ 3 أسئلة فهم قصيرة مشتقة من مفهوم الفصل ومن قرارات الطالب، لا أسئلة حفظ ولا مفاهيم من فصل آخر.`;
+    const instruction = `راجع تطبيق الطالب بنفسك ولا تنفذ المهمة بدلًا منه. كن منصفًا ومتساهلًا مع اختلاف الصياغة واللهجة والأخطاء اللغوية غير المؤثرة؛ قيّم المعنى والمنطق والتطبيق فقط. إذا أثبت الطالب المفهوم وقدم قرارًا قابلًا للتنفيذ، امنحه درجة نجاح مناسبة حتى لو كانت بعض التفاصيل ناقصة. استخدم درجة أقل من 75 فقط عند وجود سوء فهم جوهري أو إجابة غير قابلة للتطبيق.\nالكورس: ${course.title}\nالفصل: ${chapterData.title}\nالمفهوم: ${chapterTemplate?.concept || chapterData.title}\nالمهارة: ${chapterTemplate?.skill || "تطبيق مفهوم الفصل"}\nالمهمة:\n${task}\nمعايير المراجعة:\n${reviewCriteria}\nمرجع مختصر من Quiz الفصل:\n${currentQuizContext || "غير متاح"}\nتطبيق الطالب:\n${reviewText}\n\nأعط درجة Template من 100 وFeedback قصيرًا عمليًا بصيغة Review ثم Correction. اذكر ما تم جيدًا وما يحتاج تحسينًا، ثم اقترح إجابة نموذجية مختصرة للتعلم دون أن تستبدل محاولة الطالب. أنشئ 3 أسئلة فهم قصيرة مشتقة من مفهوم الفصل ومن قرارات الطالب، لا أسئلة حفظ ولا مفاهيم من فصل آخر.`;
     const evaluation = await getKeroStructured()(chapter, instruction, country, course.slug, "chapter_template_evaluation", templateEvaluationSchema);
     const { data: previousRows, error: previousError } = await supabase.from("chapter_assessments").select("id, attempt_number").eq("user_id", req.userId).eq("course_id", course.id).eq("chapter_number", chapter).order("attempt_number", { ascending: false }).limit(1);
     if (previousError) throw previousError;
     const attemptNumber = Number(previousRows?.[0]?.attempt_number || 0) + 1;
-    const { data: assessment, error } = await supabase.from("chapter_assessments").insert({ user_id: req.userId, course_id: course.id, chapter_number: chapter, attempt_number: attemptNumber, template_text: storedTemplateText, template_score: Number(evaluation.templateScore || 0), template_feedback: String(evaluation.feedback || ""), strengths: Array.isArray(evaluation.strengths) ? evaluation.strengths : [], questions: evaluation.questions, status: "questions_pending" }).select().single();
+    const templateFeedback = composeAssessmentFeedback(evaluation.feedback, evaluation.idealAnswer);
+    const { data: assessment, error } = await supabase.from("chapter_assessments").insert({ user_id: req.userId, course_id: course.id, chapter_number: chapter, attempt_number: attemptNumber, template_text: storedTemplateText, template_score: Number(evaluation.templateScore || 0), template_feedback: templateFeedback, strengths: Array.isArray(evaluation.strengths) ? evaluation.strengths : [], questions: evaluation.questions, status: "questions_pending" }).select().single();
     if (error) throw error;
     res.status(201).json({ ok: true, task, assessment: normalizeAssessment(assessment) });
   } catch (e) {
@@ -524,13 +549,14 @@ router.post("/:courseId/chapters/:chapterNumber/assessment/:assessmentId/submit"
     const reviewedTemplateText = structuredSubmission
       ? formatTemplateSubmissionForReview(chapterTemplate, structuredSubmission)
       : assessment.template_text;
-    const instruction = `قيّم إجابات الطالب عن أسئلة الفهم الثلاثة بعد قراءة تطبيقه السابق.\nالفصل الحالي: ${chapterData?.title || chapter}\nمفاهيم وأسئلة الـQuiz الحالية للفصل:\n${currentQuizContext || "غير متاحة"}\nتطبيق الطالب:\n${reviewedTemplateText}\nأسئلة Kero المولدة من الفصل الحالي:\n${questionText}\nالإجابات:\n${JSON.stringify(answers, null, 2)}\n\nممنوع تقييم مفاهيم من فصل آخر أو من بيانات قديمة. أعط درجة فهم من 100، ونقاط قوة واضحة، وملاحظات محايدة، وحدد نقاط الضعف التي تمنع الطالب من الوصول إلى 75%. لا تمنح الدرجة بناءً على الأسلوب أو اللهجة؛ قيّم فقط فهم محتوى الفصل الحالي، منطق القرار، التطبيق، والأدلة.`;
+    const instruction = `قيّم إجابات الطالب عن أسئلة الفهم الثلاثة بعد قراءة تطبيقه السابق. كن منصفًا ومتساهلًا مع الصياغة المختلفة واللهجة والأخطاء اللغوية غير المؤثرة. إذا كانت الإجابة صحيحة في جوهرها أو توضح فهمًا عمليًا مع نقص بسيط، احتسب الفهم جيدًا ولا تعتبرها رسوبًا؛ استخدم درجة أقل من 75 فقط عند وجود سوء فهم جوهري. لا تشترط كلمات مطابقة للنموذج.\nالفصل الحالي: ${chapterData?.title || chapter}\nمفاهيم وأسئلة الـQuiz الحالية للفصل:\n${currentQuizContext || "غير متاحة"}\nتطبيق الطالب:\n${reviewedTemplateText}\nأسئلة Kero المولدة من الفصل الحالي:\n${questionText}\nالإجابات:\n${JSON.stringify(answers, null, 2)}\n\nممنوع تقييم مفاهيم من فصل آخر أو من بيانات قديمة. أعط درجة فهم من 100، ونقاط قوة واضحة، وملاحظات محايدة، وحدد فقط نقاط الضعف الجوهرية التي تمنع الطالب من الوصول إلى 75%. اقترح إجابة نموذجية مختصرة لكل سؤال للمراجعة، ولا تعطِ الحل الكامل لمشروع الطالب.`;
     const evaluation = await getKeroStructured()(chapter, instruction, country, course.slug, "chapter_understanding_evaluation", understandingEvaluationSchema);
     const templateScore = Number(assessment.template_score || 0);
     const understandingScore = Number(evaluation.understandingScore || 0);
     const chapterScore = Math.round(((quizScore + templateScore + understandingScore) / 3) * 100) / 100;
     const passed = chapterScore >= 75;
-    const { data: updated, error: updateError } = await supabase.from("chapter_assessments").update({ answers, understanding_score: understandingScore, understanding_feedback: String(evaluation.feedback || ""), final_feedback: String(evaluation.feedback || ""), strengths: Array.isArray(evaluation.strengths) ? evaluation.strengths : (Array.isArray(assessment.strengths) ? assessment.strengths : []), chapter_score: chapterScore, quiz_score: quizScore, passed, weaknesses: Array.isArray(evaluation.weaknesses) ? evaluation.weaknesses : [], status: "evaluated", updated_at: new Date().toISOString() }).eq("id", assessment.id).eq("user_id", req.userId).select().single();
+    const understandingFeedback = composeAssessmentFeedback(evaluation.feedback, "", evaluation.idealAnswers);
+    const { data: updated, error: updateError } = await supabase.from("chapter_assessments").update({ answers, understanding_score: understandingScore, understanding_feedback: understandingFeedback, final_feedback: understandingFeedback, strengths: Array.isArray(evaluation.strengths) ? evaluation.strengths : (Array.isArray(assessment.strengths) ? assessment.strengths : []), chapter_score: chapterScore, quiz_score: quizScore, passed, weaknesses: Array.isArray(evaluation.weaknesses) ? evaluation.weaknesses : [], status: "evaluated", updated_at: new Date().toISOString() }).eq("id", assessment.id).eq("user_id", req.userId).select().single();
     if (updateError) throw updateError;
     res.json({ ok: true, assessment: normalizeAssessment(updated), nextUnlocked: passed });
   } catch (e) {
