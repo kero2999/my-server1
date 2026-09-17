@@ -35,7 +35,7 @@ if (rubricTotal !== 100) {
   throw new Error(`Graduation project rubric must equal 100, found ${rubricTotal}`);
 }
 
-const sourceHtml = Buffer.from(`<!doctype html><html data-protected="true"><head></head><body><a href="dashboard.html">Dashboard</a><a class="quiz-link" href="quiz.html?ch=12">Quiz</a><script>location.replace('quiz.html?ch=12')</script></body></html>`);
+const sourceHtml = Buffer.from(`<!doctype html><html data-protected="true"><head></head><body><p>النص الأصلي للمستخدم لا يتغير</p><aside id="ql-country-context">مثال محقون قديم</aside><script id="ql-country-dialect">window.__legacyDialect=true;</script><a href="dashboard.html">Dashboard</a><a class="quiz-link" href="quiz.html?ch=12">Quiz</a><script>location.replace('quiz.html?ch=12')</script></body></html>`);
 const prepared = prepareCourseHtml(sourceHtml, "ch12.html", "marketing-leadership", 77, null);
 const expectedDashboard = "https://www.quadralevel.com/dashboard/marketing-leadership";
 const expectedQuiz = "https://www.quadralevel.com/quiz/marketing-leadership/chapter/12";
@@ -43,6 +43,8 @@ if (!prepared.includes(expectedDashboard)) throw new Error("Dashboard URL was no
 if (!prepared.includes(expectedQuiz)) throw new Error("Quiz URL was not rewritten");
 if (!prepared.includes('target="_top"')) throw new Error("Rewritten navigation must escape the course iframe");
 if (/href=["']quiz\.html/i.test(prepared)) throw new Error("Legacy local quiz link remains in prepared HTML");
+if (!prepared.includes("النص الأصلي للمستخدم لا يتغير")) throw new Error("Uploaded text was unexpectedly rewritten");
+if (prepared.includes("ql-country-dialect") || prepared.includes("ql-country-context")) throw new Error("Legacy injected localization artifacts remain");
 
 const egypt = {
   countryCode: "EG",

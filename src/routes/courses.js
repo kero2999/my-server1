@@ -6,6 +6,13 @@ const { requireAuth, authenticate } = require("../middleware/auth");
 const { requireAdmin } = require("../middleware/admin");
 const { rateLimit } = require("../middleware/rate-limit");
 const { buildLearning, evaluateProject, isChapterUnlocked } = require("../learning");
+const {
+  formatTemplateSubmissionForReview,
+  getChapterTemplate,
+  normalizeTemplateSubmission,
+  parseTemplateSubmission,
+  serializeTemplateSubmission,
+} = require("../chapter-templates");
 const { findCampaignTrial, campaignTrialStatus, findCampaignByCourse } = require("../campaign-service");
 function getKeroStructured() {
   return require("./mentor").callKeroStructured;
@@ -431,6 +438,7 @@ function normalizeAssessment(row) {
     id: row.id,
     chapterNumber: Number(row.chapter_number),
     attemptNumber: Number(row.attempt_number || 1),
+    templateSubmission: parseTemplateSubmission(row.template_text),
     templateScore: Number(row.template_score || 0),
     templateFeedback: row.template_feedback || "",
     questions: Array.isArray(row.questions) ? row.questions : [],
@@ -457,24 +465,35 @@ router.post("/:courseId/chapters/:chapterNumber/assessment/start", requireAuth, 
     if (!chapter) return res.status(400).json({ ok: false, error: "رقم الفصل غير صالح." });
     const access = await getAccess(req.userId, course.id);
     if (!access.canAccess) return res.status(403).json({ ok: false, error: "لا تملك صلاحية الوصول إلى هذا الكورس." });
-    const text = String(req.body?.templateText || "").trim();
-    if (text.length < 40) return res.status(400).json({ ok: false, error: "اكتب إجابة تطبيقية لا تقل عن 40 حرفًا." });
     const country = await getUserCountry(req.userId);
     const learning = await buildLearning({ userId: req.userId, course, access, country });
     const chapterData = learning.chapters[chapter - 1];
     if (!chapterData || !chapterData.unlocked) return res.status(403).json({ ok: false, error: "هذا الفصل مقفول حتى تنجح في تقييم الفصل السابق بنسبة 75% أو أكثر." });
+    if (!chapterData.result) return res.status(409).json({ ok: false, error: "أكمل Quiz الفصل أولًا ثم ابدأ التطبيق العملي." });
+    const chapterTemplate = getChapterTemplate(course.slug, chapter);
+    let storedTemplateText = String(req.body?.templateText || "").trim();
+    let reviewText = storedTemplateText;
+    if (chapterTemplate && req.body?.templateSubmission) {
+      const submission = normalizeTemplateSubmission(chapterTemplate, req.body.templateSubmission);
+      storedTemplateText = serializeTemplateSubmission(submission);
+      reviewText = formatTemplateSubmissionForReview(chapterTemplate, submission);
+    } else if (storedTemplateText.length < 40) {
+      return res.status(400).json({ ok: false, error: "اكتب إجابة تطبيقية لا تقل عن 40 حرفًا." });
+    }
     const task = chapterData.practicalTask || "طبّق المفاهيم الظاهرة في شرح الفصل على حالة عملية.";
-    const currentQuizContext = (chapterData.quiz?.questions || []).slice(0, 6).map((question, index) => `${index + 1}) ${question.q}`).join("\n");
-    const instruction = `قيّم تطبيق الطالب على المهمة العملية المشتقة من الفصل المنشور الحالي، ثم أنشئ 3 أسئلة قصيرة تقيس الفهم الحقيقي لهذا الفصل فقط.\nالكورس: ${course.title}\nالفصل الحالي: ${chapterData.title}\nمهمة التطبيق المشتقة من الفصل:\n${task}\nأسئلة الـQuiz الحالية لهذا الفصل، وهي مرجع إضافي للمفاهيم المطلوبة:\n${currentQuizContext || "لا توجد أسئلة Quiz متاحة؛ اعتمد على عنوان ومهمة الفصل فقط."}\nإجابة الطالب:\n${text}\n\nممنوع استخدام مهام أو أمثلة أو مفاهيم من فصل آخر أو من prompt قديم. قيّم مدى استخدام الطالب لمفاهيم هذا الفصل، واطلب قرارات وأدلة ومقاييس محددة. أعط درجة Template من 100، نقاط قوة واضحة، وملاحظات قابلة للتنفيذ. يجب أن تكون الأسئلة الثلاثة مشتقة مباشرة من محتوى الفصل الحالي وأسئلته، وليست عامة أو اختبار حفظ.`;
+    const reviewCriteria = chapterTemplate?.reviewCriteria?.map((criterion) => `- ${criterion}`).join("\n") || "- صحة تطبيق مفهوم الفصل\n- وضوح القرار\n- وجود نتيجة أو مقياس عملي";
+    const currentQuizContext = (chapterData.quiz?.questions || []).slice(0, 3).map((question, index) => `${index + 1}) ${question.q}`).join("\n");
+    const instruction = `راجع تطبيق الطالب بنفسك ولا تنفذ المهمة بدلًا منه.\nالكورس: ${course.title}\nالفصل: ${chapterData.title}\nالمفهوم: ${chapterTemplate?.concept || chapterData.title}\nالمهارة: ${chapterTemplate?.skill || "تطبيق مفهوم الفصل"}\nالمهمة:\n${task}\nمعايير المراجعة:\n${reviewCriteria}\nمرجع مختصر من Quiz الفصل:\n${currentQuizContext || "غير متاح"}\nتطبيق الطالب:\n${reviewText}\n\nأعط درجة Template من 100 وFeedback قصيرًا عمليًا بصيغة Review ثم Correction. حدد ما تم جيدًا وما يحتاج تعديلًا دون كتابة الحل الكامل للطالب. أنشئ 3 أسئلة فهم قصيرة مشتقة من مفهوم الفصل ومن قرارات الطالب، لا أسئلة حفظ ولا مفاهيم من فصل آخر.`;
     const evaluation = await getKeroStructured()(chapter, instruction, country, course.slug, "chapter_template_evaluation", templateEvaluationSchema);
     const { data: previousRows, error: previousError } = await supabase.from("chapter_assessments").select("id, attempt_number").eq("user_id", req.userId).eq("course_id", course.id).eq("chapter_number", chapter).order("attempt_number", { ascending: false }).limit(1);
     if (previousError) throw previousError;
     const attemptNumber = Number(previousRows?.[0]?.attempt_number || 0) + 1;
-    const { data: assessment, error } = await supabase.from("chapter_assessments").insert({ user_id: req.userId, course_id: course.id, chapter_number: chapter, attempt_number: attemptNumber, template_text: text, template_score: Number(evaluation.templateScore || 0), template_feedback: String(evaluation.feedback || ""), strengths: Array.isArray(evaluation.strengths) ? evaluation.strengths : [], questions: evaluation.questions, status: "questions_pending" }).select().single();
+    const { data: assessment, error } = await supabase.from("chapter_assessments").insert({ user_id: req.userId, course_id: course.id, chapter_number: chapter, attempt_number: attemptNumber, template_text: storedTemplateText, template_score: Number(evaluation.templateScore || 0), template_feedback: String(evaluation.feedback || ""), strengths: Array.isArray(evaluation.strengths) ? evaluation.strengths : [], questions: evaluation.questions, status: "questions_pending" }).select().single();
     if (error) throw error;
     res.status(201).json({ ok: true, task, assessment: normalizeAssessment(assessment) });
   } catch (e) {
     console.error("Chapter assessment start error:", e);
+    if (e.code === "INVALID_TEMPLATE_SUBMISSION") return res.status(400).json({ ok: false, error: e.message });
     if (["empty_reply", "upstream_error", "invalid_structured_reply"].includes(e.message)) return res.status(502).json({ ok: false, error: "تعذر على Kero تقييم الإجابة الآن. حاول مرة أخرى." });
     accessError(res, e);
   }
@@ -500,7 +519,12 @@ router.post("/:courseId/chapters/:chapterNumber/assessment/:assessmentId/submit"
     const quizScore = Number(chapterData?.result?.score || 0);
     const questionText = JSON.stringify(assessment.questions || [], null, 2);
     const currentQuizContext = (chapterData?.quiz?.questions || []).slice(0, 6).map((question, index) => `${index + 1}) ${question.q}`).join("\n");
-    const instruction = `قيّم إجابات الطالب عن أسئلة الفهم الثلاثة بعد قراءة Template السابق.\nالفصل الحالي: ${chapterData?.title || chapter}\nمفاهيم وأسئلة الـQuiz الحالية للفصل:\n${currentQuizContext || "غير متاحة"}\nTemplate الطالب:\n${assessment.template_text}\nأسئلة Kero المولدة من الفصل الحالي:\n${questionText}\nالإجابات:\n${JSON.stringify(answers, null, 2)}\n\nممنوع تقييم مفاهيم من فصل آخر أو من بيانات قديمة. أعط درجة فهم من 100، ونقاط قوة واضحة، وملاحظات محايدة، وحدد نقاط الضعف التي تمنع الطالب من الوصول إلى 75%. لا تمنح الدرجة بناءً على الأسلوب أو اللهجة؛ قيّم فقط فهم محتوى الفصل الحالي، منطق القرار، التطبيق، والأدلة.`;
+    const chapterTemplate = getChapterTemplate(course.slug, chapter);
+    const structuredSubmission = parseTemplateSubmission(assessment.template_text);
+    const reviewedTemplateText = structuredSubmission
+      ? formatTemplateSubmissionForReview(chapterTemplate, structuredSubmission)
+      : assessment.template_text;
+    const instruction = `قيّم إجابات الطالب عن أسئلة الفهم الثلاثة بعد قراءة تطبيقه السابق.\nالفصل الحالي: ${chapterData?.title || chapter}\nمفاهيم وأسئلة الـQuiz الحالية للفصل:\n${currentQuizContext || "غير متاحة"}\nتطبيق الطالب:\n${reviewedTemplateText}\nأسئلة Kero المولدة من الفصل الحالي:\n${questionText}\nالإجابات:\n${JSON.stringify(answers, null, 2)}\n\nممنوع تقييم مفاهيم من فصل آخر أو من بيانات قديمة. أعط درجة فهم من 100، ونقاط قوة واضحة، وملاحظات محايدة، وحدد نقاط الضعف التي تمنع الطالب من الوصول إلى 75%. لا تمنح الدرجة بناءً على الأسلوب أو اللهجة؛ قيّم فقط فهم محتوى الفصل الحالي، منطق القرار، التطبيق، والأدلة.`;
     const evaluation = await getKeroStructured()(chapter, instruction, country, course.slug, "chapter_understanding_evaluation", understandingEvaluationSchema);
     const templateScore = Number(assessment.template_score || 0);
     const understandingScore = Number(evaluation.understandingScore || 0);
