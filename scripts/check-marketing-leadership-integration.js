@@ -7,8 +7,8 @@ const path = require("path");
 const content = require("../data/course-content-marketing-leadership.json");
 const { getMentorProjectPrompt } = require("../src/mentor-projects");
 const { getGraduationProjectBrief } = require("../src/graduation-project-briefs");
-const { prepareCourseHtml } = require("../src/routes/content");
-const { chapterCountryContext } = require("../src/learning");
+const { prepareCourseHtml, shouldPreserveUploadedCourse } = require("../src/routes/content");
+const { chapterCountryContext, shouldPreserveUploadedCourseTitles } = require("../src/learning");
 const mentorRouter = require("../src/routes/mentor");
 if (typeof mentorRouter !== "function") throw new Error("Mentor router failed to load");
 
@@ -63,6 +63,12 @@ if (chapterCountryContext({ slug: "marketing-launch" }, null, egypt, 1) !== egyp
 const leadershipWithCountry = prepareCourseHtml(sourceHtml, "index.html", "marketing-leadership", 77, egypt);
 if (leadershipWithCountry.includes('id="ql-country-context"')) {
   throw new Error("Marketing Leadership chapter must not inject a generic local example");
+}
+if (!shouldPreserveUploadedCourse(" Marketing-Leadership ")) {
+  throw new Error("Marketing Leadership uploaded ZIP must bypass lesson variants and dialect rewriting");
+}
+if (!shouldPreserveUploadedCourseTitles(" Marketing-Leadership ")) {
+  throw new Error("Marketing Leadership titles must bypass country variants");
 }
 const launchWithCountry = prepareCourseHtml(sourceHtml, "index.html", "marketing-launch", 4, egypt);
 if (!launchWithCountry.includes('id="ql-country-context"')) {
