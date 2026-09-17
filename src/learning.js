@@ -29,6 +29,17 @@ const MARKETING_GROWTH_MODERN_TITLES = [
   "النظام التسويقي المتكامل",
 ];
 
+const PRESERVE_UPLOADED_COURSE_TITLE_SLUGS = new Set([
+  "marketing-launch",
+  "marketing-growth",
+  "marketing-mastery",
+  "marketing-leadership",
+]);
+
+function shouldPreserveUploadedCourseTitles(courseSlug) {
+  return PRESERVE_UPLOADED_COURSE_TITLE_SLUGS.has(String(courseSlug || "").trim().toLowerCase());
+}
+
 function chapterTitle(courseSlug, number, lessonTitle, quizTitle) {
   if (String(courseSlug || "").trim().toLowerCase() === "marketing-growth" && MARKETING_GROWTH_MODERN_TITLES[number]) {
     return MARKETING_GROWTH_MODERN_TITLES[number];
@@ -158,7 +169,7 @@ async function buildLearning({ userId, course, access, country, preview = false 
     const quiz = quizByKey.get(`quiz-${n}`) || quizzes.find((item) => chapterNumber(item.quiz_key) === n) || null;
     const lessonLocal = lesson ? lessonVariant(lesson) : null;
     const quizLocal = quiz ? quizVariant(quiz) : null;
-    const preserveUploadedCourseTitles = ['marketing-launch', 'marketing-growth', 'marketing-mastery'].includes(String(course.slug || '').trim().toLowerCase());
+    const preserveUploadedCourseTitles = shouldPreserveUploadedCourseTitles(course.slug);
     const attempt = quiz ? bestAttempt(attemptsByQuiz.get(quiz.id) || []) : null;
     const previous = chapters[n - 2];
     const assessment = latestAssessmentByChapter.get(n) || null;
@@ -345,4 +356,5 @@ module.exports = {
   buildLearning,
   evaluateProject,
   isChapterUnlocked,
+  shouldPreserveUploadedCourseTitles,
 };

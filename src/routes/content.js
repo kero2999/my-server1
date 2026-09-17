@@ -10,6 +10,16 @@ const { injectContentDialect, rewriteHtmlTextNodes } = require("../content-diale
 
 const router = express.Router();
 const PUBLIC_MENTOR_IMAGE = "https://www.quadralevel.com/images/mentor-avatar.jpeg";
+const PRESERVE_UPLOADED_COURSE_SLUGS = new Set([
+  "marketing-launch",
+  "marketing-growth",
+  "marketing-mastery",
+  "marketing-leadership",
+]);
+
+function shouldPreserveUploadedCourse(courseSlug) {
+  return PRESERVE_UPLOADED_COURSE_SLUGS.has(String(courseSlug || "").trim().toLowerCase());
+}
 
 function courseIdentifier(courseSlug, courseId) {
   return String(courseSlug || courseId || "").trim();
@@ -266,8 +276,8 @@ router.get("/:courseId/*", async (req, res) => {
       const hasExplicitLessonVariant = Boolean(lessonVariant?.content_html);
       const courseSlug = String(course.slug || "").trim().toLowerCase();
       const isEgyptianMarketingLaunch = courseSlug === "marketing-launch" && country.countryCode === "EG" && requestedChapter > 0;
-      const preserveUploadedCourse = ["marketing-launch", "marketing-growth", "marketing-mastery"].includes(courseSlug);
-      // For uploaded Launch/Growth/Mastery content, the published ZIP is the source of truth.
+      const preserveUploadedCourse = shouldPreserveUploadedCourse(courseSlug);
+      // For uploaded Launch/Growth/Mastery/Leadership content, the published ZIP is the source of truth.
       // Do not let legacy lesson variants or dialect rewriting alter its wording.
       const usePublishedSource = preserveUploadedCourse || !hasExplicitLessonVariant || isEgyptianMarketingLaunch;
       const htmlBuffer = usePublishedSource ? sourceBuffer : Buffer.from(String(lessonVariant.content_html), "utf8");
@@ -288,3 +298,4 @@ router.get("/:courseId/*", async (req, res) => {
 
 module.exports = router;
 module.exports.prepareCourseHtml = prepareCourseHtml;
+module.exports.shouldPreserveUploadedCourse = shouldPreserveUploadedCourse;
