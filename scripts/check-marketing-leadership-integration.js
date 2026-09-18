@@ -46,7 +46,7 @@ if (/href=["']quiz\.html/i.test(prepared)) throw new Error("Legacy local quiz li
 if (!prepared.includes("النص الأصلي للمستخدم لا يتغير")) throw new Error("Uploaded text was unexpectedly rewritten");
 if (prepared.includes("ql-country-dialect") || prepared.includes("ql-country-context")) throw new Error("Legacy injected localization artifacts remain");
 const howToMake = renderHowToMakeSection("marketing-leadership", 1);
-if (!howToMake.includes('id="ql-how-to-make"') || !howToMake.includes("المشروع المقترح") || !howToMake.includes("هدف المشروع") || !howToMake.includes("كيف نفذنا المشروع خطوة بخطوة") || !howToMake.includes("ماذا كتبنا في المشروع؟")) {
+if (!howToMake.includes('id="ql-how-to-make"') || !howToMake.includes("المشروع المقترح") || !howToMake.includes("هدف المشروع") || !howToMake.includes("كيف نفذنا المشروع خطوة بخطوة") || !howToMake.includes("مثال مكتمل أمامك") || !howToMake.includes("كيف وصلنا للقرار؟")) {
   throw new Error("HOW TO MAKE section is incomplete");
 }
 
