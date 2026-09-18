@@ -65,6 +65,27 @@ function publicChapterTemplate(courseSlug, chapterNumber) {
   return studentTemplate;
 }
 
+function publicHowToMake(courseSlug, chapterNumber) {
+  const template = getChapterTemplate(courseSlug, chapterNumber);
+  if (!template) return null;
+  const steps = template.fields.map((field, index) => ({
+    number: index + 1,
+    title: field.label,
+    what: `تعال نطبّق خطوة «${field.label}» على الحالة بدل الاكتفاء بالتعريف النظري.`,
+    example: `في حالة ${template.scenario} نستخدم هذه الخطوة لتحديد قرار عملي واضح مرتبط بـ${template.concept}.`,
+    why: `لأن ${field.label} يساعدنا على تحويل ${template.skill} إلى قرار يمكن شرحه ومراجعته.`,
+  }));
+  return {
+    title: "HOW TO MAKE — كيف نصنع؟",
+    subtitle: "كيف نطبق ما تعلمناه؟",
+    introduction: `تعال نشوف إزاي بنطبّق «${template.concept}» خطوة بخطوة على حالة عملية، من غير ما نحول الشرح إلى اختبار.`,
+    steps,
+    example: template.scenario,
+    explanation: `نحن لا نكتفي بسرد الخطوات؛ نربط كل قرار بالمهارة المطلوبة: ${template.skill}.`,
+    result: `في النهاية نصل إلى نتيجة عملية يمكن استخدامها في Template الفصل: ${template.resultPrompt}`,
+  };
+}
+
 function practicalTaskText(template) {
   if (!template) return "طبّق أهم مفهوم في الفصل على حالة عملية، ثم وضّح القرار والنتيجة.";
   const steps = template.fields.map((field, index) => `${index + 1}) ${field.label}`).join("\n");
@@ -160,6 +181,7 @@ module.exports = {
   normalizeTemplateSubmission,
   parseTemplateSubmission,
   practicalTaskText,
+  publicHowToMake,
   publicChapterTemplate,
   serializeTemplateSubmission,
   validateChapterTemplateDefinitions,

@@ -7,6 +7,7 @@ const { findPublishedCourse, getAccess, resolveEntryFile } = require("./courses"
 const { isChapterUnlocked } = require("../learning");
 const { getUserCountry, getCourseVariants } = require("../country-service");
 const { injectContentDialect, rewriteHtmlTextNodes } = require("../content-dialect");
+const { publicHowToMake } = require("../chapter-templates");
 
 const router = express.Router();
 const PUBLIC_MENTOR_IMAGE = "https://www.quadralevel.com/images/mentor-avatar.jpeg";
@@ -54,6 +55,13 @@ function safeRelativePath(value) {
 
 function escapeHtml(value) {
   return String(value == null ? "" : value).replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[character]));
+}
+
+function renderHowToMakeSection(courseSlug, chapterNumber) {
+  const howToMake = publicHowToMake(courseSlug, chapterNumber);
+  if (!howToMake) return "";
+  const steps = howToMake.steps.map((step) => `<article class="ql-how-step"><div class="ql-how-number">${String(step.number).padStart(2, "0")}</div><div><h4>${escapeHtml(step.title)}</h4><p><strong>ماذا نفعل؟</strong> ${escapeHtml(step.what)}</p><p class="ql-how-example"><strong>مثال عملي:</strong> ${escapeHtml(step.example)}</p><p><strong>لماذا؟</strong> ${escapeHtml(step.why)}</p></div></article>`).join("");
+  return `<style id="ql-how-to-make-style">.ql-how-to-make{width:min(1120px,calc(100% - 32px));margin:42px auto 120px;padding:28px;border:1px solid rgba(201,168,106,.34);border-radius:24px;background:linear-gradient(145deg,rgba(201,168,106,.12),rgba(20,18,16,.72));color:inherit;box-shadow:0 18px 42px rgba(0,0,0,.16);font-family:inherit}.ql-how-to-make h2{margin:0 0 7px;color:#c9a86a;font-size:clamp(1.2rem,2.4vw,1.8rem)}.ql-how-subtitle{margin:0 0 8px;font-size:1.05rem;font-weight:800}.ql-how-intro,.ql-how-result{line-height:1.9;color:rgba(255,255,255,.78)}.ql-how-steps{display:grid;gap:12px;margin-top:22px}.ql-how-step{display:grid;grid-template-columns:45px 1fr;gap:14px;padding:16px;border:1px solid rgba(201,168,106,.2);border-radius:16px;background:rgba(10,10,12,.28)}.ql-how-number{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:rgba(201,168,106,.18);color:#c9a86a;font-weight:900}.ql-how-step h4{margin:0 0 8px;color:#f0d79a;font-size:1.02rem}.ql-how-step p{margin:5px 0;line-height:1.8;color:rgba(255,255,255,.76)}.ql-how-example{padding:8px 10px;border-inline-start:3px solid #c9a86a;background:rgba(201,168,106,.07)}.ql-how-result{margin:18px 0 0;padding:14px;border-radius:14px;background:rgba(63,143,125,.1);border:1px solid rgba(63,143,125,.3)}@media(max-width:640px){.ql-how-to-make{width:calc(100% - 20px);padding:18px;border-radius:18px}.ql-how-step{grid-template-columns:34px 1fr;padding:12px;gap:10px}.ql-how-number{width:32px;height:32px;font-size:.78rem}}</style><section id="ql-how-to-make" class="ql-how-to-make" dir="rtl"><h2>🛠️ ${escapeHtml(howToMake.title)}</h2><p class="ql-how-subtitle">${escapeHtml(howToMake.subtitle)}</p><p class="ql-how-intro">${escapeHtml(howToMake.introduction)}</p><div class="ql-how-steps">${steps}</div><p class="ql-how-result"><strong>النتيجة:</strong> ${escapeHtml(howToMake.result)}</p></section>`;
 }
 
 function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "", courseId = "", country = null) {
@@ -122,6 +130,9 @@ function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "", courseId
     if (!hasMentorScript) {
       const mentorBootstrap = '<script>(function(){function mount(){if(window.LMSMentor&&!document.getElementById("mentor-fab"))window.LMSMentor.mount(typeof CHAPTER_NUM==="number"?CHAPTER_NUM:1);}function load(){if(window.LMSMentor){mount();return;}var script=document.createElement("script");script.src="https://www.quadralevel.com/js/mentor.js";script.async=false;script.onload=mount;document.head.appendChild(script);}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",load,{once:true});else load();})();</script>';
       sanitized = sanitized.replace(/<\/body>/i, mentorBootstrap + '</body>');
+    }
+    if (!/id=(['"])ql-how-to-make\1/i.test(sanitized)) {
+      sanitized = sanitized.replace(/<\/body>/i, renderHowToMakeSection(courseSlug, chapterNumber) + '</body>');
     }
     const mentorImageFix = '<script>(function(){var image=' + JSON.stringify(PUBLIC_MENTOR_IMAGE) + ';var dashboard=' + JSON.stringify(dashboardUrl) + ';function sync(){document.querySelectorAll(`#mentor-fab img,#mentor-panel img,.mentor-topbar img,.mentor-avatar-small,.mh-icon img,img[src*="kero"],img[src*="mentor"]`).forEach(function(node){if(node.getAttribute("src")!==image)node.src=image;});document.querySelectorAll("a").forEach(function(node){var href=node.getAttribute("href")||"";var label=node.textContent||"";if(/dashboard\\.html|(?:^|\\/)courses(?:\\.html)?(?:[?#]|$)/i.test(href)&&/لوحتي|لوحة التعلم/i.test(label)){node.setAttribute("href",dashboard);node.setAttribute("target","_top");}});}function boot(){sync();if(window.MutationObserver){new MutationObserver(sync).observe(document.documentElement,{childList:true,subtree:true});}}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot,{once:true});else boot();})();</script>';
     sanitized = sanitized.replace(/<\/body>/i, mentorImageFix + '</body>');
@@ -303,3 +314,4 @@ router.get("/:courseId/*", async (req, res) => {
 module.exports = router;
 module.exports.prepareCourseHtml = prepareCourseHtml;
 module.exports.shouldPreserveUploadedCourse = shouldPreserveUploadedCourse;
+module.exports.renderHowToMakeSection = renderHowToMakeSection;
