@@ -71,11 +71,11 @@ function publicHowToMake(courseSlug, chapterNumber) {
   const steps = template.fields.map((field, index) => ({
     number: index + 1,
     title: field.label,
-    what: `في مشروع «${template.taskTitle}» نطبّق هذه الخطوة أولًا، ثم نستخدم نتيجتها لاتخاذ القرار التالي.`,
+    what: `في مشروع «${template.taskTitle}» نبدأ بهذه الخطوة لأننا نحتاج معلومة محددة قبل أن نقرر ماذا نفعل. لا نكتب كلامًا عامًا؛ نأخذ الحالة كما هي ونحوّلها إلى معلومة يمكن استخدامها في الخطوة التالية.`,
     example: String(field.placeholder || "مثال عملي مرتبط بالحالة").replace(/^مثال\s*:\s*/i, ""),
     filledValue: String(field.placeholder || "مثال عملي مرتبط بالحالة").replace(/^مثال\s*:\s*/i, ""),
-    why: `هذه الإجابة تجعل تطبيق ${template.skill} مبنيًا على حالة واضحة، وليس على كلام عام.`,
-    explanation: `نشرح هنا كيف تحولت المعلومة إلى قرار داخل المشروع، وليس مجرد تعريف نظري.`,
+    why: `هذه الخطوة مهمة لأنها تمنعنا من التخمين. عندما تكون المعلومة محددة، نستطيع أن نختار رسالة أو قناة أو قرارًا مناسبًا بدل أن نتعامل مع كل الناس بالطريقة نفسها.`,
+    explanation: `نقرأ المثال ثم نسأل: ماذا تخبرنا هذه المعلومة عن العميل أو السوق؟ بعد ذلك نربطها مباشرة بالقرار التسويقي التالي داخل المشروع، وبهذا نطبق ${template.skill} عمليًا بدل حفظ تعريفه.`,
     visualType: index === 0 ? "product-card" : index === template.fields.length - 1 ? "result-card" : "process-card",
   }));
   return {
