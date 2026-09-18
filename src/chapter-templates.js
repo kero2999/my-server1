@@ -75,11 +75,14 @@ function publicHowToMake(courseSlug, chapterNumber) {
     example: String(field.placeholder || "مثال عملي مرتبط بالحالة").replace(/^مثال\s*:\s*/i, ""),
     filledValue: String(field.placeholder || "مثال عملي مرتبط بالحالة").replace(/^مثال\s*:\s*/i, ""),
     why: `هذه الإجابة تجعل تطبيق ${template.skill} مبنيًا على حالة واضحة، وليس على كلام عام.`,
+    explanation: `نشرح هنا كيف تحولت المعلومة إلى قرار داخل المشروع، وليس مجرد تعريف نظري.`,
+    visualType: index === 0 ? "product-card" : index === template.fields.length - 1 ? "result-card" : "process-card",
   }));
   return {
     title: "HOW TO MAKE — كيف نصنع؟",
     subtitle: "كيف نطبق ما تعلمناه؟",
     introduction: `تعال نشوف إزاي بنطبّق «${template.concept}» على مثال واضح من أرض الواقع.`,
+    realExample: template.scenario,
     caseTitle: template.taskTitle,
     caseDescription: template.taskDescription,
     projectGoal: `هدف المشروع: الوصول إلى ${template.resultPrompt.replace(/^.*?:\s*/, "")}`,
