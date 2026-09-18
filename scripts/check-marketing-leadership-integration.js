@@ -7,7 +7,7 @@ const path = require("path");
 const content = require("../data/course-content-marketing-leadership.json");
 const { getMentorProjectPrompt } = require("../src/mentor-projects");
 const { getGraduationProjectBrief } = require("../src/graduation-project-briefs");
-const { prepareCourseHtml, shouldPreserveUploadedCourse } = require("../src/routes/content");
+const { prepareCourseHtml, shouldPreserveUploadedCourse, renderHowToMakeSection } = require("../src/routes/content");
 const { chapterCountryContext, shouldPreserveUploadedCourseTitles } = require("../src/learning");
 const mentorRouter = require("../src/routes/mentor");
 if (typeof mentorRouter !== "function") throw new Error("Mentor router failed to load");
@@ -45,6 +45,10 @@ if (!prepared.includes('target="_top"')) throw new Error("Rewritten navigation m
 if (/href=["']quiz\.html/i.test(prepared)) throw new Error("Legacy local quiz link remains in prepared HTML");
 if (!prepared.includes("النص الأصلي للمستخدم لا يتغير")) throw new Error("Uploaded text was unexpectedly rewritten");
 if (prepared.includes("ql-country-dialect") || prepared.includes("ql-country-context")) throw new Error("Legacy injected localization artifacts remain");
+const howToMake = renderHowToMakeSection("marketing-leadership", 1);
+if (!howToMake.includes('id="ql-how-to-make"') || !howToMake.includes("ماذا نفعل؟") || !howToMake.includes("مثال عملي")) {
+  throw new Error("HOW TO MAKE section is incomplete");
+}
 
 const egypt = {
   countryCode: "EG",
