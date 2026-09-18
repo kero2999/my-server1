@@ -73,6 +73,7 @@ function publicHowToMake(courseSlug, chapterNumber) {
     title: field.label,
     what: `نبدأ بـ${field.label} بطريقة بسيطة ومباشرة.`,
     example: String(field.placeholder || "مثال عملي مرتبط بالحالة").replace(/^مثال\s*:\s*/i, ""),
+    filledValue: String(field.placeholder || "مثال عملي مرتبط بالحالة").replace(/^مثال\s*:\s*/i, ""),
     why: `لأن هذه المعلومة تساعدنا على اتخاذ قرار صحيح في ${template.skill}.`,
   }));
   return {
