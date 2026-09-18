@@ -68,14 +68,22 @@ function publicChapterTemplate(courseSlug, chapterNumber) {
 function publicHowToMake(courseSlug, chapterNumber) {
   const template = getChapterTemplate(courseSlug, chapterNumber);
   if (!template) return null;
+  const demoAnswers = normalizeSlug(courseSlug) === "marketing-launch" && Number(chapterNumber) === 1
+    ? [
+      { value: "المشكلة: العميل يجد صعوبة في اختيار ملابس صيفية مريحة ومناسبة للخروج اليومي، لأن بعض الخيارات تبدو جميلة لكنها ثقيلة أو غير عملية.", explanation: "وجدنا المشكلة من خلال ملاحظة أسئلة العملاء قبل الشراء، ومراجعة التعليقات، وسؤال عدد من العملاء عن سبب ترددهم." },
+      { value: "الحل: نعرض مجموعة صيفية من خامات خفيفة ومريحة، بتصميمات تصلح للخروج اليومي، ونوضح المقاسات وطريقة تنسيق كل قطعة.", explanation: "الحل لا يكتفي بقول جودة عالية؛ بل يعالج سبب التردد نفسه: الراحة وسهولة اختيار اللبس." },
+      { value: "الاستغلال التسويقي: نبني الرسالة حول الراحة والاستخدام اليومي: «لبس صيفي مريح تقدر تتحرك بيه طول اليوم». ونستخدم صورًا توضح القماش والتنسيق بدل صورة المنتج وحدها.", explanation: "هنا تحولت المشكلة إلى فائدة يفهمها العميل، فأصبح الإعلان يتحدث عن حياته وليس عن مواصفات المنتج فقط." },
+      { value: "القرار: نبدأ باستهداف العملاء الذين يبحثون عن ملابس صيفية عملية للخروج اليومي، ونختبر رسالة الراحة مع عرض المجموعة الجديدة.", explanation: "اخترنا هذا القرار لأن المشكلة ظهرت عند هذه الفئة تحديدًا، ولأن الرسالة يمكن اختبارها بقياس النقرات والطلبات." },
+    ]
+    : [];
   const steps = template.fields.map((field, index) => ({
     number: index + 1,
     title: field.label,
     what: `في مشروع «${template.taskTitle}» نبدأ بهذه الخطوة لأننا نحتاج معلومة محددة قبل أن نقرر ماذا نفعل. لا نكتب كلامًا عامًا؛ نأخذ الحالة كما هي ونحوّلها إلى معلومة يمكن استخدامها في الخطوة التالية.`,
-    example: String(field.placeholder || "مثال عملي مرتبط بالحالة").replace(/^مثال\s*:\s*/i, ""),
-    filledValue: String(field.placeholder || "مثال عملي مرتبط بالحالة").replace(/^مثال\s*:\s*/i, ""),
+    example: demoAnswers[index]?.value || String(field.placeholder || "مثال عملي مرتبط بالحالة").replace(/^مثال\s*:\s*/i, ""),
+    filledValue: demoAnswers[index]?.value || String(field.placeholder || "مثال عملي مرتبط بالحالة").replace(/^مثال\s*:\s*/i, ""),
     why: `هذه الخطوة مهمة لأنها تمنعنا من التخمين. عندما تكون المعلومة محددة، نستطيع أن نختار رسالة أو قناة أو قرارًا مناسبًا بدل أن نتعامل مع كل الناس بالطريقة نفسها.`,
-    explanation: `نقرأ المثال ثم نسأل: ماذا تخبرنا هذه المعلومة عن العميل أو السوق؟ بعد ذلك نربطها مباشرة بالقرار التسويقي التالي داخل المشروع، وبهذا نطبق ${template.skill} عمليًا بدل حفظ تعريفه.`,
+    explanation: demoAnswers[index]?.explanation || `نقرأ المثال ثم نسأل: ماذا تخبرنا هذه المعلومة عن العميل أو السوق؟ بعد ذلك نربطها مباشرة بالقرار التسويقي التالي داخل المشروع، وبهذا نطبق ${template.skill} عمليًا بدل حفظ تعريفه.`,
     visualType: index === 0 ? "product-card" : index === template.fields.length - 1 ? "result-card" : "process-card",
   }));
   return {
@@ -88,7 +96,9 @@ function publicHowToMake(courseSlug, chapterNumber) {
     projectGoal: `هدف المشروع: الوصول إلى ${template.resultPrompt.replace(/^.*?:\s*/, "")}`,
     steps,
     example: template.scenario,
-    explanation: `نبدأ بالحالة الواقعية، نملأ كل خانة بمعلومة محددة، ثم نجمع الإجابات في قرار واحد يمكن تنفيذه وقياسه.`,
+    explanation: normalizeSlug(courseSlug) === "marketing-launch" && Number(chapterNumber) === 1
+      ? "بدأنا من مشكلة حقيقية، بحثنا عن سببها، صممنا حلًا يعالجها، ثم حولنا الحل إلى رسالة تسويقية وقرار قابل للاختبار. تأثير القرار أن العميل يفهم القيمة بسرعة، ونستطيع قياس هل الرسالة أدت إلى تفاعل وطلبات أم لا."
+      : `نبدأ بالحالة الواقعية، نملأ كل خانة بمعلومة محددة، ثم نجمع الإجابات في قرار واحد يمكن تنفيذه وقياسه.`,
     result: template.resultPrompt,
   };
 }
