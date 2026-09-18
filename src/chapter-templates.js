@@ -71,10 +71,10 @@ function publicHowToMake(courseSlug, chapterNumber) {
   const steps = template.fields.map((field, index) => ({
     number: index + 1,
     title: field.label,
-    what: `نبدأ بـ${field.label} بطريقة بسيطة ومباشرة.`,
+    what: `في مشروع «${template.taskTitle}» نطبّق هذه الخطوة أولًا، ثم نستخدم نتيجتها لاتخاذ القرار التالي.`,
     example: String(field.placeholder || "مثال عملي مرتبط بالحالة").replace(/^مثال\s*:\s*/i, ""),
     filledValue: String(field.placeholder || "مثال عملي مرتبط بالحالة").replace(/^مثال\s*:\s*/i, ""),
-    why: `لأن هذه المعلومة تساعدنا على اتخاذ قرار صحيح في ${template.skill}.`,
+    why: `هذه الإجابة تجعل تطبيق ${template.skill} مبنيًا على حالة واضحة، وليس على كلام عام.`,
   }));
   return {
     title: "HOW TO MAKE — كيف نصنع؟",
@@ -82,9 +82,10 @@ function publicHowToMake(courseSlug, chapterNumber) {
     introduction: `تعال نشوف إزاي بنطبّق «${template.concept}» على مثال واضح من أرض الواقع.`,
     caseTitle: template.taskTitle,
     caseDescription: template.taskDescription,
+    projectGoal: `هدف المشروع: الوصول إلى ${template.resultPrompt.replace(/^.*?:\s*/, "")}`,
     steps,
     example: template.scenario,
-    explanation: `الفكرة ببساطة: نستخدم ${template.skill} حتى ننتقل من فهم المشكلة إلى قرار عملي.`,
+    explanation: `نبدأ بالحالة الواقعية، نملأ كل خانة بمعلومة محددة، ثم نجمع الإجابات في قرار واحد يمكن تنفيذه وقياسه.`,
     result: template.resultPrompt,
   };
 }
