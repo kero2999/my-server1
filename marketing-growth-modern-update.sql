@@ -1,9 +1,17 @@
 -- Marketing Growth updated ZIP: 12 lessons and 12 quizzes. Safe to rerun.
 -- Updates only lessons and quizzes. Graduation project remains unchanged.
 begin;
+
+-- Remove duplicate chapter-one aliases left by older uploads. The application uses ch1.
+with course_row as (select id from courses where slug = 'marketing-growth')
+delete from lessons
+using course_row
+where lessons.course_id = course_row.id
+  and lessons.lesson_key in ('index', 'index.html');
+
 with course_row as (select id from courses where slug = 'marketing-growth')
 insert into lessons (course_id, lesson_key, title, position, is_preview)
-select course_row.id, 'index', 'البحث التسويقي', 1, true
+select course_row.id, 'ch1', 'البحث التسويقي', 1, true
 from course_row
 on conflict (course_id, lesson_key) do update set title = excluded.title, position = excluded.position, is_preview = excluded.is_preview;
 

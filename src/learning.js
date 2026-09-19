@@ -3,12 +3,49 @@ const supabase = require("./db");
 const { getCountryConfig, getCourseVariants, normalizeCountryCode } = require("./country-service");
 const { getGraduationProjectBrief, validateGraduationProjectBrief } = require("./graduation-project-briefs");
 const { getChapterProjectBrief } = require("./chapter-projects");
+const { getChapterTemplate, parseTemplateSubmission, practicalTaskText, publicChapterTemplate } = require("./chapter-templates");
 
 const PASSED_PROJECT_STATUSES = new Set(["passed", "approved", "completed"]);
 
 function chapterNumber(value) {
-  const match = String(value || "").match(/(?:quiz-|ch(?:apter)?-?)(\d+)/i);
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "index" || normalized === "index.html") return 1;
+  const match = normalized.match(/(?:quiz-|ch(?:apter)?-?)(\d+)/i);
   return match ? Number(match[1]) : 0;
+}
+
+const MARKETING_GROWTH_MODERN_TITLES = [
+  "",
+  "البحث التسويقي",
+  "التحليل المتقدم للعميل",
+  "تحليل المنافسين",
+  "التموضع التسويقي",
+  "استراتيجية العرض",
+  "القمع التسويقي",
+  "توليد العملاء المحتملين",
+  "تحسين التحويل",
+  "التسويق المدفوع",
+  "الأتمتة التسويقية",
+  "الاحتفاظ بالعملاء والنمو",
+  "النظام التسويقي المتكامل",
+];
+
+const PRESERVE_UPLOADED_COURSE_TITLE_SLUGS = new Set([
+  "marketing-launch",
+  "marketing-growth",
+  "marketing-mastery",
+  "marketing-leadership",
+]);
+
+function shouldPreserveUploadedCourseTitles(courseSlug) {
+  return PRESERVE_UPLOADED_COURSE_TITLE_SLUGS.has(String(courseSlug || "").trim().toLowerCase());
+}
+
+function chapterTitle(courseSlug, number, lessonTitle, quizTitle) {
+  if (String(courseSlug || "").trim().toLowerCase() === "marketing-growth" && MARKETING_GROWTH_MODERN_TITLES[number]) {
+    return MARKETING_GROWTH_MODERN_TITLES[number];
+  }
+  return lessonTitle || quizTitle || `الفصل ${number}`;
 }
 
 function quizQuestions(questions) {
@@ -31,7 +68,7 @@ function bestAttempt(attempts) {
 async function loadChapterAssessments(userId, courseId) {
   const { data, error } = await supabase
     .from("chapter_assessments")
-    .select("id, chapter_number, attempt_number, template_score, template_feedback, questions, answers, understanding_score, understanding_feedback, chapter_score, quiz_score, passed, strengths, weaknesses, final_feedback, status, created_at, updated_at")
+    .select("id, chapter_number, attempt_number, template_text, template_score, template_feedback, questions, answers, understanding_score, understanding_feedback, chapter_score, quiz_score, passed, strengths, weaknesses, final_feedback, status, created_at, updated_at")
     .eq("user_id", userId)
     .eq("course_id", courseId)
     .order("created_at", { ascending: false });
@@ -133,17 +170,18 @@ async function buildLearning({ userId, course, access, country, preview = false 
     const quiz = quizByKey.get(`quiz-${n}`) || quizzes.find((item) => chapterNumber(item.quiz_key) === n) || null;
     const lessonLocal = lesson ? lessonVariant(lesson) : null;
     const quizLocal = quiz ? quizVariant(quiz) : null;
-    const preserveUploadedCourseTitles = ['marketing-launch', 'marketing-growth', 'marketing-mastery'].includes(String(course.slug || '').trim().toLowerCase());
+    const preserveUploadedCourseTitles = shouldPreserveUploadedCourseTitles(course.slug);
     const attempt = quiz ? bestAttempt(attemptsByQuiz.get(quiz.id) || []) : null;
     const previous = chapters[n - 2];
     const assessment = latestAssessmentByChapter.get(n) || null;
+    const chapterTemplate = getChapterTemplate(course.slug, n);
     const unlocked = Boolean(access?.admin) || n === 1 || Boolean(previous && (assessmentSystemEnabled ? previous.assessment?.passed : previous.result?.passed));
     const lessonProgress = lesson ? progress.find((item) => item.lesson_key === lesson.lesson_key) : null;
     chapters.push({
       number: n,
       lessonKey: lesson ? lesson.lesson_key : `ch${n}`,
       title: preserveUploadedCourseTitles
-        ? (lesson?.title || quiz?.title || `الفصل ${n}`)
+        ? chapterTitle(course.slug, n, lesson?.title, quiz?.title)
         : (lessonLocal?.title || quizLocal?.title || lesson?.title || quiz?.title || `الفصل ${n}`),
       countryContext: chapterCountryContext(course, lessonLocal, resolvedCountry, n),
       position: lesson?.position || n,
@@ -162,8 +200,12 @@ async function buildLearning({ userId, course, access, country, preview = false 
         strengths: Array.isArray(assessment.strengths) ? assessment.strengths : [],
         weaknesses: Array.isArray(assessment.weaknesses) ? assessment.weaknesses : [],
         finalFeedback: assessment.final_feedback || assessment.understanding_feedback || assessment.template_feedback || "",
+        templateSubmission: parseTemplateSubmission(assessment.template_text),
       } : null,
-      practicalTask: `${buildCurrentChapterTask(course.slug, n, lesson?.title || quiz?.title || `الفصل ${n}`, quiz?.questions)}\n\nالحالة المختارة لهذا الفصل:\n${getChapterProjectBrief(course.slug, n)}`,
+      practicalTask: chapterTemplate
+        ? practicalTaskText(chapterTemplate)
+        : `${buildCurrentChapterTask(course.slug, n, chapterTitle(course.slug, n, lesson?.title || quiz?.title, quiz?.questions), quiz?.questions)}\n\nالحالة المختارة لهذا الفصل:\n${getChapterProjectBrief(course.slug, n)}`,
+      practicalTemplate: publicChapterTemplate(course.slug, n),
 
       chapterScoreRequired: 75,
       progress: Number(lessonProgress?.progress || 0),
@@ -320,4 +362,5 @@ module.exports = {
   buildLearning,
   evaluateProject,
   isChapterUnlocked,
+  shouldPreserveUploadedCourseTitles,
 };

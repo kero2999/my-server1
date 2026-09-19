@@ -7,8 +7,8 @@ const path = require("path");
 const content = require("../data/course-content-marketing-leadership.json");
 const { getMentorProjectPrompt } = require("../src/mentor-projects");
 const { getGraduationProjectBrief } = require("../src/graduation-project-briefs");
-const { prepareCourseHtml } = require("../src/routes/content");
-const { chapterCountryContext } = require("../src/learning");
+const { prepareCourseHtml, shouldPreserveUploadedCourse, renderHowToMakeSection } = require("../src/routes/content");
+const { chapterCountryContext, shouldPreserveUploadedCourseTitles } = require("../src/learning");
 const mentorRouter = require("../src/routes/mentor");
 if (typeof mentorRouter !== "function") throw new Error("Mentor router failed to load");
 
@@ -35,7 +35,7 @@ if (rubricTotal !== 100) {
   throw new Error(`Graduation project rubric must equal 100, found ${rubricTotal}`);
 }
 
-const sourceHtml = Buffer.from(`<!doctype html><html data-protected="true"><head></head><body><a href="dashboard.html">Dashboard</a><a class="quiz-link" href="quiz.html?ch=12">Quiz</a><script>location.replace('quiz.html?ch=12')</script></body></html>`);
+const sourceHtml = Buffer.from(`<!doctype html><html data-protected="true"><head></head><body><p>النص الأصلي للمستخدم لا يتغير</p><aside id="ql-country-context">مثال محقون قديم</aside><script id="ql-country-dialect">window.__legacyDialect=true;</script><a href="dashboard.html">Dashboard</a><a class="quiz-link" href="quiz.html?ch=12">Quiz</a><script>location.replace('quiz.html?ch=12')</script></body></html>`);
 const prepared = prepareCourseHtml(sourceHtml, "ch12.html", "marketing-leadership", 77, null);
 const expectedDashboard = "https://www.quadralevel.com/dashboard/marketing-leadership";
 const expectedQuiz = "https://www.quadralevel.com/quiz/marketing-leadership/chapter/12";
@@ -43,6 +43,12 @@ if (!prepared.includes(expectedDashboard)) throw new Error("Dashboard URL was no
 if (!prepared.includes(expectedQuiz)) throw new Error("Quiz URL was not rewritten");
 if (!prepared.includes('target="_top"')) throw new Error("Rewritten navigation must escape the course iframe");
 if (/href=["']quiz\.html/i.test(prepared)) throw new Error("Legacy local quiz link remains in prepared HTML");
+if (!prepared.includes("النص الأصلي للمستخدم لا يتغير")) throw new Error("Uploaded text was unexpectedly rewritten");
+if (prepared.includes("ql-country-dialect") || prepared.includes("ql-country-context")) throw new Error("Legacy injected localization artifacts remain");
+const howToMake = renderHowToMakeSection("marketing-leadership", 1);
+if (!howToMake.includes('id="ql-how-to-make"') || !howToMake.includes("ql-proto-root") || !howToMake.includes("THE REAL EXAMPLE") || !howToMake.includes("FINAL TAKEAWAY") || !howToMake.includes("data-proto-next") || !howToMake.includes("ql-proto-step")) {
+  throw new Error("HOW TO MAKE section is incomplete");
+}
 
 const egypt = {
   countryCode: "EG",
@@ -63,6 +69,12 @@ if (chapterCountryContext({ slug: "marketing-launch" }, null, egypt, 1) !== egyp
 const leadershipWithCountry = prepareCourseHtml(sourceHtml, "index.html", "marketing-leadership", 77, egypt);
 if (leadershipWithCountry.includes('id="ql-country-context"')) {
   throw new Error("Marketing Leadership chapter must not inject a generic local example");
+}
+if (!shouldPreserveUploadedCourse(" Marketing-Leadership ")) {
+  throw new Error("Marketing Leadership uploaded ZIP must bypass lesson variants and dialect rewriting");
+}
+if (!shouldPreserveUploadedCourseTitles(" Marketing-Leadership ")) {
+  throw new Error("Marketing Leadership titles must bypass country variants");
 }
 const launchWithCountry = prepareCourseHtml(sourceHtml, "index.html", "marketing-launch", 4, egypt);
 if (!launchWithCountry.includes('id="ql-country-context"')) {

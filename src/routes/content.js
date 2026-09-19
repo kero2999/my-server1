@@ -7,9 +7,20 @@ const { findPublishedCourse, getAccess, resolveEntryFile } = require("./courses"
 const { isChapterUnlocked } = require("../learning");
 const { getUserCountry, getCourseVariants } = require("../country-service");
 const { injectContentDialect, rewriteHtmlTextNodes } = require("../content-dialect");
+const { publicHowToMake } = require("../chapter-templates");
 
 const router = express.Router();
 const PUBLIC_MENTOR_IMAGE = "https://www.quadralevel.com/images/mentor-avatar.jpeg";
+const PRESERVE_UPLOADED_COURSE_SLUGS = new Set([
+  "marketing-launch",
+  "marketing-growth",
+  "marketing-mastery",
+  "marketing-leadership",
+]);
+
+function shouldPreserveUploadedCourse(courseSlug) {
+  return PRESERVE_UPLOADED_COURSE_SLUGS.has(String(courseSlug || "").trim().toLowerCase());
+}
 
 function courseIdentifier(courseSlug, courseId) {
   return String(courseSlug || courseId || "").trim();
@@ -46,6 +57,17 @@ function escapeHtml(value) {
   return String(value == null ? "" : value).replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[character]));
 }
 
+function renderHowToMakeSection(courseSlug, chapterNumber) {
+  const howToMake = publicHowToMake(courseSlug, chapterNumber);
+  if (!howToMake) return "";
+  const e = escapeHtml;
+  const steps = howToMake.steps.map((step, index) => `<section class="ql-proto-slide ql-proto-step" data-proto-slide="${index + 4}"><div class="ql-proto-inner"><div class="ql-proto-step-head"><span class="ql-proto-badge"><i class="fas fa-${step.visualType === "result-card" ? "flag-checkered" : step.visualType === "product-card" ? "box-open" : "diagram-project"}"></i></span><div><small>STEP ${String(step.number).padStart(2, "0")} / ${String(howToMake.steps.length).padStart(2, "0")}</small><h3>${e(step.title)}</h3></div></div><div class="ql-proto-cols"><div><div class="ql-proto-block"><b>⚡ ماذا نفعل؟</b><p>${e(step.what)}</p></div><div class="ql-proto-block ql-proto-why"><b>؟ لماذا؟</b><p>${e(step.why)}</p></div></div><div><div class="ql-proto-label">👁 المثال الواقعي</div><div class="ql-proto-example">${e(step.filledValue)}</div><div class="ql-proto-label">✦ كيف وصلنا للقرار؟</div><div class="ql-proto-result">${e(step.explanation)}</div></div></div></div></section>`).join("");
+  const summary = howToMake.steps.map((step) => `<div class="ql-proto-summary-item"><span>${String(step.number).padStart(2, "0")}</span><b>${e(step.title)}</b></div>`).join("");
+  const total = howToMake.steps.length + 5;
+  const script = `<script>(function(){var r=document.getElementById("ql-how-to-make"),s=[].slice.call(r.querySelectorAll("[data-proto-slide]")),n=0,g=function(x){n=(x+s.length)%s.length;s.forEach(function(a,i){a.hidden=i!==n});r.querySelector("[data-proto-progress]").textContent=String(n+1).padStart(2,"0")+" / "+String(s.length).padStart(2,"0")};r.querySelector("[data-proto-prev]").onclick=function(){g(n-1)};r.querySelector("[data-proto-next]").onclick=function(){g(n+1)};document.addEventListener("keydown",function(a){if(a.key==="ArrowLeft")g(n+1);if(a.key==="ArrowRight")g(n-1)});g(0)})();</script>`;
+  return `<style id="ql-how-to-make-prototype-style">.ql-proto-root{position:relative;background:#0b0b0c;color:#ece7db;font-family:inherit;direction:rtl;min-height:500px}.ql-proto-slide{min-height:560px;padding:70px 5%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0b0b0c 0%,#1c1710 50%,#0b0b0c 100%)}.ql-proto-slide[hidden]{display:none}.ql-proto-inner{width:min(1180px,100%)}.ql-proto-cover{text-align:center;background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.14);border-radius:30px;padding:55px 35px;box-shadow:0 20px 50px rgba(0,0,0,.5)}.ql-proto-cover h2{font-size:3.4rem;color:#c9a86a;margin:12px 0}.ql-proto-cover h3{font-size:1.5rem;color:#fff}.ql-proto-cover p,.ql-proto-intro p{font-size:1.1rem;line-height:2;color:rgba(236,231,219,.78)}.ql-proto-rule{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-top:24px}.ql-proto-rule span{padding:7px 14px;border-radius:20px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#dcc48f}.ql-proto-heading{display:flex;gap:18px;align-items:center;margin-bottom:28px}.ql-proto-number{width:68px;height:68px;border-radius:18px;display:grid;place-items:center;background:linear-gradient(135deg,#c9a86a,#7a5230);font-size:1.8rem;color:#fff}.ql-proto-heading small,.ql-proto-step-head small{color:#c9a86a;font-weight:800}.ql-proto-heading h3,.ql-proto-step-head h3{margin:3px 0;color:#fff;font-size:2rem}.ql-proto-quote{padding:28px 32px;border-right:5px solid #c9a86a;background:rgba(201,168,106,.1);border-radius:0 20px 20px 0;font-size:1.25rem;font-weight:700;line-height:2}.ql-proto-card{padding:28px;border:1px solid rgba(255,255,255,.1);border-radius:22px;background:rgba(255,255,255,.05)}.ql-proto-card h4{color:#dcc48f;font-size:1.35rem;margin-bottom:10px}.ql-proto-card p{line-height:2;color:rgba(236,231,219,.8)}.ql-proto-chip{display:inline-block;margin-top:14px;padding:9px 15px;border-radius:20px;border:1px solid rgba(201,168,106,.35);color:#dcc48f}.ql-proto-step-head{display:flex;gap:18px;align-items:center;margin-bottom:25px}.ql-proto-badge{width:78px;height:78px;border-radius:22px;display:grid;place-items:center;background:linear-gradient(135deg,#c9a86a,#7a5230);font-size:2rem}.ql-proto-cols{display:grid;grid-template-columns:1fr 1fr;gap:25px}.ql-proto-block,.ql-proto-example,.ql-proto-result{padding:20px 22px;border:1px solid rgba(255,255,255,.1);border-radius:18px;background:rgba(255,255,255,.05);margin-bottom:16px}.ql-proto-block b,.ql-proto-label{display:block;color:#c9a86a;margin-bottom:10px;font-weight:800}.ql-proto-block p,.ql-proto-example,.ql-proto-result{line-height:2;color:rgba(236,231,219,.82)}.ql-proto-why{border-right:4px solid #3f8f7d}.ql-proto-why b{color:#8fcdbb}.ql-proto-result{border-color:rgba(201,168,106,.35);color:#fff}.ql-proto-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:20px 0}.ql-proto-summary-item{padding:18px 10px;text-align:center;border:1px solid rgba(255,255,255,.1);border-radius:16px;background:rgba(255,255,255,.05)}.ql-proto-summary-item span{display:block;color:#c9a86a;font-weight:900}.ql-proto-summary-item b{display:block;margin-top:6px;color:#fff}.ql-proto-nav{display:flex;justify-content:center;align-items:center;gap:16px;padding:18px;background:rgba(11,11,12,.95);border-top:1px solid rgba(201,168,106,.35);position:sticky;bottom:0;z-index:5}.ql-proto-nav button{border:2px solid #c9a86a;background:transparent;color:#c9a86a;padding:9px 18px;border-radius:25px;font:700 14px inherit;cursor:pointer}.ql-proto-nav button:hover{background:#c9a86a;color:#0b0b0c}.ql-proto-progress{color:#c9a86a;font-weight:900;min-width:62px;text-align:center}@media(max-width:700px){.ql-proto-slide{padding:45px 18px;min-height:620px}.ql-proto-cols{grid-template-columns:1fr}.ql-proto-summary{grid-template-columns:1fr 1fr}.ql-proto-cover h2{font-size:2.4rem}.ql-proto-heading h3,.ql-proto-step-head h3{font-size:1.5rem}}</style><section id="ql-how-to-make" class="ql-proto-root"><div class="ql-proto-slide" data-proto-slide="1"><div class="ql-proto-inner ql-proto-cover"><div style="font-size:3rem;color:#c9a86a">⚒</div><h2>HOW TO MAKE</h2><h3>${e(howToMake.title)}</h3><p>${e(howToMake.introduction)}</p><div class="ql-proto-rule"><span>مثال واقعي</span><span>طريقة تفكير</span><span>قرار</span><span>تنفيذ</span><span>نتيجة</span></div></div></div><div class="ql-proto-slide" data-proto-slide="2"><div class="ql-proto-inner ql-proto-intro"><div class="ql-proto-heading"><div class="ql-proto-number">01</div><div><small>WHAT ARE WE MAKING</small><h3>ماذا سنصنع؟</h3></div></div><div class="ql-proto-quote">${e(howToMake.introduction)}</div><div class="ql-proto-card" style="margin-top:24px"><h4>${e(howToMake.caseTitle)}</h4><p>${e(howToMake.caseDescription)}</p></div></div></div><div class="ql-proto-slide" data-proto-slide="3"><div class="ql-proto-inner"><div class="ql-proto-heading"><div class="ql-proto-number">02</div><div><small>THE REAL EXAMPLE</small><h3>المثال الحقيقي</h3></div></div><div class="ql-proto-card"><h4>📦 ${e(howToMake.caseTitle)}</h4><p>${e(howToMake.realExample)}</p><span class="ql-proto-chip">🎯 ${e(howToMake.projectGoal)}</span></div></div></div><div class="ql-proto-slide" data-proto-slide="4"><div class="ql-proto-inner"><div class="ql-proto-heading"><div class="ql-proto-number">03</div><div><small>STARTING POINT</small><h3>من أين نبدأ؟</h3></div></div><div class="ql-proto-quote">لدينا هذا المثال، ونبدأ بتحديد أول معلومة نحتاجها قبل اتخاذ القرار التالي.</div><div class="ql-proto-card" style="margin-top:24px"><p>${e(howToMake.caseDescription)}</p></div></div></div>${steps}<div class="ql-proto-slide" data-proto-slide="${howToMake.steps.length + 5}"><div class="ql-proto-inner"><div class="ql-proto-heading"><div class="ql-proto-number">${String(howToMake.steps.length + 4).padStart(2,"0")}</div><div><small>FINAL RESULT</small><h3>النتيجة النهائية</h3></div></div><div class="ql-proto-card"><h4>✦ القرار النهائي للمشروع</h4><p>${e(howToMake.result)}</p><p>${e(howToMake.explanation)}</p></div></div></div><div class="ql-proto-slide" data-proto-slide="${howToMake.steps.length + 6}"><div class="ql-proto-inner"><div class="ql-proto-heading"><div class="ql-proto-number">${String(howToMake.steps.length + 5).padStart(2,"0")}</div><div><small>FINAL TAKEAWAY</small><h3>ماذا تعلمنا؟</h3></div></div><div class="ql-proto-summary">${summary}</div><div class="ql-proto-quote">${e(howToMake.explanation)}</div><p style="text-align:center;color:#dcc48f;margin-top:24px">انتهى الشرح العملي. الآن استخدم Template الفصل لتطبيق الفكرة على مشروعك.</p></div></div><div class="ql-proto-nav"><button type="button" data-proto-prev>← السابق</button><span class="ql-proto-progress" data-proto-progress>01 / ${String(total).padStart(2,"0")}</span><button type="button" data-proto-next>التالي →</button></div>${script}</section>`;
+}
+
 function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "", courseId = "", country = null) {
   const html = buffer.toString("utf8");
   // The outer Marketplace gateway has already authenticated this request.
@@ -54,7 +76,11 @@ function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "", courseId
     .replace(/(<html\b[^>]*?)\sdata-protected=(['"])true\2/i, '$1 data-protected="false"')
     .replace(/<script\b[^>]*\bsw-register\.js[^>]*>\s*<\/script>/gi, '')
     .replace(/<script\b[^>]*\bsrc=(['"])[^'"]*auth\.js\1[^>]*>\s*<\/script>/gi, '')
-    .replace(/<script\b[^>]*>[\s\S]*?lms_session_v1[\s\S]*?<\/script>/gi, '');
+    .replace(/<script\b[^>]*>[\s\S]*?lms_session_v1[\s\S]*?<\/script>/gi, '')
+    // Older published responses may already contain our injected dialect/context blocks.
+    // Remove only those marked artifacts; never rewrite the uploaded text nodes.
+    .replace(/<script\b[^>]*id=(['"])ql-country-dialect\1[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<aside\b[^>]*id=(['"])ql-country-context\1[^>]*>[\s\S]*?<\/aside>/gi, '');
 
   const chapterMatch = String(requestedPath || "").match(/(?:^|\/)ch(\d+)\.html$/i);
   const chapterNumber = chapterMatch ? Number(chapterMatch[1]) : /(?:^|\/)index\.html$/i.test(String(requestedPath || "")) ? 1 : 0;
@@ -108,6 +134,9 @@ function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "", courseId
     if (!hasMentorScript) {
       const mentorBootstrap = '<script>(function(){function mount(){if(window.LMSMentor&&!document.getElementById("mentor-fab"))window.LMSMentor.mount(typeof CHAPTER_NUM==="number"?CHAPTER_NUM:1);}function load(){if(window.LMSMentor){mount();return;}var script=document.createElement("script");script.src="https://www.quadralevel.com/js/mentor.js";script.async=false;script.onload=mount;document.head.appendChild(script);}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",load,{once:true});else load();})();</script>';
       sanitized = sanitized.replace(/<\/body>/i, mentorBootstrap + '</body>');
+    }
+    if (!/id=(['"])ql-how-to-make\1/i.test(sanitized)) {
+      sanitized = sanitized.replace(/<\/body>/i, renderHowToMakeSection(courseSlug, chapterNumber) + '</body>');
     }
     const mentorImageFix = '<script>(function(){var image=' + JSON.stringify(PUBLIC_MENTOR_IMAGE) + ';var dashboard=' + JSON.stringify(dashboardUrl) + ';function sync(){document.querySelectorAll(`#mentor-fab img,#mentor-panel img,.mentor-topbar img,.mentor-avatar-small,.mh-icon img,img[src*="kero"],img[src*="mentor"]`).forEach(function(node){if(node.getAttribute("src")!==image)node.src=image;});document.querySelectorAll("a").forEach(function(node){var href=node.getAttribute("href")||"";var label=node.textContent||"";if(/dashboard\\.html|(?:^|\\/)courses(?:\\.html)?(?:[?#]|$)/i.test(href)&&/لوحتي|لوحة التعلم/i.test(label)){node.setAttribute("href",dashboard);node.setAttribute("target","_top");}});}function boot(){sync();if(window.MutationObserver){new MutationObserver(sync).observe(document.documentElement,{childList:true,subtree:true});}}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot,{once:true});else boot();})();</script>';
     sanitized = sanitized.replace(/<\/body>/i, mentorImageFix + '</body>');
@@ -266,8 +295,8 @@ router.get("/:courseId/*", async (req, res) => {
       const hasExplicitLessonVariant = Boolean(lessonVariant?.content_html);
       const courseSlug = String(course.slug || "").trim().toLowerCase();
       const isEgyptianMarketingLaunch = courseSlug === "marketing-launch" && country.countryCode === "EG" && requestedChapter > 0;
-      const preserveUploadedCourse = ["marketing-launch", "marketing-growth", "marketing-mastery"].includes(courseSlug);
-      // For uploaded Launch/Growth/Mastery content, the published ZIP is the source of truth.
+      const preserveUploadedCourse = shouldPreserveUploadedCourse(courseSlug);
+      // For uploaded Launch/Growth/Mastery/Leadership content, the published ZIP is the source of truth.
       // Do not let legacy lesson variants or dialect rewriting alter its wording.
       const usePublishedSource = preserveUploadedCourse || !hasExplicitLessonVariant || isEgyptianMarketingLaunch;
       const htmlBuffer = usePublishedSource ? sourceBuffer : Buffer.from(String(lessonVariant.content_html), "utf8");
@@ -288,3 +317,5 @@ router.get("/:courseId/*", async (req, res) => {
 
 module.exports = router;
 module.exports.prepareCourseHtml = prepareCourseHtml;
+module.exports.shouldPreserveUploadedCourse = shouldPreserveUploadedCourse;
+module.exports.renderHowToMakeSection = renderHowToMakeSection;
