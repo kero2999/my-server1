@@ -135,9 +135,6 @@ function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "", courseId
       const mentorBootstrap = '<script>(function(){function mount(){if(window.LMSMentor&&!document.getElementById("mentor-fab"))window.LMSMentor.mount(typeof CHAPTER_NUM==="number"?CHAPTER_NUM:1);}function load(){if(window.LMSMentor){mount();return;}var script=document.createElement("script");script.src="https://www.quadralevel.com/js/mentor.js";script.async=false;script.onload=mount;document.head.appendChild(script);}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",load,{once:true});else load();})();</script>';
       sanitized = sanitized.replace(/<\/body>/i, mentorBootstrap + '</body>');
     }
-    if (!/id=(['"])ql-how-to-make\1/i.test(sanitized)) {
-      sanitized = sanitized.replace(/<\/body>/i, renderHowToMakeSection(courseSlug, chapterNumber) + '</body>');
-    }
     const mentorImageFix = '<script>(function(){var image=' + JSON.stringify(PUBLIC_MENTOR_IMAGE) + ';var dashboard=' + JSON.stringify(dashboardUrl) + ';function sync(){document.querySelectorAll(`#mentor-fab img,#mentor-panel img,.mentor-topbar img,.mentor-avatar-small,.mh-icon img,img[src*="kero"],img[src*="mentor"]`).forEach(function(node){if(node.getAttribute("src")!==image)node.src=image;});document.querySelectorAll("a").forEach(function(node){var href=node.getAttribute("href")||"";var label=node.textContent||"";if(/dashboard\\.html|(?:^|\\/)courses(?:\\.html)?(?:[?#]|$)/i.test(href)&&/لوحتي|لوحة التعلم/i.test(label)){node.setAttribute("href",dashboard);node.setAttribute("target","_top");}});}function boot(){sync();if(window.MutationObserver){new MutationObserver(sync).observe(document.documentElement,{childList:true,subtree:true});}}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot,{once:true});else boot();})();</script>';
     sanitized = sanitized.replace(/<\/body>/i, mentorImageFix + '</body>');
   }
