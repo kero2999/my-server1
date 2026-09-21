@@ -45,6 +45,32 @@ async function withStats(affiliates) {
   });
 }
 
+async function detailStats(affiliateId) {
+  const types = ["affiliate_visit", "affiliate_registration", "affiliate_trial", "affiliate_purchase"];
+  const results = await Promise.all(types.map((eventType) => supabase
+    .from("affiliate_events")
+    .select("id", { count: "exact", head: true })
+    .eq("affiliate_id", affiliateId)
+    .eq("event_type", eventType)));
+  const failed = results.find((result) => result.error);
+  if (failed) throw failed.error;
+  const { data: commissions, error: commissionsError } = await supabase
+    .from("affiliate_commissions")
+    .select("amount_cents, commission_amount_cents, status")
+    .eq("affiliate_id", affiliateId);
+  if (commissionsError) throw commissionsError;
+  const ownCommissions = commissions || [];
+  return {
+    visits: Number(results[0].count || 0),
+    registrations: Number(results[1].count || 0),
+    trials: Number(results[2].count || 0),
+    purchases: Number(results[3].count || 0),
+    revenueCents: ownCommissions.filter((item) => item.status !== "cancelled" && item.amount_cents).reduce((sum, item) => sum + Number(item.amount_cents), 0),
+    commissionCents: ownCommissions.filter((item) => item.status !== "cancelled").reduce((sum, item) => sum + Number(item.commission_amount_cents || 0), 0),
+    pendingCommissionCents: ownCommissions.filter((item) => item.status === "pending").reduce((sum, item) => sum + Number(item.commission_amount_cents || 0), 0),
+  };
+}
+
 router.get("/", async (req, res) => {
   try {
     const { data, error } = await supabase.from("affiliates").select("*").order("created_at", { ascending: false });
@@ -63,7 +89,8 @@ router.get("/:id", async (req, res) => {
     const { data, error } = await supabase.from("affiliates").select("*").eq("id", id).maybeSingle();
     if (error) throw error;
     if (!data) return res.status(404).json({ ok: false, error: "المسوق غير موجود." });
-    const [affiliate] = await withStats([data]);
+    const affiliate = { ...data, stats: await detailStats(id) };
+    res.set("Cache-Control", "private, max-age=15");
     res.json({ ok: true, affiliate });
   } catch (error) {
     console.error("Admin affiliate details error:", error);
