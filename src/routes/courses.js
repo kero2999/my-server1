@@ -329,7 +329,7 @@ router.get("/", async (req, res) => {
     const { data, error } = await query;
     if (error) throw error;
     const prices = await getCoursePrices((data || []).map((course) => course.id), country.countryCode);
-    res.set({ "Cache-Control": "private, no-store", Vary: "Authorization, X-Country-Code" });
+    res.set({ "Cache-Control": "public, max-age=30, stale-while-revalidate=120", Vary: "X-Country-Code" });
     const orderedCourses = sortCoursesForDisplay(data);
     res.json({ ok: true, country: { countryCode: country.countryCode, countryName: country.countryName, currency: country.currency, currencySymbol: country.currencySymbol, locale: country.locale }, courses: orderedCourses.map((course) => publicCourse(course, prices.get(Number(course.id)), country)) });
   } catch (e) {
@@ -344,7 +344,7 @@ router.get("/:courseId", async (req, res) => {
     if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
     const country = await resolveRequestCountry(req);
     const prices = await getCoursePrices([course.id], country.countryCode);
-    res.set({ "Cache-Control": "private, no-store", Vary: "Authorization, X-Country-Code" });
+    res.set({ "Cache-Control": "public, max-age=30, stale-while-revalidate=120", Vary: "X-Country-Code" });
     res.json({ ok: true, country: { countryCode: country.countryCode, countryName: country.countryName, currency: country.currency, currencySymbol: country.currencySymbol, locale: country.locale }, course: publicCourse(course, prices.get(Number(course.id)), country) });
   } catch (e) {
     accessError(res, e);

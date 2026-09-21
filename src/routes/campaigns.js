@@ -14,7 +14,7 @@ const {
 } = require("../campaign-service");
 
 const router = express.Router();
-const campaignStatusLimiter = rateLimit({ name: "campaign-status", windowMs: 60 * 1000, max: 60, keyGenerator: (req) => String(req.userId || req.ip || "unknown") });
+const campaignStatusLimiter = rateLimit({ name: "campaign-status", windowMs: 60 * 1000, max: 300, keyGenerator: (req) => String(req.userId || req.ip || "unknown") });
 
 function numericId(value) {
   const parsed = Number(value);
