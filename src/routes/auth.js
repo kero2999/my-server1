@@ -7,6 +7,7 @@ const supabase = require("../db");
 const { requireAuth } = require("../middleware/auth");
 const { rateLimit } = require("../middleware/rate-limit");
 const { normalizeCountryCode } = require("../country-service");
+const { attributeUser } = require("../affiliate-service");
 
 const router = express.Router();
 const accountKey = (req) => `${req.ip || "unknown"}:${String(req.body?.email || "").trim().toLowerCase().slice(0, 160)}`;
@@ -46,7 +47,7 @@ function publicUser(u) {
 // POST /api/auth/register
 router.post("/register", registerLimiter, async (req, res) => {
   try {
-    const { fullName, email, password } = req.body || {};
+    const { fullName, email, password, affiliateCode } = req.body || {};
     const countryCode = normalizeCountryCode(req.body?.countryCode || req.body?.country_code);
     if (typeof fullName !== "string" || typeof email !== "string" || typeof password !== "string" || !fullName.trim() || !email.trim() || !password) {
       return res.status(400).json({ ok: false, error: "من فضلك املأ جميع الحقول." });
@@ -93,6 +94,14 @@ router.post("/register", registerLimiter, async (req, res) => {
 
     if (error) throw error;
 
+    if (affiliateCode) {
+      try {
+        await attributeUser(user.id, affiliateCode);
+      } catch (affiliateError) {
+        console.error("Affiliate attribution error:", affiliateError);
+      }
+    }
+
     const token = signToken(user.id);
     res.json({ ok: true, token, user: publicUser(user) });
   } catch (e) {
@@ -104,7 +113,7 @@ router.post("/register", registerLimiter, async (req, res) => {
 // POST /api/auth/login
 router.post("/login", loginLimiter, async (req, res) => {
   try {
-    const { email, password } = req.body || {};
+    const { email, password, affiliateCode } = req.body || {};
     if (typeof email !== "string" || typeof password !== "string" || email.length > 320 || password.length > 128) {
       return res.status(400).json({ ok: false, error: "الإيميل أو كلمة المرور غير صحيحة." });
     }
@@ -121,6 +130,13 @@ router.post("/login", loginLimiter, async (req, res) => {
     if (!match) return res.status(400).json({ ok: false, error: "الإيميل أو كلمة المرور غير صحيحة." });
 
     const token = signToken(user.id);
+    if (affiliateCode) {
+      try {
+        await attributeUser(user.id, affiliateCode);
+      } catch (affiliateError) {
+        console.error("Affiliate login attribution error:", affiliateError);
+      }
+    }
     res.json({ ok: true, token, user: publicUser(user) });
   } catch (e) {
     console.error(e);
