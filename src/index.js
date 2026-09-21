@@ -13,6 +13,8 @@ const adminRoutes = require("./routes/admin");
 const contentRoutes = require("./routes/content");
 const certificatesRoutes = require("./routes/certificates");
 const reviewsRoutes = require("./routes/reviews");
+const affiliatesRoutes = require("./routes/affiliates");
+const adminAffiliatesRoutes = require("./routes/admin-affiliates");
 const campaignsRoutes = require("./routes/campaigns");
 const countriesRoutes = require("./routes/countries");
 
@@ -68,6 +70,8 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/content", contentRoutes);
 app.use("/api/certificates", certificatesRoutes);
 app.use("/api/reviews", reviewsRoutes);
+app.use("/api/affiliates", affiliatesRoutes);
+app.use("/api/admin/affiliates", adminAffiliatesRoutes);
 app.use("/api/campaigns", campaignsRoutes);
 app.use("/api/countries", countriesRoutes);
 

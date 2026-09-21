@@ -3,6 +3,7 @@ const supabase = require("../db");
 const whopsdk = require("../whop");
 const { verifyHmac, callbackDetails } = require("../paymob");
 const { CAMPAIGN_KEY, findCampaignByKey, campaignExpiry } = require("../campaign-service");
+const { recordAffiliateConversion } = require("../affiliate-service");
 
 const router = express.Router();
 
@@ -102,7 +103,8 @@ router.post("/paymob", async (req, res) => {
 
     if (details.success) {
       if (payment.payment_type === "campaign_trial") {
-        await activateCampaignTrial({ ...payment, status: "paid", paid_at: paidAt });
+        const paidPayment = { ...payment, status: "paid", paid_at: paidAt };
+        await activateCampaignTrial(paidPayment);
       } else {
         const { error: enrollmentError } = await supabase.from("enrollments").upsert({
           user_id: payment.user_id,
@@ -114,6 +116,7 @@ router.post("/paymob", async (req, res) => {
           updated_at: new Date().toISOString(),
         }, { onConflict: "user_id,course_id" });
         if (enrollmentError) throw enrollmentError;
+        await recordAffiliateConversion({ ...payment, status: "paid", paid_at: paidAt }, "affiliate_purchase");
       }
     }
 
@@ -147,6 +150,7 @@ async function activateCampaignTrial(payment) {
     updated_at: new Date().toISOString(),
   });
   if (trialError && trialError.code !== "23505") throw trialError;
+  await recordAffiliateConversion(payment, "affiliate_trial");
 }
 
 router.post("/whop", (req, res) => {
