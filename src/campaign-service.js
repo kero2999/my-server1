@@ -12,7 +12,8 @@ async function findCampaignByCourse(courseId) {
     .from("campaign_settings")
     .select("*")
     .eq("course_id", courseId)
-    .eq("campaign_key", CAMPAIGN_KEY)
+    .order("id", { ascending: false })
+    .limit(1)
     .maybeSingle();
   if (error) {
     if (isMissingCampaignSchema(error)) return null;
@@ -34,14 +35,15 @@ async function findCampaignByKey(campaignKey = CAMPAIGN_KEY) {
   return data || null;
 }
 
-async function findCampaignTrial(userId, courseId) {
-  const { data, error } = await supabase
+async function findCampaignTrial(userId, courseId, campaignKey = null) {
+  let query = supabase
     .from("campaign_trials")
     .select("id, campaign_key, user_id, course_id, payment_id, duration_days, status, started_at, expires_at, created_at, updated_at")
     .eq("user_id", userId)
-    .eq("course_id", courseId)
-    .eq("campaign_key", CAMPAIGN_KEY)
-    .maybeSingle();
+    .eq("course_id", courseId);
+  if (campaignKey) query = query.eq("campaign_key", campaignKey);
+  query = query.order("id", { ascending: false }).limit(1);
+  const { data, error } = await query.maybeSingle();
   if (error) {
     if (isMissingCampaignSchema(error)) return null;
     throw error;
