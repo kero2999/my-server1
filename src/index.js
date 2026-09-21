@@ -48,7 +48,9 @@ app.use((req, res, next) => {
 
 app.use(
   "/api",
-  rateLimit({ name: "api-global", windowMs: 60 * 1000, max: 120 })
+  // Public reads can fan out when many students open the catalog together.
+  // Sensitive routes keep their stricter route-specific limiters below.
+  rateLimit({ name: "api-global", windowMs: 60 * 1000, max: 600 })
 );
 
 // مهم: راوت الـ webhook لازم ياخد الـ body كنص خام (raw) قبل ما نعمل express.json()
