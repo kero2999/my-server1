@@ -10,6 +10,7 @@ const {
   campaignTrialStatus,
   publicCampaignSettings,
   adminCampaignSettings,
+  findCampaignByKey,
 } = require("../campaign-service");
 
 const router = express.Router();
@@ -55,7 +56,7 @@ router.get("/:courseId/mine", requireAuth, campaignStatusLimiter, async (req, re
     const course = await findCourse(req.params.courseId);
     if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
     const setting = await findCampaignByCourse(course.id);
-    const trial = setting ? await findCampaignTrial(req.userId, course.id) : null;
+    const trial = setting ? await findCampaignTrial(req.userId, course.id, setting.campaign_key) : null;
     res.set("Cache-Control", "private, no-store");
     res.json({ ok: true, ...publicStatus(setting, trial, course) });
   } catch (error) {
@@ -111,7 +112,7 @@ router.get("/admin/:courseId/reviews", requireAdmin, async (req, res) => {
     const courseId = numericId(req.params.courseId);
     if (!courseId) return res.status(400).json({ ok: false, error: "معرف الكورس غير صالح." });
     const setting = await findCampaignByCourse(courseId);
-    if (!setting) return res.status(404).json({ ok: false, error: "إعداد حملة Marketing Launch غير موجود." });
+    if (!setting) return res.status(404).json({ ok: false, error: "إعداد الحملة غير موجود." });
     const status = ["pending", "published", "hidden"].includes(String(req.query.status || "")) ? String(req.query.status) : null;
     let query = supabase.from("course_reviews").select("id, user_id, course_id, rating, comment, status, verified_purchase, campaign_key, review_request_id, created_at, updated_at, users(full_name, email)").eq("course_id", courseId).eq("campaign_key", setting.campaign_key).order("created_at", { ascending: false }).limit(200);
     if (status) query = query.eq("status", status);
@@ -132,7 +133,7 @@ router.patch("/admin/reviews/:reviewId", requireAdmin, async (req, res) => {
     if (!reviewId || !["published", "hidden"].includes(status)) return res.status(400).json({ ok: false, error: "حالة التقييم غير صالحة." });
     const { data: current, error: currentError } = await supabase.from("course_reviews").select("id, campaign_key").eq("id", reviewId).maybeSingle();
     if (currentError) throw currentError;
-    if (!current || current.campaign_key !== CAMPAIGN_KEY) return res.status(404).json({ ok: false, error: "تقييم الحملة غير موجود." });
+    if (!current || !(await findCampaignByKey(current.campaign_key))) return res.status(404).json({ ok: false, error: "تقييم الحملة غير موجود." });
     const { data, error } = await supabase.from("course_reviews").update({ status, updated_at: new Date().toISOString() }).eq("id", reviewId).select("id, rating, comment, status, created_at, updated_at").single();
     if (error) throw error;
     res.json({ ok: true, review: data });
@@ -146,9 +147,8 @@ router.patch("/admin/:courseId", requireAdmin, async (req, res) => {
   try {
     const courseId = numericId(req.params.courseId);
     if (!courseId) return res.status(400).json({ ok: false, error: "معرف الكورس غير صالح." });
-    const { data: current, error: currentError } = await supabase.from("campaign_settings").select("*").eq("course_id", courseId).eq("campaign_key", CAMPAIGN_KEY).maybeSingle();
-    if (currentError) throw currentError;
-    if (!current) return res.status(404).json({ ok: false, error: "إعداد حملة Marketing Launch غير موجود. شغّل Migration أولًا." });
+    const current = await findCampaignByCourse(courseId);
+    if (!current) return res.status(404).json({ ok: false, error: "إعداد الحملة غير موجود. شغّل Migration أولًا." });
 
     const input = req.body && typeof req.body === "object" ? req.body : {};
     const integer = (key, min, max) => {

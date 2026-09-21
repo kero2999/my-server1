@@ -4,7 +4,7 @@ const supabase = require("../db");
 const { requireAuth } = require("../middleware/auth");
 const { rateLimit } = require("../middleware/rate-limit");
 const { createCheckout } = require("../paymob");
-const { CAMPAIGN_KEY, findCampaignByCourse, findCampaignTrial, publicCampaignSettings } = require("../campaign-service");
+const { findCampaignByCourse, findCampaignTrial, publicCampaignSettings } = require("../campaign-service");
 const { getUserCountry } = require("../country-service");
 
 const router = express.Router();
@@ -31,7 +31,7 @@ router.post("/course/:courseId/campaign/create", requireAuth, checkoutLimiter, a
     const course = await findPublishedCourse(req.params.courseId);
     if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
     const campaign = await findCampaignByCourse(course.id);
-    if (!campaign || campaign.campaign_key !== CAMPAIGN_KEY) return res.status(404).json({ ok: false, error: "الحملة غير مهيأة لهذا الكورس." });
+    if (!campaign) return res.status(404).json({ ok: false, error: "الحملة غير مهيأة لهذا الكورس." });
     if (!campaign.enabled) return res.status(409).json({ ok: false, error: "الحملة غير مفعلة حاليًا." });
     const campaignCountry = await getUserCountry(req.userId);
     if (campaignCountry.countryCode !== "EG") return res.status(409).json({ ok: false, error: "دفع الحملة متاح حاليًا بالجنيه المصري فقط. غيّر الدولة إلى مصر أو انتظر تفعيل بوابة الدفع المحلية." });
@@ -45,7 +45,7 @@ router.post("/course/:courseId/campaign/create", requireAuth, checkoutLimiter, a
     if (enrollmentError) throw enrollmentError;
     if (existingEnrollment && existingEnrollment.status === "active") return res.status(409).json({ ok: false, error: "هذا الكورس موجود بالفعل في حسابك." });
 
-    const existingTrial = await findCampaignTrial(req.userId, course.id);
+    const existingTrial = await findCampaignTrial(req.userId, course.id, campaign.campaign_key);
     if (existingTrial) return res.status(409).json({ ok: false, error: "تم استخدام عرض الحملة لهذا الحساب من قبل." });
 
     const { data: pendingPayment, error: pendingError } = await supabase
@@ -55,7 +55,7 @@ router.post("/course/:courseId/campaign/create", requireAuth, checkoutLimiter, a
       .eq("course_id", course.id)
       .eq("payment_type", "campaign_trial")
       .eq("status", "pending")
-      .contains("metadata", { campaignKey: CAMPAIGN_KEY })
+      .contains("metadata", { campaignKey: campaign.campaign_key })
       .maybeSingle();
     if (pendingError) throw pendingError;
     if (pendingPayment) return res.status(409).json({ ok: false, error: "لديك طلب دفع للحملة قيد الانتظار. أكمل عملية الدفع الحالية أولًا." });
@@ -77,7 +77,7 @@ router.post("/course/:courseId/campaign/create", requireAuth, checkoutLimiter, a
       amount_cents: amountCents,
       currency: campaign.currency || course.currency || "EGP",
       payment_type: "campaign_trial",
-      metadata: { campaignKey: CAMPAIGN_KEY, durationDays, campaignPriceCents: amountCents },
+      metadata: { campaignKey: campaign.campaign_key, durationDays, campaignPriceCents: amountCents },
       status: "pending",
     }).select("id, merchant_order_id, amount_cents, currency, status, payment_type").single();
     if (paymentError) throw paymentError;
