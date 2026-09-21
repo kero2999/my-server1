@@ -56,6 +56,21 @@ router.get("/", async (req, res) => {
   }
 });
 
+router.get("/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) return res.status(400).json({ ok: false, error: "بيانات المسوق غير صالحة." });
+    const { data, error } = await supabase.from("affiliates").select("*").eq("id", id).maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ ok: false, error: "المسوق غير موجود." });
+    const [affiliate] = await withStats([data]);
+    res.json({ ok: true, affiliate });
+  } catch (error) {
+    console.error("Admin affiliate details error:", error);
+    res.status(500).json({ ok: false, error: "تعذر تحميل تفاصيل المسوق حاليًا." });
+  }
+});
+
 router.post("/", async (req, res) => {
   try {
     const payload = input(req.body);
