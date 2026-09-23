@@ -50,7 +50,7 @@ router.post("/course/:courseId/campaign/create", requireAuth, checkoutLimiter, a
 
     const { data: pendingPayment, error: pendingError } = await supabase
       .from("payments")
-      .select("id, merchant_order_id, provider_order_id, amount_cents, currency, status")
+      .select("id, merchant_order_id, provider_order_id, amount_cents, currency, status, created_at, updated_at")
       .eq("user_id", req.userId)
       .eq("course_id", course.id)
       .eq("payment_type", "campaign_trial")
@@ -58,7 +58,16 @@ router.post("/course/:courseId/campaign/create", requireAuth, checkoutLimiter, a
       .contains("metadata", { campaignKey: campaign.campaign_key })
       .maybeSingle();
     if (pendingError) throw pendingError;
-    if (pendingPayment) return res.status(409).json({ ok: false, error: "لديك طلب دفع للحملة قيد الانتظار. أكمل عملية الدفع الحالية أولًا." });
+    if (pendingPayment) {
+      const pendingSince = new Date(pendingPayment.updated_at || pendingPayment.created_at || 0).getTime();
+      const stalePending = !Number.isFinite(pendingSince) || Date.now() - pendingSince > 15 * 60 * 1000;
+      if (stalePending) {
+        const { error: staleError } = await supabase.from("payments").update({ status: "failed", updated_at: new Date().toISOString() }).eq("id", pendingPayment.id).eq("status", "pending");
+        if (staleError) throw staleError;
+      } else {
+        return res.status(409).json({ ok: false, code: "PAYMENT_PENDING", error: "يوجد طلب دفع حديث قيد الانتظار. أكمل تأكيده من هاتفك أو انتظر 15 دقيقة ثم أعد المحاولة." });
+      }
+    }
 
     const amountCents = Number(campaign.price_cents);
     const durationDays = Number(campaign.duration_days);
