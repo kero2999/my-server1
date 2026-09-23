@@ -83,7 +83,9 @@ router.post("/course/:courseId/campaign/create", requireAuth, checkoutLimiter, a
     if (paymentError) throw paymentError;
     payment = insertedPayment;
 
-    const checkout = await createCheckout({ amountCents, currency: campaign.currency || course.currency || "EGP", merchantOrderId, user: { email: user.email, fullName: user.full_name } });
+    const paymentMethod = req.body && req.body.paymentMethod === "wallet" ? "wallet" : "card";
+    const walletPhone = paymentMethod === "wallet" ? String(req.body.walletPhone || "").trim() : undefined;
+    const checkout = await createCheckout({ amountCents, currency: campaign.currency || course.currency || "EGP", merchantOrderId, user: { email: user.email, fullName: user.full_name, phone: walletPhone }, paymentMethod, walletPhone });
     const { error: updateError } = await supabase.from("payments").update({ provider_order_id: checkout.providerOrderId, updated_at: new Date().toISOString() }).eq("id", payment.id);
     if (updateError) throw updateError;
 
