@@ -89,7 +89,7 @@ router.post("/course/:courseId/campaign/create", requireAuth, checkoutLimiter, a
     const { error: updateError } = await supabase.from("payments").update({ provider_order_id: checkout.providerOrderId, updated_at: new Date().toISOString() }).eq("id", payment.id);
     if (updateError) throw updateError;
 
-    res.status(201).json({ ok: true, payment: Object.assign({}, payment, { providerOrderId: checkout.providerOrderId }), campaign: publicCampaignSettings(campaign, course), checkoutUrl: checkout.checkoutUrl });
+    res.status(201).json({ ok: true, payment: Object.assign({}, payment, { providerOrderId: checkout.providerOrderId }), campaign: publicCampaignSettings(campaign, course), checkoutUrl: checkout.checkoutUrl, walletPending: Boolean(checkout.walletPending) });
   } catch (error) {
     console.error("Campaign payment creation error:", error);
     if (payment && payment.id) await supabase.from("payments").update({ status: "failed", updated_at: new Date().toISOString() }).eq("id", payment.id);
