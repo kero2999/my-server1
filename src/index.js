@@ -17,6 +17,9 @@ const affiliatesRoutes = require("./routes/affiliates");
 const adminAffiliatesRoutes = require("./routes/admin-affiliates");
 const campaignsRoutes = require("./routes/campaigns");
 const countriesRoutes = require("./routes/countries");
+const eventsRoutes = require("./routes/events");
+const adminEventsRoutes = require("./routes/admin-events");
+const { auditRequestMiddleware } = require("./audit-service");
 
 const app = express();
 app.disable("x-powered-by");
@@ -54,6 +57,7 @@ app.use(
   // Sensitive routes keep their stricter route-specific limiters below.
   rateLimit({ name: "api-global", windowMs: 60 * 1000, max: 600 })
 );
+app.use(auditRequestMiddleware());
 
 // مهم: راوت الـ webhook لازم ياخد الـ body كنص خام (raw) قبل ما نعمل express.json()
 // عشان التحقق من التوقيع (signature) يشتغل صح.
@@ -74,6 +78,8 @@ app.use("/api/affiliates", affiliatesRoutes);
 app.use("/api/admin/affiliates", adminAffiliatesRoutes);
 app.use("/api/campaigns", campaignsRoutes);
 app.use("/api/countries", countriesRoutes);
+app.use("/api/events", eventsRoutes);
+app.use("/api/admin/events", adminEventsRoutes);
 
 app.get("/health", (req, res) => res.json({ ok: true, service: "marketing-platform-server" }));
 
