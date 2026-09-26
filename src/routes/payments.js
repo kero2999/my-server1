@@ -77,6 +77,12 @@ router.post("/course/:courseId/campaign/create", requireAuth, checkoutLimiter, a
     if (userError) throw userError;
     if (!user) return res.status(404).json({ ok: false, error: "المستخدم غير موجود." });
 
+    const paymentMethod = req.body && req.body.paymentMethod === "wallet" ? "wallet" : "card";
+    const walletPhone = paymentMethod === "wallet" ? String(req.body.walletPhone || "").replace(/\s+/g, "").trim() : undefined;
+    if (paymentMethod === "wallet" && !/^01[0125]\d{8}$/.test(walletPhone || "")) {
+      return res.status(400).json({ ok: false, code: "WALLET_PHONE_INVALID", error: "رقم المحفظة غير صالح. اكتب رقم محفظة مصرية من 11 رقمًا يبدأ بـ010 أو 011 أو 012 أو 015." });
+    }
+
     const merchantOrderId = `ql_campaign_${req.userId}_${course.id}_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
     const { data: insertedPayment, error: paymentError } = await supabase.from("payments").insert({
       user_id: req.userId,
@@ -92,11 +98,6 @@ router.post("/course/:courseId/campaign/create", requireAuth, checkoutLimiter, a
     if (paymentError) throw paymentError;
     payment = insertedPayment;
 
-    const paymentMethod = req.body && req.body.paymentMethod === "wallet" ? "wallet" : "card";
-    const walletPhone = paymentMethod === "wallet" ? String(req.body.walletPhone || "").replace(/\s+/g, "").trim() : undefined;
-    if (paymentMethod === "wallet" && !/^01[0125]\d{8}$/.test(walletPhone || "")) {
-      return res.status(400).json({ ok: false, error: "رقم المحفظة غير صالح. اكتب رقم محفظة مصرية من 11 رقمًا يبدأ بـ010 أو 011 أو 012 أو 015." });
-    }
     const checkout = await createCheckout({ amountCents, currency: campaign.currency || course.currency || "EGP", merchantOrderId, user: { email: user.email, fullName: user.full_name, phone: walletPhone }, paymentMethod, walletPhone });
     const { error: updateError } = await supabase.from("payments").update({ provider_order_id: checkout.providerOrderId, updated_at: new Date().toISOString() }).eq("id", payment.id);
     if (updateError) throw updateError;
