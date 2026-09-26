@@ -93,7 +93,10 @@ router.post("/course/:courseId/campaign/create", requireAuth, checkoutLimiter, a
     payment = insertedPayment;
 
     const paymentMethod = req.body && req.body.paymentMethod === "wallet" ? "wallet" : "card";
-    const walletPhone = paymentMethod === "wallet" ? String(req.body.walletPhone || "").trim() : undefined;
+    const walletPhone = paymentMethod === "wallet" ? String(req.body.walletPhone || "").replace(/\s+/g, "").trim() : undefined;
+    if (paymentMethod === "wallet" && !/^01[0125]\d{8}$/.test(walletPhone || "")) {
+      return res.status(400).json({ ok: false, error: "رقم المحفظة غير صالح. اكتب رقم محفظة مصرية من 11 رقمًا يبدأ بـ010 أو 011 أو 012 أو 015." });
+    }
     const checkout = await createCheckout({ amountCents, currency: campaign.currency || course.currency || "EGP", merchantOrderId, user: { email: user.email, fullName: user.full_name, phone: walletPhone }, paymentMethod, walletPhone });
     const { error: updateError } = await supabase.from("payments").update({ provider_order_id: checkout.providerOrderId, updated_at: new Date().toISOString() }).eq("id", payment.id);
     if (updateError) throw updateError;
@@ -104,7 +107,8 @@ router.post("/course/:courseId/campaign/create", requireAuth, checkoutLimiter, a
     if (payment && payment.id) await supabase.from("payments").update({ status: "failed", updated_at: new Date().toISOString() }).eq("id", payment.id);
     if (error.message === "PAYMOB_API_KEY_MISSING" || error.message === "PAYMOB_INTEGRATION_ID_MISSING" || error.message === "PAYMOB_IFRAME_ID_MISSING") return res.status(503).json({ ok: false, error: "الدفع غير مفعّل بعد على السيرفر. أضف إعدادات Paymob Sandbox أولًا." });
     if (error.message === "PAYMOB_INTEGRATION_ID_INVALID") return res.status(503).json({ ok: false, error: "إعداد Paymob Integration غير صالح." });
-    if (error.message === "PAYMOB_UPSTREAM_ERROR") return res.status(502).json({ ok: false, error: "تعذّر إنشاء جلسة دفع الحملة من Paymob حاليًا." });
+    if (error.message === "PAYMOB_UPSTREAM_ERROR") return res.status(502).json({ ok: false, error: "تعذّر إنشاء جلسة دفع الحملة من Paymob حاليًا. جرّب مرة أخرى بعد لحظات." });
+    if (error.message === "PAYMOB_WALLET_PHONE_INVALID") return res.status(400).json({ ok: false, error: "رقم المحفظة غير صالح. اكتب رقم محفظة مصرية من 11 رقمًا." });
     res.status(500).json({ ok: false, error: "تعذّر إنشاء طلب دفع الحملة حاليًا." });
   }
 });
