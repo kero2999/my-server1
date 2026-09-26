@@ -10,6 +10,25 @@ const { getUserCountry } = require("../country-service");
 const router = express.Router();
 const checkoutLimiter = rateLimit({ name: "payment-checkout", windowMs: 10 * 60 * 1000, max: 5, keyGenerator: (req) => String(req.userId || req.ip || "unknown") });
 
+router.get("/:paymentId/status", requireAuth, async (req, res) => {
+  try {
+    if (!isNumericId(req.params.paymentId)) return res.status(400).json({ ok: false, error: "معرّف الدفع غير صالح." });
+    const { data: payment, error } = await supabase
+      .from("payments")
+      .select("id, user_id, course_id, payment_type, status, provider_transaction_id, paid_at, updated_at")
+      .eq("id", Number(req.params.paymentId))
+      .eq("user_id", req.userId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!payment) return res.status(404).json({ ok: false, error: "عملية الدفع غير موجودة." });
+    res.set("Cache-Control", "private, no-store");
+    return res.json({ ok: true, payment: { id: payment.id, courseId: payment.course_id, paymentType: payment.payment_type, status: payment.status, providerTransactionId: payment.provider_transaction_id || null, paidAt: payment.paid_at || null, updatedAt: payment.updated_at || null } });
+  } catch (error) {
+    console.error("Payment status error:", error);
+    return res.status(500).json({ ok: false, error: "تعذّر قراءة حالة عملية الدفع حاليًا." });
+  }
+});
+
 function isNumericId(value) {
   return /^\d+$/.test(String(value || ""));
 }
