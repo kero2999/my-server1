@@ -4,8 +4,15 @@ const whopsdk = require("../whop");
 const { verifyHmac, callbackDetails } = require("../paymob");
 const { CAMPAIGN_KEY, findCampaignByKey, campaignExpiry } = require("../campaign-service");
 const { recordAffiliateConversion } = require("../affiliate-service");
+const { recordAuditEvent } = require("../audit-service");
 
 const router = express.Router();
+
+function recordWebhookAudit(req, action, status, metadata = {}) {
+  return recordAuditEvent({ req, eventType: "payment", action, status, metadata }).catch((auditError) => {
+    console.error("Paymob webhook audit event failed:", auditError.message);
+  });
+}
 
 router.post("/paymob", async (req, res) => {
   const bodyType = typeof req.body;
@@ -26,6 +33,7 @@ router.post("/paymob", async (req, res) => {
   try {
     if (typeof req.body !== "string") {
       console.warn("[Paymob webhook] rejected", { reason: "body_not_raw_text", bodyType });
+      await recordWebhookAudit(req, "PAYMOB_WEBHOOK_REJECTED", "error", { reason: "body_not_raw_text", bodyType });
       return res.status(400).json({ ok: false, error: "Invalid raw callback body" });
     }
 
@@ -34,6 +42,7 @@ router.post("/paymob", async (req, res) => {
       payload = JSON.parse(req.body);
     } catch (error) {
       console.warn("[Paymob webhook] rejected", { reason: "invalid_json", bodyLength });
+      await recordWebhookAudit(req, "PAYMOB_WEBHOOK_REJECTED", "error", { reason: "invalid_json", bodyLength });
       return res.status(400).json({ ok: false, error: "Invalid callback JSON" });
     }
 
@@ -47,11 +56,13 @@ router.post("/paymob", async (req, res) => {
       validHmac = Boolean(signature && verifyHmac(payload, signature));
     } catch (error) {
       console.error("[Paymob webhook] HMAC configuration/error:", error.message);
+      await recordWebhookAudit(req, "PAYMOB_WEBHOOK_REJECTED", "error", { reason: "hmac_configuration", errorCode: error.message });
       return res.status(503).json({ ok: false, error: "Webhook configuration unavailable" });
     }
 
     if (!validHmac) {
       console.warn("[Paymob webhook] rejected", { reason: signature ? "invalid_hmac" : "missing_hmac", signatureSource });
+      await recordWebhookAudit(req, "PAYMOB_WEBHOOK_REJECTED", "error", { reason: signature ? "invalid_hmac" : "missing_hmac", signatureSource, bodyLength });
       return res.status(400).json({ ok: false, error: "Invalid HMAC" });
     }
 
@@ -63,6 +74,7 @@ router.post("/paymob", async (req, res) => {
 
     const details = callbackDetails(payload);
     if (!details.transactionId || !details.providerOrderId) {
+      await recordWebhookAudit(req, "PAYMOB_WEBHOOK_INCOMPLETE", "error", { hasTransactionId: Boolean(details.transactionId), hasProviderOrderId: Boolean(details.providerOrderId) });
       return res.status(400).json({ ok: false, error: "Incomplete Paymob callback" });
     }
 
@@ -77,16 +89,19 @@ router.post("/paymob", async (req, res) => {
     }
     if (!payment) {
       console.warn("Paymob callback did not match a local payment:", details.providerOrderId);
+      await recordWebhookAudit(req, "PAYMOB_WEBHOOK_UNMATCHED", "error", { providerOrderId: details.providerOrderId, merchantOrderId: details.merchantOrderId, transactionId: details.transactionId });
       return res.status(200).json({ received: true, matched: false });
     }
 
     if (Number(payment.amount_cents) !== details.amountCents || String(payment.currency).toUpperCase() !== String(details.currency).toUpperCase()) {
       console.error("Paymob callback amount/currency mismatch:", { payment, details });
+      await recordWebhookAudit(req, "PAYMOB_WEBHOOK_MISMATCH", "error", { paymentId: payment.id, providerOrderId: details.providerOrderId, transactionId: details.transactionId, expectedAmountCents: payment.amount_cents, receivedAmountCents: details.amountCents, expectedCurrency: payment.currency, receivedCurrency: details.currency });
       return res.status(400).json({ ok: false, error: "Payment data mismatch" });
     }
 
     if (payment.status === "paid") {
       if (payment.payment_type === "campaign_trial") await activateCampaignTrial(payment);
+      await recordWebhookAudit(req, `PAYMOB_WEBHOOK_DUPLICATE ${payment.id}`, "success", { paymentId: payment.id, providerOrderId: details.providerOrderId, transactionId: details.transactionId, paymentStatus: "paid" });
       return res.status(200).json({ received: true, duplicate: true });
     }
 
@@ -120,9 +135,12 @@ router.post("/paymob", async (req, res) => {
       }
     }
 
+    await recordWebhookAudit(req, `PAYMOB_WEBHOOK_PROCESSED ${payment.id}`, "success", { paymentId: payment.id, providerOrderId: details.providerOrderId, transactionId: details.transactionId, paymentStatus: nextStatus, success: details.success });
+
     return res.status(200).json({ received: true, status: nextStatus });
   } catch (e) {
     console.error("Paymob webhook error:", e);
+    await recordWebhookAudit(req, "PAYMOB_WEBHOOK_PROCESSING_ERROR", "error", { errorCode: e.message });
     return res.status(500).json({ ok: false, error: "Webhook processing failed" });
   }
 });
