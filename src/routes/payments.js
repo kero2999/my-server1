@@ -6,22 +6,48 @@ const { rateLimit } = require("../middleware/rate-limit");
 const { createCheckout } = require("../paymob");
 const { findCampaignByCourse, findCampaignTrial, publicCampaignSettings } = require("../campaign-service");
 const { getUserCountry } = require("../country-service");
+const { recordAuditEvent } = require("../audit-service");
 
 const router = express.Router();
 const checkoutLimiter = rateLimit({ name: "payment-checkout", windowMs: 10 * 60 * 1000, max: 5, keyGenerator: (req) => String(req.userId || req.ip || "unknown") });
+
+function recordPaymentAudit(req, { action, status = "success", payment, metadata = {} }) {
+  return recordAuditEvent({
+    req,
+    eventType: "payment",
+    action,
+    userId: payment && payment.user_id ? payment.user_id : req.userId,
+    courseId: payment && payment.course_id ? payment.course_id : null,
+    status,
+    metadata: {
+      paymentId: payment && payment.id ? payment.id : null,
+      paymentStatus: payment && payment.status ? payment.status : null,
+      paymentType: payment && payment.payment_type ? payment.payment_type : null,
+      providerOrderId: payment && payment.provider_order_id ? payment.provider_order_id : null,
+      ...metadata,
+    },
+  }).catch((auditError) => console.error("Payment audit event failed:", auditError.message));
+}
 
 router.get("/:paymentId/status", requireAuth, async (req, res) => {
   try {
     if (!isNumericId(req.params.paymentId)) return res.status(400).json({ ok: false, error: "معرّف الدفع غير صالح." });
     const { data: payment, error } = await supabase
       .from("payments")
-      .select("id, user_id, course_id, payment_type, status, provider_transaction_id, paid_at, updated_at")
+      .select("id, user_id, course_id, payment_type, status, merchant_order_id, provider_order_id, provider_transaction_id, paid_at, updated_at")
       .eq("id", Number(req.params.paymentId))
       .eq("user_id", req.userId)
       .maybeSingle();
     if (error) throw error;
     if (!payment) return res.status(404).json({ ok: false, error: "عملية الدفع غير موجودة." });
     res.set("Cache-Control", "private, no-store");
+    if (payment.status !== "pending") {
+      await recordPaymentAudit(req, {
+        action: `PAYMENT_STATUS ${payment.id}`,
+        payment,
+        metadata: { providerTransactionId: payment.provider_transaction_id || null, paidAt: payment.paid_at || null },
+      });
+    }
     return res.json({ ok: true, payment: { id: payment.id, courseId: payment.course_id, paymentType: payment.payment_type, status: payment.status, providerTransactionId: payment.provider_transaction_id || null, paidAt: payment.paid_at || null, updatedAt: payment.updated_at || null } });
   } catch (error) {
     console.error("Payment status error:", error);
@@ -111,7 +137,7 @@ router.post("/course/:courseId/campaign/create", requireAuth, checkoutLimiter, a
       amount_cents: amountCents,
       currency: campaign.currency || course.currency || "EGP",
       payment_type: "campaign_trial",
-      metadata: { campaignKey: campaign.campaign_key, durationDays, campaignPriceCents: amountCents },
+      metadata: { campaignKey: campaign.campaign_key, durationDays, campaignPriceCents: amountCents, paymentMethod },
       status: "pending",
     }).select("id, merchant_order_id, amount_cents, currency, status, payment_type").single();
     if (paymentError) throw paymentError;
@@ -121,10 +147,18 @@ router.post("/course/:courseId/campaign/create", requireAuth, checkoutLimiter, a
     const { error: updateError } = await supabase.from("payments").update({ provider_order_id: checkout.providerOrderId, updated_at: new Date().toISOString() }).eq("id", payment.id);
     if (updateError) throw updateError;
 
+    payment = { ...payment, provider_order_id: checkout.providerOrderId };
+    await recordPaymentAudit(req, {
+      action: `PAYMENT_CHECKOUT_CREATED ${payment.id}`,
+      payment,
+      metadata: { paymentMethod, walletPending: Boolean(checkout.walletPending), hasCheckoutUrl: Boolean(checkout.checkoutUrl), amountCents },
+    });
+
     res.status(201).json({ ok: true, payment: Object.assign({}, payment, { providerOrderId: checkout.providerOrderId }), campaign: publicCampaignSettings(campaign, course), checkoutUrl: checkout.checkoutUrl, walletPending: Boolean(checkout.walletPending) });
   } catch (error) {
     console.error("Campaign payment creation error:", error);
     if (payment && payment.id) await supabase.from("payments").update({ status: "failed", updated_at: new Date().toISOString() }).eq("id", payment.id);
+    await recordPaymentAudit(req, { action: `PAYMENT_CHECKOUT_FAILED ${payment && payment.id ? payment.id : "new"}`, status: "error", payment, metadata: { errorCode: error.message, paymentMethod: req.body && req.body.paymentMethod === "wallet" ? "wallet" : "card" } });
     if (error.message === "PAYMOB_API_KEY_MISSING" || error.message === "PAYMOB_INTEGRATION_ID_MISSING" || error.message === "PAYMOB_IFRAME_ID_MISSING") return res.status(503).json({ ok: false, error: "الدفع غير مفعّل بعد على السيرفر. أضف إعدادات Paymob Sandbox أولًا." });
     if (error.message === "PAYMOB_INTEGRATION_ID_INVALID") return res.status(503).json({ ok: false, error: "إعداد Paymob Integration غير صالح." });
     if (error.message === "PAYMOB_UPSTREAM_ERROR") return res.status(502).json({ ok: false, error: "تعذّر إنشاء جلسة دفع الحملة من Paymob حاليًا. جرّب مرة أخرى بعد لحظات." });
@@ -216,6 +250,13 @@ router.post("/course/:courseId/create", requireAuth, checkoutLimiter, async (req
       .eq("id", payment.id);
     if (updateError) throw updateError;
 
+    payment = { ...payment, provider_order_id: checkout.providerOrderId };
+    await recordPaymentAudit(req, {
+      action: `PAYMENT_CHECKOUT_CREATED ${payment.id}`,
+      payment,
+      metadata: { paymentMethod, walletPending: Boolean(checkout.walletPending), hasCheckoutUrl: Boolean(checkout.checkoutUrl), amountCents },
+    });
+
     res.status(201).json({
       ok: true,
       payment: Object.assign({}, payment, { providerOrderId: checkout.providerOrderId }),
@@ -226,6 +267,7 @@ router.post("/course/:courseId/create", requireAuth, checkoutLimiter, async (req
     if (payment && payment.id) {
       await supabase.from("payments").update({ status: "failed", updated_at: new Date().toISOString() }).eq("id", payment.id);
     }
+    await recordPaymentAudit(req, { action: `PAYMENT_CHECKOUT_FAILED ${payment && payment.id ? payment.id : "new"}`, status: "error", payment, metadata: { errorCode: e.message, paymentMethod: req.body && req.body.paymentMethod === "wallet" ? "wallet" : "card" } });
     if (e.message === "PAYMOB_API_KEY_MISSING" || e.message === "PAYMOB_INTEGRATION_ID_MISSING" || e.message === "PAYMOB_WALLET_INTEGRATION_ID_MISSING" || e.message === "PAYMOB_IFRAME_ID_MISSING") {
       return res.status(503).json({ ok: false, error: "الدفع غير مفعّل بعد على السيرفر. أضف إعدادات Paymob أولًا." });
     }
