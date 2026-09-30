@@ -11,6 +11,8 @@ const {
   publicCampaignSettings,
   adminCampaignSettings,
   findCampaignByKey,
+  launchOfferStats,
+  isFreeHourFunnel,
 } = require("../campaign-service");
 
 const router = express.Router();
@@ -44,7 +46,7 @@ router.get("/:courseId", campaignStatusLimiter, async (req, res) => {
     if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
     const setting = await findCampaignByCourse(course.id);
     res.set("Cache-Control", "private, no-store");
-    res.json({ ok: true, ...publicStatus(setting, null, course) });
+    res.json({ ok: true, ...publicStatus(setting, null, course), launchOffer: await launchOfferStats(setting) });
   } catch (error) {
     console.error("Public campaign status error:", error);
     res.status(500).json({ ok: false, error: "تعذر تحميل إعدادات الحملة حاليًا." });
@@ -57,8 +59,14 @@ router.get("/:courseId/mine", requireAuth, campaignStatusLimiter, async (req, re
     if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
     const setting = await findCampaignByCourse(course.id);
     const trial = setting ? await findCampaignTrial(req.userId, course.id, setting.campaign_key) : null;
+    let eligibility = null;
+    if (setting && isFreeHourFunnel(setting)) {
+      const { data: request, error: requestError } = await supabase.from("campaign_review_requests").select("status, launch_offer_eligible, submitted_at").eq("user_id", req.userId).eq("course_id", course.id).eq("campaign_key", setting.campaign_key).maybeSingle();
+      if (requestError) throw requestError;
+      eligibility = { eligible: Boolean(request?.status === "submitted" && request?.launch_offer_eligible), reviewStatus: request?.status || null, submittedAt: request?.submitted_at || null };
+    }
     res.set("Cache-Control", "private, no-store");
-    res.json({ ok: true, ...publicStatus(setting, trial, course) });
+    res.json({ ok: true, ...publicStatus(setting, trial, course), launchOffer: await launchOfferStats(setting), eligibility });
   } catch (error) {
     console.error("My campaign status error:", error);
     res.status(500).json({ ok: false, error: "تعذر تحميل حالة الحملة حاليًا." });
@@ -76,7 +84,7 @@ router.get("/admin/:courseId", requireAdmin, async (req, res) => {
     if (!setting) return res.json({ ok: true, settings: null, stats: null });
 
     const now = new Date().toISOString();
-    const [trialsResult, activeResult, expiredResult, paidResult, reviewsResult, publishedReviewsResult, pendingReviewsResult] = await Promise.all([
+    const [trialsResult, activeResult, expiredResult, paidResult, reviewsResult, publishedReviewsResult, pendingReviewsResult, freeTrialsResult, freeTrialsCompletedResult, eligibleResult] = await Promise.all([
       supabase.from("campaign_trials").select("id", { count: "exact", head: true }).eq("campaign_key", setting.campaign_key),
       supabase.from("campaign_trials").select("id", { count: "exact", head: true }).eq("campaign_key", setting.campaign_key).eq("status", "active").gt("expires_at", now),
       supabase.from("campaign_trials").select("id", { count: "exact", head: true }).eq("campaign_key", setting.campaign_key).or(`status.eq.expired,expires_at.lte.${now}`),
@@ -84,9 +92,13 @@ router.get("/admin/:courseId", requireAdmin, async (req, res) => {
       supabase.from("course_reviews").select("id", { count: "exact", head: true }).eq("course_id", course.id).eq("campaign_key", setting.campaign_key),
       supabase.from("course_reviews").select("id", { count: "exact", head: true }).eq("course_id", course.id).eq("campaign_key", setting.campaign_key).eq("status", "published"),
       supabase.from("course_reviews").select("id", { count: "exact", head: true }).eq("course_id", course.id).eq("campaign_key", setting.campaign_key).eq("status", "pending"),
+      supabase.from("course_trials").select("id", { count: "exact", head: true }).eq("course_id", course.id),
+      supabase.from("course_trials").select("id", { count: "exact", head: true }).eq("course_id", course.id).lte("expires_at", now),
+      supabase.from("campaign_review_requests").select("id", { count: "exact", head: true }).eq("course_id", course.id).eq("campaign_key", setting.campaign_key).eq("launch_offer_eligible", true),
     ]);
-    const firstError = [trialsResult, activeResult, expiredResult, paidResult, reviewsResult, publishedReviewsResult, pendingReviewsResult].find((result) => result.error)?.error;
+    const firstError = [trialsResult, activeResult, expiredResult, paidResult, reviewsResult, publishedReviewsResult, pendingReviewsResult, freeTrialsResult, freeTrialsCompletedResult, eligibleResult].find((result) => result.error)?.error;
     if (firstError) throw firstError;
+    const launchOffer = await launchOfferStats(setting);
     res.set("Cache-Control", "private, no-store");
     res.json({
       ok: true,
@@ -99,6 +111,12 @@ router.get("/admin/:courseId", requireAdmin, async (req, res) => {
         reviews: Number(reviewsResult.count || 0),
         publishedReviews: Number(publishedReviewsResult.count || 0),
         pendingReviews: Number(pendingReviewsResult.count || 0),
+        totalLaunchSlots: launchOffer.totalSlots,
+        usedLaunchSlots: launchOffer.usedSlots,
+        remainingLaunchSlots: launchOffer.remainingSlots,
+        freeTrialsStarted: Number(freeTrialsResult.count || 0),
+        freeTrialsCompleted: Number(freeTrialsCompletedResult.count || 0),
+        eligibleUsers: Number(eligibleResult.count || 0),
       },
     });
   } catch (error) {

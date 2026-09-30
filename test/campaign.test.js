@@ -1,6 +1,6 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
-const { campaignExpiry, campaignTrialStatus } = require("../src/campaign-service");
+const { campaignExpiry, campaignTrialStatus, isFreeHourFunnel } = require("../src/campaign-service");
 
 test("campaign expiry is calculated from the server-side start time", () => {
   assert.equal(
@@ -22,4 +22,10 @@ test("campaign trial is active only while its expiry is in the future", () => {
   assert.equal(campaignTrialStatus(trial, Date.parse("2026-08-30T00:00:00.000Z")).active, true);
   assert.equal(campaignTrialStatus(trial, Date.parse("2026-09-06T00:00:00.000Z")).active, false);
   assert.equal(campaignTrialStatus({ ...trial, status: "revoked" }, Date.parse("2026-08-30T00:00:00.000Z")).active, false);
+});
+
+test("free-hour funnel is opt-in by campaign version and does not affect legacy campaigns", () => {
+  assert.equal(isFreeHourFunnel({ launch_funnel_version: "free_hour_review_v1" }), true);
+  assert.equal(isFreeHourFunnel({ launch_funnel_version: "legacy_paid_trial" }), false);
+  assert.equal(isFreeHourFunnel(null), false);
 });

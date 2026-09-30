@@ -75,6 +75,25 @@ function campaignTrialStatus(trial, now = Date.now()) {
   };
 }
 
+function isFreeHourFunnel(setting) {
+  return String(setting?.launch_funnel_version || "") === "free_hour_review_v1";
+}
+
+async function launchOfferStats(setting) {
+  if (!setting || !isFreeHourFunnel(setting)) return { totalSlots: 0, usedSlots: 0, remainingSlots: 0 };
+  const { count, error } = await supabase
+    .from("launch_offer_redemptions")
+    .select("id", { count: "exact", head: true })
+    .eq("campaign_key", setting.campaign_key);
+  if (error) {
+    if (isMissingCampaignSchema(error)) return { totalSlots: Number(setting.launch_slot_limit || 200), usedSlots: 0, remainingSlots: Number(setting.launch_slot_limit || 200), schemaReady: false };
+    throw error;
+  }
+  const totalSlots = Number(setting.launch_slot_limit || 200);
+  const usedSlots = Number(count || 0);
+  return { totalSlots, usedSlots, remainingSlots: Math.max(0, totalSlots - usedSlots), schemaReady: true };
+}
+
 function publicCampaignSettings(setting, course) {
   if (!setting) return null;
   return {
@@ -88,6 +107,9 @@ function publicCampaignSettings(setting, course) {
     normalPriceCents: Number(setting.normal_price_cents),
     normalTrialMinutes: Number(setting.normal_trial_minutes),
     reviewEnabled: Boolean(setting.review_enabled),
+    funnelVersion: setting.launch_funnel_version || "legacy_paid_trial",
+    freeTrialMinutes: Number(setting.free_trial_minutes || setting.normal_trial_minutes || 10),
+    totalSlots: Number(setting.launch_slot_limit || 0),
   };
 }
 
@@ -101,6 +123,9 @@ function adminCampaignSettings(setting, course) {
     reviewMinProgress: Number(setting.review_min_progress),
     reviewMinCompletedLessons: Number(setting.review_min_completed_lessons),
     reviewsRequireModeration: Boolean(setting.reviews_require_moderation),
+    launchFunnelVersion: setting.launch_funnel_version || "legacy_paid_trial",
+    freeTrialMinutes: Number(setting.free_trial_minutes || setting.normal_trial_minutes || 10),
+    launchSlotLimit: Number(setting.launch_slot_limit || 0),
     createdAt: setting.created_at,
     updatedAt: setting.updated_at,
   };
@@ -123,4 +148,6 @@ module.exports = {
   publicCampaignSettings,
   adminCampaignSettings,
   campaignExpiry,
+  isFreeHourFunnel,
+  launchOfferStats,
 };

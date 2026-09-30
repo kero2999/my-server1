@@ -2,7 +2,7 @@ const express = require("express");
 const supabase = require("../db");
 const whopsdk = require("../whop");
 const { verifyHmac, callbackDetails } = require("../paymob");
-const { CAMPAIGN_KEY, findCampaignByKey, campaignExpiry } = require("../campaign-service");
+const { CAMPAIGN_KEY, findCampaignByKey, campaignExpiry, isFreeHourFunnel } = require("../campaign-service");
 const { recordAffiliateConversion } = require("../affiliate-service");
 const { recordAuditEvent } = require("../audit-service");
 
@@ -150,6 +150,24 @@ async function activateCampaignTrial(payment) {
   const campaignKey = String(metadata.campaignKey || CAMPAIGN_KEY);
   const campaign = await findCampaignByKey(campaignKey);
   if (!campaign || Number(campaign.course_id) !== Number(payment.course_id)) throw new Error("CAMPAIGN_NOT_CONFIGURED");
+
+  if (isFreeHourFunnel(campaign)) {
+    if (Number(payment.amount_cents) !== 2000 || String(payment.currency).toUpperCase() !== "EGP") throw new Error("LAUNCH_PAYMENT_RULE_MISMATCH");
+    const { data: slot, error: slotError } = await supabase.rpc("reserve_launch_offer_slot", {
+      p_campaign_key: campaignKey,
+      p_user_id: payment.user_id,
+      p_course_id: payment.course_id,
+      p_payment_id: payment.id,
+    });
+    if (slotError) {
+      if (/LAUNCH_SLOTS_EXHAUSTED|LAUNCH_PAYMENT_NOT_VERIFIED/i.test(String(slotError.message || ""))) {
+        console.warn("Launch offer slot rejected after paid callback:", { paymentId: payment.id, reason: slotError.message });
+        return;
+      }
+      throw slotError;
+    }
+    await supabase.from("payments").update({ metadata: { ...metadata, launchOfferSlot: Number(slot), launchOfferRedeemed: true }, updated_at: new Date().toISOString() }).eq("id", payment.id);
+  }
 
   const durationDays = Number(metadata.durationDays || campaign.duration_days);
   const startedAt = payment.paid_at || new Date().toISOString();

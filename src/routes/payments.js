@@ -4,7 +4,7 @@ const supabase = require("../db");
 const { requireAuth } = require("../middleware/auth");
 const { rateLimit } = require("../middleware/rate-limit");
 const { createCheckout } = require("../paymob");
-const { findCampaignByCourse, findCampaignTrial, publicCampaignSettings } = require("../campaign-service");
+const { findCampaignByCourse, findCampaignTrial, publicCampaignSettings, isFreeHourFunnel, launchOfferStats } = require("../campaign-service");
 const { getUserCountry } = require("../country-service");
 const { recordAuditEvent } = require("../audit-service");
 
@@ -93,6 +93,22 @@ router.post("/course/:courseId/campaign/create", requireAuth, checkoutLimiter, a
     const existingTrial = await findCampaignTrial(req.userId, course.id, campaign.campaign_key);
     if (existingTrial) return res.status(409).json({ ok: false, error: "تم استخدام عرض الحملة لهذا الحساب من قبل." });
 
+    const freeHourFunnel = isFreeHourFunnel(campaign);
+    if (freeHourFunnel) {
+      const { data: request, error: requestError } = await supabase
+        .from("campaign_review_requests")
+        .select("id, status, launch_offer_eligible")
+        .eq("user_id", req.userId)
+        .eq("course_id", course.id)
+        .eq("campaign_key", campaign.campaign_key)
+        .maybeSingle();
+      if (requestError) throw requestError;
+      if (!request || request.status !== "submitted" || request.launch_offer_eligible !== true) return res.status(403).json({ ok: false, code: "LAUNCH_REVIEW_REQUIRED", error: "أرسل تقييمك الصادق بعد انتهاء التجربة أولًا حتى تصبح مؤهلًا لعرض الإطلاق." });
+      const stats = await launchOfferStats(campaign);
+      if (stats.schemaReady === false) return res.status(503).json({ ok: false, code: "LAUNCH_OFFER_NOT_READY", error: "عرض الإطلاق غير جاهز حاليًا. شغّل تحديث قاعدة البيانات أولًا." });
+      if (stats.remainingSlots <= 0) return res.status(409).json({ ok: false, code: "LAUNCH_SLOTS_EXHAUSTED", error: "انتهى عرض الإطلاق." });
+    }
+
     const { data: pendingPayment, error: pendingError } = await supabase
       .from("payments")
       .select("id, merchant_order_id, provider_order_id, amount_cents, currency, status, created_at, updated_at")
@@ -114,8 +130,8 @@ router.post("/course/:courseId/campaign/create", requireAuth, checkoutLimiter, a
       }
     }
 
-    const amountCents = Number(campaign.price_cents);
-    const durationDays = Number(campaign.duration_days);
+    const amountCents = freeHourFunnel ? 2000 : Number(campaign.price_cents);
+    const durationDays = freeHourFunnel ? 10 : Number(campaign.duration_days);
     if (!Number.isInteger(amountCents) || amountCents < 1 || !Number.isInteger(durationDays) || durationDays < 1) return res.status(500).json({ ok: false, error: "إعدادات الحملة غير صالحة." });
 
     const { data: user, error: userError } = await supabase.from("users").select("id, email, full_name").eq("id", req.userId).maybeSingle();
@@ -135,15 +151,15 @@ router.post("/course/:courseId/campaign/create", requireAuth, checkoutLimiter, a
       merchant_order_id: merchantOrderId,
       provider: "paymob",
       amount_cents: amountCents,
-      currency: campaign.currency || course.currency || "EGP",
+      currency: freeHourFunnel ? "EGP" : (campaign.currency || course.currency || "EGP"),
       payment_type: "campaign_trial",
-      metadata: { campaignKey: campaign.campaign_key, durationDays, campaignPriceCents: amountCents, paymentMethod },
+      metadata: { campaignKey: campaign.campaign_key, durationDays, campaignPriceCents: amountCents, paymentMethod, funnelVersion: campaign.launch_funnel_version || "legacy_paid_trial", attribution: Object.fromEntries(Object.entries(req.body?.attribution || {}).filter(([key, value]) => ["utm_source", "utm_medium", "utm_campaign", "utm_content", "fbclid"].includes(key) && typeof value === "string").map(([key, value]) => [key, value.slice(0, 300)])) },
       status: "pending",
     }).select("id, merchant_order_id, amount_cents, currency, status, payment_type").single();
     if (paymentError) throw paymentError;
     payment = insertedPayment;
 
-    const checkout = await createCheckout({ amountCents, currency: campaign.currency || course.currency || "EGP", merchantOrderId, user: { email: user.email, fullName: user.full_name, phone: walletPhone }, paymentMethod, walletPhone });
+    const checkout = await createCheckout({ amountCents, currency: freeHourFunnel ? "EGP" : (campaign.currency || course.currency || "EGP"), merchantOrderId, user: { email: user.email, fullName: user.full_name, phone: walletPhone }, paymentMethod, walletPhone });
     const { error: updateError } = await supabase.from("payments").update({ provider_order_id: checkout.providerOrderId, updated_at: new Date().toISOString() }).eq("id", payment.id);
     if (updateError) throw updateError;
 
