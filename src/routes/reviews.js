@@ -4,7 +4,8 @@ const supabase = require("../db");
 const { requireAuth } = require("../middleware/auth");
 const { rateLimit } = require("../middleware/rate-limit");
 const { findPublishedCourse, getAccess } = require("./courses");
-const { findCampaignByCourse, findCampaignTrial, campaignTrialStatus, isMissingCampaignSchema } = require("../campaign-service");
+const { findCampaignByCourse, findCampaignTrial, campaignTrialStatus, isMissingCampaignSchema, isFreeHourFunnel } = require("../campaign-service");
+const { recordAuditEvent } = require("../audit-service");
 
 const router = express.Router();
 const REVIEW_VIDEO_BUCKET = process.env.REVIEW_VIDEO_BUCKET || "review-media";
@@ -65,14 +66,15 @@ async function reviewEligibility(userId, courseId) {
   const setting = await findCampaignByCourse(courseId);
   if (!setting) return { eligible: false, campaign: null, request: null, alreadyReviewed: false, metrics: null, requirements: null };
 
-  const [trialResult, progressResult, lessonsResult, reviewResult, requestResult] = await Promise.all([
+  const [trialResult, freeTrialResult, progressResult, lessonsResult, reviewResult, requestResult] = await Promise.all([
     findCampaignTrial(userId, courseId),
+    supabase.from("course_trials").select("id, started_at, expires_at").eq("user_id", userId).eq("course_id", courseId).maybeSingle(),
     supabase.from("course_progress").select("progress, completed").eq("user_id", userId).eq("course_id", courseId),
     supabase.from("lessons").select("id").eq("course_id", courseId),
     supabase.from("course_reviews").select("id, status").eq("user_id", userId).eq("course_id", courseId).maybeSingle(),
     supabase.from("campaign_review_requests").select("id, status, eligible_at, requested_at, submitted_at").eq("user_id", userId).eq("campaign_key", setting.campaign_key).maybeSingle(),
   ]);
-  const firstError = [progressResult, lessonsResult, reviewResult, requestResult].find((result) => result.error)?.error;
+  const firstError = [freeTrialResult, progressResult, lessonsResult, reviewResult, requestResult].find((result) => result.error)?.error;
   if (firstError) {
     if (isMissingCampaignSchema(firstError)) return { eligible: false, campaign: setting, request: null, alreadyReviewed: false, metrics: null, requirements: null, schemaReady: false };
     throw firstError;
@@ -82,9 +84,12 @@ async function reviewEligibility(userId, courseId) {
   const totalLessons = (lessonsResult.data || []).length || progressRows.length;
   const completedLessons = progressRows.filter((row) => Boolean(row.completed)).length;
   const progressPct = totalLessons ? Math.round((progressRows.reduce((sum, row) => sum + Number(row.progress || 0), 0) / totalLessons) * 100) / 100 : 0;
-  const elapsedDays = trialResult ? Math.max(0, Math.floor((Date.now() - new Date(trialResult.started_at).getTime()) / (24 * 60 * 60 * 1000))) : 0;
+  const funnelTrial = isFreeHourFunnel(setting) ? freeTrialResult.data : trialResult;
+  const elapsedDays = funnelTrial ? Math.max(0, Math.floor((Date.now() - new Date(funnelTrial.started_at).getTime()) / (24 * 60 * 60 * 1000))) : 0;
   const request = requestResult.data || null;
-  const trialState = campaignTrialStatus(trialResult);
+  const trialState = isFreeHourFunnel(setting)
+    ? { started: Boolean(funnelTrial), active: Boolean(funnelTrial && new Date(funnelTrial.expires_at).getTime() > Date.now()), remainingSeconds: funnelTrial ? Math.max(0, Math.floor((new Date(funnelTrial.expires_at).getTime() - Date.now()) / 1000)) : 0 }
+    : campaignTrialStatus(trialResult);
   const alreadyReviewed = Boolean(reviewResult.data);
   const requirements = {
     minDays: Number(setting.review_min_days),
@@ -93,7 +98,7 @@ async function reviewEligibility(userId, courseId) {
   };
   const eligible = Boolean(
     setting.review_enabled &&
-    trialState.active &&
+    (isFreeHourFunnel(setting) ? (trialState.started && !trialState.active) : trialState.active) &&
     !alreadyReviewed &&
     (!request || request.status === "eligible") &&
     elapsedDays >= requirements.minDays &&
@@ -105,7 +110,7 @@ async function reviewEligibility(userId, courseId) {
     campaign: setting,
     request,
     alreadyReviewed,
-    trial: trialResult,
+    trial: funnelTrial,
     metrics: { elapsedDays, progressPct, completedLessons },
     requirements,
     schemaReady: true,
@@ -153,7 +158,7 @@ router.post("/:courseId/request", requireAuth, reviewCreateLimiter, async (req, 
       campaign_key: result.campaign.campaign_key,
       user_id: req.userId,
       course_id: course.id,
-      campaign_trial_id: result.trial.id,
+      campaign_trial_id: isFreeHourFunnel(result.campaign) ? null : result.trial.id,
       status: "requested",
       eligible_at: new Date(new Date(result.trial.started_at).getTime() + result.requirements.minDays * 24 * 60 * 60 * 1000).toISOString(),
       requested_at: new Date().toISOString(),
@@ -225,12 +230,28 @@ router.post("/:courseId", requireAuth, reviewCreateLimiter, async (req, res) => 
   try {
     const course = await findPublishedCourse(req.params.courseId);
     if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
-    const access = await getAccess(req.userId, course.id);
-    if (!access.canAccess) return res.status(403).json({ ok: false, error: "افتح الكورس أو اشترِه أولًا حتى تتمكن من تقييمه." });
-
     const campaign = await findCampaignByCourse(course.id);
+    const access = await getAccess(req.userId, course.id);
+    const freeHourFunnel = Boolean(campaign && isFreeHourFunnel(campaign));
+    const freeTrial = freeHourFunnel ? (await supabase.from("course_trials").select("id, expires_at").eq("user_id", req.userId).eq("course_id", course.id).maybeSingle()).data : null;
+    if (!access.canAccess && !(freeHourFunnel && freeTrial && new Date(freeTrial.expires_at).getTime() <= Date.now())) return res.status(403).json({ ok: false, error: "افتح الكورس أو اشترِه أولًا حتى تتمكن من تقييمه." });
     const campaignTrial = campaign ? await findCampaignTrial(req.userId, course.id) : null;
     let campaignRequest = null;
+    if (freeHourFunnel) {
+      const eligibility = await reviewEligibility(req.userId, course.id);
+      if (!eligibility.eligible) return res.status(409).json({ ok: false, error: "أكمل الساعة المجانية أولًا حتى تستطيع إرسال تقييم صادق." });
+      const { data: request, error: requestError } = await supabase.from("campaign_review_requests").upsert({
+        campaign_key: campaign.campaign_key,
+        user_id: req.userId,
+        course_id: course.id,
+        status: "requested",
+        eligible_at: new Date().toISOString(),
+        requested_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "user_id,campaign_key" }).select("id, status").single();
+      if (requestError) throw requestError;
+      campaignRequest = request;
+    }
     if (campaignTrial && campaign) {
       const { data, error } = await supabase.from("campaign_review_requests").select("id, status").eq("user_id", req.userId).eq("course_id", course.id).eq("campaign_key", campaign.campaign_key).maybeSingle();
       if (error) throw error;
@@ -253,7 +274,7 @@ router.post("/:courseId", requireAuth, reviewCreateLimiter, async (req, res) => 
     if (existingError) throw existingError;
     if (existing) return res.status(409).json({ ok: false, error: "لديك تقييم سابق لهذا الكورس." });
 
-    const reviewStatus = campaignTrial && campaign?.reviews_require_moderation ? "pending" : "published";
+    const reviewStatus = (campaignTrial || freeHourFunnel) && campaign?.reviews_require_moderation ? "pending" : "published";
     const { data, error } = await supabase
       .from("course_reviews")
       .insert({
@@ -263,7 +284,7 @@ router.post("/:courseId", requireAuth, reviewCreateLimiter, async (req, res) => 
         comment,
         status: reviewStatus,
         verified_purchase: access.enrolled,
-        campaign_key: campaignTrial ? campaign.campaign_key : null,
+        campaign_key: (campaignTrial || freeHourFunnel) ? campaign.campaign_key : null,
         review_request_id: campaignRequest?.id || null,
       })
       .select("id, user_id, course_id, rating, comment, status, verified_purchase, video_bucket, video_path, video_mime_type, video_size_bytes, created_at, updated_at, users(full_name)")
@@ -274,8 +295,9 @@ router.post("/:courseId", requireAuth, reviewCreateLimiter, async (req, res) => 
     }
 
     if (campaignRequest?.id) {
-      await supabase.from("campaign_review_requests").update({ status: "submitted", submitted_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", campaignRequest.id);
+      await supabase.from("campaign_review_requests").update({ status: "submitted", launch_offer_eligible: true, eligible_at: new Date().toISOString(), submitted_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", campaignRequest.id);
     }
+    await recordAuditEvent({ req, eventType: "review_submitted", action: "REVIEW_SUBMITTED", userId: req.userId, courseId: course.id, metadata: { reviewId: data.id, rating } });
     res.status(201).json({ ok: true, review: await serializeReview(data), moderation: reviewStatus === "pending" ? "pending" : "published" });
   } catch (error) {
     console.error("Create review error:", error);

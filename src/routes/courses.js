@@ -13,7 +13,7 @@ const {
   parseTemplateSubmission,
   serializeTemplateSubmission,
 } = require("../chapter-templates");
-const { findCampaignTrial, campaignTrialStatus, findCampaignByCourse } = require("../campaign-service");
+const { findCampaignTrial, campaignTrialStatus, findCampaignByCourse, isFreeHourFunnel } = require("../campaign-service");
 function getKeroStructured() {
   return require("./mentor").callKeroStructured;
 }
@@ -650,7 +650,9 @@ router.post("/:courseId/trial/start", requireAuth, trialStartLimiter, async (req
       return res.status(409).json({ ok: false, error: "عرض الوصول الكامل لمدة 10 أيام متاح لهذا الكورس بدلًا من التجربة المجانية الحالية." });
     }
 
-    const minutes = Number(course.trial_minutes || DEFAULT_TRIAL_MINUTES);
+    const minutes = campaign && campaign.enabled && isFreeHourFunnel(campaign)
+      ? Number(campaign.free_trial_minutes || 60)
+      : Number(course.trial_minutes || DEFAULT_TRIAL_MINUTES);
     const startedAt = new Date();
     const expiresAt = new Date(startedAt.getTime() + minutes * 60 * 1000);
     const { error } = await supabase.from("course_trials").insert({
