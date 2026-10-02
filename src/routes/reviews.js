@@ -96,14 +96,13 @@ async function reviewEligibility(userId, courseId) {
     minProgress: Number(setting.review_min_progress),
     minCompletedLessons: Number(setting.review_min_completed_lessons),
   };
+  // Reviews are available to authenticated students before course use. The
+  // review remains honest and, when configured, pending moderation; campaign
+  // eligibility must not be used to force a positive review.
   const eligible = Boolean(
     setting.review_enabled &&
-    (isFreeHourFunnel(setting) ? (trialState.started && !trialState.active) : trialState.active) &&
     !alreadyReviewed &&
-    (!request || request.status === "eligible") &&
-    elapsedDays >= requirements.minDays &&
-    progressPct >= requirements.minProgress &&
-    completedLessons >= requirements.minCompletedLessons
+    (!request || request.status === "eligible" || request.status === "requested")
   );
   return {
     eligible,
@@ -152,15 +151,15 @@ router.post("/:courseId/request", requireAuth, reviewCreateLimiter, async (req, 
     if (!result.campaign || !result.schemaReady) return res.status(409).json({ ok: false, error: "طلب تقييم الحملة غير متاح حاليًا." });
     if (result.request?.status === "requested") return res.json({ ok: true, request: { ...publicReviewRequest(result), status: "requested", alreadyRequested: true } });
     if (result.request?.status === "submitted") return res.json({ ok: true, request: { ...publicReviewRequest(result), status: "submitted", alreadyRequested: true } });
-    if (!result.eligible) return res.status(409).json({ ok: false, error: "سيظهر طلب التقييم بعد استخدام الكورس وتحقيق شروط الأهلية المحددة." });
+    if (!result.eligible) return res.status(409).json({ ok: false, error: "لا يمكنك طلب تقييم جديد لهذا الكورس حاليًا." });
 
     const { data, error } = await supabase.from("campaign_review_requests").insert({
       campaign_key: result.campaign.campaign_key,
       user_id: req.userId,
       course_id: course.id,
-      campaign_trial_id: isFreeHourFunnel(result.campaign) ? null : result.trial.id,
+      campaign_trial_id: isFreeHourFunnel(result.campaign) ? null : result.trial?.id || null,
       status: "requested",
-      eligible_at: new Date(new Date(result.trial.started_at).getTime() + result.requirements.minDays * 24 * 60 * 60 * 1000).toISOString(),
+      eligible_at: new Date().toISOString(),
       requested_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }).select("id, status, eligible_at, requested_at, submitted_at").single();
@@ -234,12 +233,12 @@ router.post("/:courseId", requireAuth, reviewCreateLimiter, async (req, res) => 
     const access = await getAccess(req.userId, course.id);
     const freeHourFunnel = Boolean(campaign && isFreeHourFunnel(campaign));
     const freeTrial = freeHourFunnel ? (await supabase.from("course_trials").select("id, expires_at").eq("user_id", req.userId).eq("course_id", course.id).maybeSingle()).data : null;
-    if (!access.canAccess && !(freeHourFunnel && freeTrial && new Date(freeTrial.expires_at).getTime() <= Date.now())) return res.status(403).json({ ok: false, error: "افتح الكورس أو اشترِه أولًا حتى تتمكن من تقييمه." });
+    if (!access.canAccess && !campaign) return res.status(403).json({ ok: false, error: "التقييم متاح بعد تسجيل الدخول وفتح الكورس." });
     const campaignTrial = campaign ? await findCampaignTrial(req.userId, course.id) : null;
     let campaignRequest = null;
     if (freeHourFunnel) {
       const eligibility = await reviewEligibility(req.userId, course.id);
-      if (!eligibility.eligible) return res.status(409).json({ ok: false, error: "أكمل الساعة المجانية أولًا حتى تستطيع إرسال تقييم صادق." });
+      if (!eligibility.eligible) return res.status(409).json({ ok: false, error: "لا يمكنك إرسال تقييم جديد لهذا الكورس حاليًا." });
       const { data: request, error: requestError } = await supabase.from("campaign_review_requests").upsert({
         campaign_key: campaign.campaign_key,
         user_id: req.userId,
