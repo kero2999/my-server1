@@ -224,39 +224,13 @@ router.get("/:courseId", async (req, res) => {
   }
 });
 
-// POST /api/reviews/:courseId — one review per user/course, available with course access.
+// POST /api/reviews/:courseId — one review per authenticated user/course.
 router.post("/:courseId", requireAuth, reviewCreateLimiter, async (req, res) => {
   try {
     const course = await findPublishedCourse(req.params.courseId);
     if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
     const campaign = await findCampaignByCourse(course.id);
     const access = await getAccess(req.userId, course.id);
-    const freeHourFunnel = Boolean(campaign && isFreeHourFunnel(campaign));
-    const freeTrial = freeHourFunnel ? (await supabase.from("course_trials").select("id, expires_at").eq("user_id", req.userId).eq("course_id", course.id).maybeSingle()).data : null;
-    if (!access.canAccess && !campaign) return res.status(403).json({ ok: false, error: "التقييم متاح بعد تسجيل الدخول وفتح الكورس." });
-    const campaignTrial = campaign ? await findCampaignTrial(req.userId, course.id) : null;
-    let campaignRequest = null;
-    if (freeHourFunnel) {
-      const eligibility = await reviewEligibility(req.userId, course.id);
-      if (!eligibility.eligible) return res.status(409).json({ ok: false, error: "لا يمكنك إرسال تقييم جديد لهذا الكورس حاليًا." });
-      const { data: request, error: requestError } = await supabase.from("campaign_review_requests").upsert({
-        campaign_key: campaign.campaign_key,
-        user_id: req.userId,
-        course_id: course.id,
-        status: "requested",
-        eligible_at: new Date().toISOString(),
-        requested_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }, { onConflict: "user_id,campaign_key" }).select("id, status").single();
-      if (requestError) throw requestError;
-      campaignRequest = request;
-    }
-    if (campaignTrial && campaign) {
-      const { data, error } = await supabase.from("campaign_review_requests").select("id, status").eq("user_id", req.userId).eq("course_id", course.id).eq("campaign_key", campaign.campaign_key).maybeSingle();
-      if (error) throw error;
-      campaignRequest = data;
-      if (!campaignRequest || campaignRequest.status !== "requested") return res.status(409).json({ ok: false, error: "اطلب التقييم اختياريًا أولًا بعد تحقيق شروط الاستخدام." });
-    }
 
     const input = req.body && typeof req.body === "object" ? req.body : {};
     const rating = Number(input.rating);
@@ -273,7 +247,8 @@ router.post("/:courseId", requireAuth, reviewCreateLimiter, async (req, res) => 
     if (existingError) throw existingError;
     if (existing) return res.status(409).json({ ok: false, error: "لديك تقييم سابق لهذا الكورس." });
 
-    const reviewStatus = (campaignTrial || freeHourFunnel) && campaign?.reviews_require_moderation ? "pending" : "published";
+    const campaignTrial = campaign ? await findCampaignTrial(req.userId, course.id) : null;
+    const reviewStatus = campaign?.reviews_require_moderation ? "pending" : "published";
     const { data, error } = await supabase
       .from("course_reviews")
       .insert({
@@ -283,8 +258,8 @@ router.post("/:courseId", requireAuth, reviewCreateLimiter, async (req, res) => 
         comment,
         status: reviewStatus,
         verified_purchase: access.enrolled,
-        campaign_key: (campaignTrial || freeHourFunnel) ? campaign.campaign_key : null,
-        review_request_id: campaignRequest?.id || null,
+        campaign_key: campaignTrial ? campaign.campaign_key : null,
+        review_request_id: null,
       })
       .select("id, user_id, course_id, rating, comment, status, verified_purchase, video_bucket, video_path, video_mime_type, video_size_bytes, created_at, updated_at, users(full_name)")
       .single();
@@ -293,9 +268,6 @@ router.post("/:courseId", requireAuth, reviewCreateLimiter, async (req, res) => 
       throw error;
     }
 
-    if (campaignRequest?.id) {
-      await supabase.from("campaign_review_requests").update({ status: "submitted", launch_offer_eligible: true, eligible_at: new Date().toISOString(), submitted_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", campaignRequest.id);
-    }
     await recordAuditEvent({ req, eventType: "review_submitted", action: "REVIEW_SUBMITTED", userId: req.userId, courseId: course.id, metadata: { reviewId: data.id, rating } });
     res.status(201).json({ ok: true, review: await serializeReview(data), moderation: reviewStatus === "pending" ? "pending" : "published" });
   } catch (error) {
