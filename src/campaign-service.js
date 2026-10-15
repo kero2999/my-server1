@@ -1,6 +1,13 @@
 const supabase = require("./db");
 
 const CAMPAIGN_KEY = "marketing-launch-10-day";
+const RETIRED_CAMPAIGNS = new Set([CAMPAIGN_KEY, "marketing-growth-10-day", "marketing-mastery-10-day", "marketing-leadership-10-day"]);
+function isRetiredCampaign(setting) {
+  return Boolean(setting && (RETIRED_CAMPAIGNS.has(setting.campaign_key) || isFreeHourFunnel(setting)));
+}
+function applyRetirement(setting) {
+  return isRetiredCampaign(setting) ? {...setting, enabled:false, review_enabled:false, retired:true, free_trial_minutes:10, normal_trial_minutes:10} : setting;
+}
 const MISSING_RELATION_CODES = new Set(["42P01", "PGRST205"]);
 
 function isMissingCampaignSchema(error) {
@@ -19,7 +26,7 @@ async function findCampaignByCourse(courseId) {
     if (isMissingCampaignSchema(error)) return null;
     throw error;
   }
-  return data || null;
+  return applyRetirement(data) || null;
 }
 
 async function findCampaignByKey(campaignKey = CAMPAIGN_KEY) {
@@ -32,7 +39,7 @@ async function findCampaignByKey(campaignKey = CAMPAIGN_KEY) {
     if (isMissingCampaignSchema(error)) return null;
     throw error;
   }
-  return data || null;
+  return applyRetirement(data) || null;
 }
 
 async function findCampaignTrial(userId, courseId, campaignKey = null) {
@@ -80,7 +87,7 @@ function isFreeHourFunnel(setting) {
 }
 
 async function launchOfferStats(setting) {
-  if (!setting || !isFreeHourFunnel(setting)) return { totalSlots: 0, usedSlots: 0, remainingSlots: 0 };
+  if (!setting || isRetiredCampaign(setting) || !isFreeHourFunnel(setting)) return { totalSlots: 0, usedSlots: 0, remainingSlots: 0 };
   const { count, error } = await supabase
     .from("launch_offer_redemptions")
     .select("id", { count: "exact", head: true })
@@ -96,9 +103,11 @@ async function launchOfferStats(setting) {
 
 function publicCampaignSettings(setting, course) {
   if (!setting) return null;
+  setting = applyRetirement(setting);
   return {
     key: setting.campaign_key,
     enabled: Boolean(setting.enabled),
+    retired: isRetiredCampaign(setting),
     courseId: setting.course_id,
     courseSlug: course?.slug || null,
     priceCents: Number(setting.price_cents),
@@ -115,6 +124,7 @@ function publicCampaignSettings(setting, course) {
 
 function adminCampaignSettings(setting, course) {
   if (!setting) return null;
+  setting = applyRetirement(setting);
   return {
     ...publicCampaignSettings(setting, course),
     goalSubscribers: Number(setting.goal_subscribers),
@@ -139,7 +149,7 @@ function campaignExpiry(startedAt, durationDays) {
 }
 
 module.exports = {
-  CAMPAIGN_KEY,
+  CAMPAIGN_KEY, isRetiredCampaign, applyRetirement,
   isMissingCampaignSchema,
   findCampaignByCourse,
   findCampaignByKey,

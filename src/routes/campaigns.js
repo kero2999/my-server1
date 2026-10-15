@@ -60,7 +60,7 @@ router.get("/:courseId/mine", requireAuth, campaignStatusLimiter, async (req, re
     const setting = await findCampaignByCourse(course.id);
     const trial = setting ? await findCampaignTrial(req.userId, course.id, setting.campaign_key) : null;
     let eligibility = null;
-    if (setting && isFreeHourFunnel(setting)) {
+    if (setting && setting.enabled && isFreeHourFunnel(setting)) {
       const { data: request, error: requestError } = await supabase.from("campaign_review_requests").select("status, launch_offer_eligible, submitted_at").eq("user_id", req.userId).eq("course_id", course.id).eq("campaign_key", setting.campaign_key).maybeSingle();
       if (requestError) throw requestError;
       eligibility = { eligible: Boolean(request?.status === "submitted" && request?.launch_offer_eligible), reviewStatus: request?.status || null, submittedAt: request?.submitted_at || null };
@@ -169,6 +169,7 @@ router.patch("/admin/:courseId", requireAdmin, async (req, res) => {
     if (!current) return res.status(404).json({ ok: false, error: "إعداد الحملة غير موجود. شغّل Migration أولًا." });
 
     const input = req.body && typeof req.body === "object" ? req.body : {};
+    if (current.retired && (input.enabled === true || input.reviewEnabled === true)) return res.status(410).json({ok:false,error:"تم إلغاء هذا العرض."});
     const integer = (key, min, max) => {
       if (input[key] === undefined) return undefined;
       const value = Number(input[key]);
