@@ -4,7 +4,7 @@ const supabase = require("../db");
 const { requireAuth } = require("../middleware/auth");
 const { rateLimit } = require("../middleware/rate-limit");
 const { createCheckout } = require("../paymob");
-const { findCampaignByCourse, findCampaignTrial, publicCampaignSettings, isFreeHourFunnel, launchOfferStats } = require("../campaign-service");
+const { findCampaignByCourse, findCampaignTrial, publicCampaignSettings, isRetiredCampaign, isFreeHourFunnel, launchOfferStats } = require("../campaign-service");
 const { getUserCountry } = require("../country-service");
 const { recordAuditEvent } = require("../audit-service");
 
@@ -77,6 +77,7 @@ router.post("/course/:courseId/campaign/create", requireAuth, checkoutLimiter, a
     if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
     const campaign = await findCampaignByCourse(course.id);
     if (!campaign) return res.status(404).json({ ok: false, error: "الحملة غير مهيأة لهذا الكورس." });
+    if (isRetiredCampaign(campaign)) return res.status(410).json({ ok:false, error:"انتهى هذا العرض. يمكنك مراجعة سعر الكورس الحالي." });
     if (!campaign.enabled) return res.status(409).json({ ok: false, error: "الحملة غير مفعلة حاليًا." });
     const campaignCountry = await getUserCountry(req.userId);
     if (campaignCountry.countryCode !== "EG") return res.status(409).json({ ok: false, error: "دفع الحملة متاح حاليًا بالجنيه المصري فقط. غيّر الدولة إلى مصر أو انتظر تفعيل بوابة الدفع المحلية." });

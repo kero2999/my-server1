@@ -123,7 +123,7 @@ function publicReviewRequest(result) {
     alreadyReviewed: Boolean(result.alreadyReviewed),
     metrics: result.metrics || { elapsedDays: 0, progressPct: 0, completedLessons: 0 },
     requirements: result.requirements || null,
-    campaignEnabled: Boolean(result.campaign && (result.campaign.enabled || result.trial)),
+    campaignEnabled: Boolean(result.campaign && !result.campaign.retired && (result.campaign.enabled || result.trial)),
     reviewEnabled: Boolean(result.campaign?.review_enabled),
   };
 }

@@ -13,7 +13,7 @@ const {
   parseTemplateSubmission,
   serializeTemplateSubmission,
 } = require("../chapter-templates");
-const { findCampaignTrial, campaignTrialStatus, findCampaignByCourse, isFreeHourFunnel } = require("../campaign-service");
+const { findCampaignTrial, campaignTrialStatus, findCampaignByCourse } = require("../campaign-service");
 function getKeroStructured() {
   return require("./mentor").callKeroStructured;
 }
@@ -91,7 +91,7 @@ function publicCourse(row, pricing, country) {
     category: row.categories || null,
     instructor: row.instructor,
     status: row.status,
-    trialMinutes: row.trial_minutes,
+    trialMinutes: DEFAULT_TRIAL_MINUTES,
     entryFile: row.entry_file,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -338,6 +338,15 @@ router.get("/", async (req, res) => {
 });
 
 // GET /api/courses/:courseId — public details for a published course.
+router.get("/:courseId/overview", async (req,res)=>{
+  try {
+    const course=await findPublishedCourse(req.params.courseId);
+    if(!course)return res.status(404).json({ok:false,error:"الكورس غير موجود."});
+    const overview=require('../course-overview').courseOverview(course.slug);
+    res.json({ok:true,overview});
+  } catch(error){res.status(500).json({ok:false,error:"تعذر تحميل المنهج حاليًا."});}
+});
+
 router.get("/:courseId", async (req, res) => {
   try {
     const course = await findPublishedCourse(req.params.courseId);
@@ -650,9 +659,7 @@ router.post("/:courseId/trial/start", requireAuth, trialStartLimiter, async (req
       return res.status(409).json({ ok: false, error: "عرض الوصول الكامل لمدة 10 أيام متاح لهذا الكورس بدلًا من التجربة المجانية الحالية." });
     }
 
-    const minutes = campaign && campaign.enabled && isFreeHourFunnel(campaign)
-      ? Number(campaign.free_trial_minutes || 60)
-      : Number(course.trial_minutes || DEFAULT_TRIAL_MINUTES);
+    const minutes = DEFAULT_TRIAL_MINUTES;
     const startedAt = new Date();
     const expiresAt = new Date(startedAt.getTime() + minutes * 60 * 1000);
     const { error } = await supabase.from("course_trials").insert({
