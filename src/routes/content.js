@@ -1,6 +1,10 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const mime = require("mime-types");
+const { gzip } = require("node:zlib");
+const { promisify } = require("node:util");
+const gzipAsync = promisify(gzip);
+const { optimizeAuthoredHtml } = require("../course-presentation-performance");
 const supabase = require("../db");
 const { authenticate } = require("../middleware/auth");
 const { findPublishedCourse, getAccess, resolveEntryFile } = require("./courses");
@@ -106,7 +110,7 @@ function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "", courseId
     if (/id=["']assessmentTheme["']/i.test(sanitized)) {
       sanitized = sanitized.replace(/<\/body>/i, '<script id="ql-live-assessment-theme">(function(){var b=document.getElementById("assessmentTheme");if(b&&!b.onclick)b.addEventListener("click",function(){document.body.classList.toggle("dark")},true)})();</script></body>');
     }
-    return Buffer.from(sanitized, "utf8");
+    return Buffer.from(optimizeAuthoredHtml(sanitized), "utf8");
   }
   if (isChapter) {
     const dashboardUrl = courseDashboardUrl(courseSlug, courseId);
@@ -190,7 +194,7 @@ async function discoverStoredPath(bucket, prefix, requestedPath) {
       const child = `${current}/${item.name}`;
       const relative = child.slice(root.length + 1).replace(/\\/g, "/");
       if (relative.toLowerCase() === target) return relative;
-      if ((target.endsWith("/ch1.html") || target.endsWith("/index.html")) && String(item.name || "").toLowerCase() === basename && item.id) {
+      if ((/(?:^|\/)ch1\.html$|(?:^|\/)index\.html$/i.test(target)) && String(item.name || "").toLowerCase() === basename && item.id) {
         return relative;
       }
       if (!item.id && item.name) queue.push(child);
@@ -201,15 +205,16 @@ async function discoverStoredPath(bucket, prefix, requestedPath) {
 }
 
 async function downloadCourseFile(course, requestedPath) {
-  const candidates = [requestedPath];
+  // Most published entry paths are already exact. Do not list the storage tree first.
+  const direct = await supabase.storage.from(course.content_bucket).download(`${course.content_prefix}/${requestedPath}`);
+  if (!direct.error && direct.data) return { data: direct.data, path: requestedPath };
   const basename = String(requestedPath || "").split("/").pop().toLowerCase();
   if (basename === "ch1.html" || basename === "index.html") {
     const discovered = await discoverStoredPath(course.content_bucket, course.content_prefix, requestedPath);
-    if (discovered && !candidates.includes(discovered)) candidates.push(discovered);
-  }
-  for (const path of candidates) {
-    const { data, error } = await supabase.storage.from(course.content_bucket).download(`${course.content_prefix}/${path}`);
-    if (!error && data) return { data, path };
+    if (discovered && discovered !== requestedPath) {
+      const fallback = await supabase.storage.from(course.content_bucket).download(`${course.content_prefix}/${discovered}`);
+      if (!fallback.error && fallback.data) return { data: fallback.data, path: discovered };
+    }
   }
   return null;
 }
@@ -303,12 +308,12 @@ router.get("/:courseId/*", async (req, res) => {
     let responseBody = sourceBuffer;
     if (isHtmlContent) {
       const country = await getUserCountry(identity.userId);
-      const variants = await getCourseVariants(course.id, country.countryCode);
+      const preserveUploadedCourse = shouldPreserveUploadedCourse(course.slug);
+      const variants = preserveUploadedCourse ? { lessons: new Map() } : await getCourseVariants(course.id, country.countryCode);
       const lessonVariant = requestedChapter > 0 ? variants.lessons.get(`ch${requestedChapter}`) : null;
       const hasExplicitLessonVariant = Boolean(lessonVariant?.content_html);
       const courseSlug = String(course.slug || "").trim().toLowerCase();
       const isEgyptianMarketingLaunch = courseSlug === "marketing-launch" && country.countryCode === "EG" && requestedChapter > 0;
-      const preserveUploadedCourse = shouldPreserveUploadedCourse(courseSlug);
       // For uploaded Launch/Growth/Mastery/Leadership content, the published ZIP is the source of truth.
       // Do not let legacy lesson variants or dialect rewriting alter its wording.
       const usePublishedSource = preserveUploadedCourse || !hasExplicitLessonVariant || isEgyptianMarketingLaunch;
@@ -320,6 +325,11 @@ router.get("/:courseId/*", async (req, res) => {
       responseBody = usePublishedSource
         ? (preserveUploadedContent ? preparedHtml : injectContentDialect(serverLocalizedHtml, dialectCountry))
         : serverLocalizedHtml;
+    }
+    res.vary("Accept-Encoding");
+    if (isHtmlContent && responseBody.length >= 1024 && req.acceptsEncodings("gzip")) {
+      responseBody = await gzipAsync(responseBody, { level: 4 });
+      res.set("Content-Encoding", "gzip");
     }
     res.send(responseBody);
   } catch (e) {
