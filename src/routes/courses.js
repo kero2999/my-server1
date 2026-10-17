@@ -1,3 +1,4 @@
+const { reviewedQuiz } = require('../reviewed-quizzes');
 const express = require("express");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
@@ -775,7 +776,10 @@ router.post("/:courseId/quizzes/:quizId/submit", requireAuth, quizSubmitLimiter,
     }
 
     const answers = Array.isArray(req.body.answers) ? req.body.answers : [];
-    const questions = Array.isArray(quiz.questions) ? quiz.questions : [];
+    const reviewed = reviewedQuiz(course, quiz);
+    if (reviewed && req.body.quizVersion !== reviewed.version) return res.status(409).json({ ok: false, code: 'QUIZ_VERSION_CHANGED', error: 'تم تحديث الاختبار. حدّث الصفحة وأعد اختيار إجاباتك قبل التسليم.' });
+    const questions = reviewed ? reviewed.questions : (Array.isArray(quiz.questions) ? quiz.questions : []);
+    if (reviewed && (answers.length !== questions.length || answers.some((a,i) => !Number.isInteger(a) || a < 0 || a >= questions[i].options.length))) return res.status(400).json({ ok:false, error:'أكمل جميع إجابات الاختبار.' });
     if (!questions.length) return res.status(400).json({ ok: false, error: "الاختبار لا يحتوي على أسئلة." });
     let correct = 0;
     questions.forEach((question, index) => {

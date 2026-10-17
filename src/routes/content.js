@@ -92,6 +92,9 @@ function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "", courseId
   const lessonContext = hideGenericCountryExamples ? "" : country?.lessonContexts?.[chapterNumber] || "";
   const countryBootstrap = country ? '<script id="ql-country-bootstrap">(function(){var profile=' + JSON.stringify({ countryCode: country.countryCode, countryName: country.countryName, dialect: country.dialect, currency: country.currency, currencySymbol: country.currencySymbol, locale: country.locale }) + ';window.LMSCountry=window.LMSCountry||{};window.LMSCountry.getCode=function(){return profile.countryCode;};window.LMSCountry.getProfile=function(){return profile;};})();</script>' : "";
   if (countryBootstrap && !/id=(['"])ql-country-bootstrap\1/i.test(sanitized)) sanitized = sanitized.replace(/<\/head>/i, countryBootstrap + '</head>');
+  // The reviewed package supplies its own navigation, visual explanations and mentor access.
+  // Authentication and server chapter checks run in the gateway before this presentation step.
+  if (/<meta\s+name=["']ql-course-release["']\s+content=["']2026-10-17["']/i.test(sanitized)) return Buffer.from(sanitized, "utf8");
   if (isChapter) {
     const dashboardUrl = courseDashboardUrl(courseSlug, courseId);
     const quizUrl = courseQuizUrl(courseSlug, courseId, chapterNumber);
