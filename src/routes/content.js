@@ -94,7 +94,16 @@ function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "", courseId
   if (countryBootstrap && !/id=(['"])ql-country-bootstrap\1/i.test(sanitized)) sanitized = sanitized.replace(/<\/head>/i, countryBootstrap + '</head>');
   // The reviewed package supplies its own navigation, visual explanations and mentor access.
   // Authentication and server chapter checks run in the gateway before this presentation step.
-  if (/<meta\s+name=["']ql-course-release["']\s+content=["']2026-10-17["']/i.test(sanitized)) return Buffer.from(sanitized, "utf8");
+  const authoredRelease = /<meta\b(?=[^>]*\bname\s*=\s*["']ql-course-release["'])(?=[^>]*\bcontent\s*=\s*["']2026-10-17["'])[^>]*>/i.test(sanitized);
+  if (authoredRelease) {
+    const catalogUrl = `https://www.quadralevel.com/learn/${encodeURIComponent(courseIdentifier(courseSlug, courseId))}/chapter/1?activity=index`;
+    sanitized = sanitized.replace(/href=(["'])course-home\.html\1/gi, 'href="' + catalogUrl + '" target="_top"');
+    if (String(courseSlug).toLowerCase() === "marketing-launch" && /(?:^|\/)course-home\.html$/i.test(requestedPath)) {
+      sanitized = sanitized.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, (script) => /QLLearning\.request\(\s*['"]learning['"]\s*,\s*1\s*\)/.test(script) ? "" : script);
+      sanitized = sanitized.replace(/<\/body>/i, '<script src="https://www.quadralevel.com/js/launch-course-catalog.js"></script></body>');
+    }
+    return Buffer.from(sanitized, "utf8");
+  }
   if (isChapter) {
     const dashboardUrl = courseDashboardUrl(courseSlug, courseId);
     const quizUrl = courseQuizUrl(courseSlug, courseId, chapterNumber);
