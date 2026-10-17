@@ -598,9 +598,16 @@ router.get("/:courseId/content-token", requireAuth, async (req, res) => {
   try {
     const course = await findPublishedCourse(req.params.courseId);
     if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
-    const access = await getAccess(req.userId, course.id);
+    const includeShell = req.query.include === "learning-shell";
+    const [access, country] = await Promise.all([
+      getAccess(req.userId, course.id),
+      includeShell ? getUserCountry(req.userId) : Promise.resolve(null),
+    ]);
     if (!access.canAccess) return res.status(403).json({ ok: false, error: "لا تملك صلاحية الوصول إلى محتوى هذا الكورس." });
-    const entryFile = await resolveEntryFile(course);
+    const [entryFile, prices] = await Promise.all([
+      resolveEntryFile(course),
+      includeShell ? getCoursePrices([course.id], country.countryCode) : Promise.resolve(null),
+    ]);
     if (entryFile && entryFile !== course.entry_file) {
       const { error: repairError } = await supabase
         .from("courses")
@@ -613,7 +620,9 @@ router.get("/:courseId/content-token", requireAuth, async (req, res) => {
       }
     }
     const token = jwt.sign({ userId: req.userId, courseId: String(course.id), scope: "course-content" }, process.env.JWT_SECRET, { expiresIn: access.accessType === "enrolled" ? "1h" : "15m" });
-    res.json({ ok: true, token, entryFile, expiresIn: access.accessType === "enrolled" ? 3600 : 900 });
+    res.set("Cache-Control", "private, no-store");
+    res.json({ ok: true, token, entryFile, expiresIn: access.accessType === "enrolled" ? 3600 : 900,
+      ...(includeShell ? { course: publicCourse(course, prices.get(Number(course.id)), country), access } : {}) });
   } catch (e) {
     accessError(res, e);
   }
