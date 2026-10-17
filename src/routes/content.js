@@ -100,6 +100,19 @@ function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "", courseId
   // Authentication and server chapter checks run in the gateway before this presentation step.
   const authoredRelease = /<meta\b(?=[^>]*\bname\s*=\s*["']ql-course-release["'])(?=[^>]*\bcontent\s*=\s*["']2026-10-17["'])[^>]*>/i.test(sanitized);
   if (authoredRelease) {
+    // The authenticated learning shell owns Kero. Do not start a hidden second
+    // widget or fetch a full learning dashboard merely to mount that duplicate.
+    const authoredChapter = /(?:^|\/)(?:ch\d+|index)\.html$/i.test(requestedPath);
+    if (authoredChapter) {
+      sanitized = sanitized
+        .replace(/<script\b[^>]*\bsrc=(["'])(?:\.\/)?mentor-bridge\.js\1[^>]*>\s*<\/script>/gi, '')
+        .replace(/<script\b[^>]*\bsrc=(["'])https:\/\/www\.quadralevel\.com\/js\/mentor\.js(?:\?[^"']*)?\1[^>]*>\s*<\/script>/gi, '')
+        .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, script => /QLLearning\.request\(\s*['"]learning['"]/.test(script) && /window\.LMSAuth\s*=/.test(script) && /LMSMentor\.mount/.test(script) ? '' : script);
+    }
+    const assessmentAsset = String(courseSlug).toLowerCase() === 'marketing-launch' ? 'course-assessment-launch-20261017.js' : 'course-assessment-20261017.js';
+    sanitized = sanitized
+      .replace(/(<script\b[^>]*\bsrc=)(["'])(?:\.\/)?learning-rpc\.js\2/gi, '$1"https://www.quadralevel.com/js/course-learning-rpc-20261017.js"')
+      .replace(/(<script\b[^>]*\bsrc=)(["'])(?:\.\/)?assessment-live\.js\2/gi, '$1"https://www.quadralevel.com/js/' + assessmentAsset + '"');
     const catalogUrl = `https://www.quadralevel.com/learn/${encodeURIComponent(courseIdentifier(courseSlug, courseId))}/chapter/1?activity=index`;
     sanitized = sanitized.replace(/href=(["'])course-home\.html\1/gi, 'href="' + catalogUrl + '" target="_top"');
     if (["marketing-launch", "marketing-growth", "marketing-mastery", "marketing-leadership"].includes(String(courseSlug).toLowerCase()) && /(?:^|\/)course-home\.html$/i.test(requestedPath)) {
