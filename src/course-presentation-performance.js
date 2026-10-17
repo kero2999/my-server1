@@ -11,6 +11,11 @@ function optimizeAuthoredHtml(html) {
     return rule;
   });
   if (changed && !result.includes(FONT_STYLESHEET)) result = result.replace(/<\/head>/i, '<link rel="stylesheet" href="' + FONT_STYLESHEET + '"></head>');
+  // Reveal readable content without waiting for every image or optional resource to load.
+  if (/<main\b/i.test(result) && !/id=["']ql-reader-ready["']/.test(result)) {
+    const readyScript = '<script id="ql-reader-ready">(function(){if(parent===window)return;var done=false,observer;function ready(){if(done)return;var main=document.querySelector("main"),text=main&&main.querySelector("p");if(!text||!text.textContent.trim())return;done=true;if(observer)observer.disconnect();parent.postMessage({type:"ql-reader-ready"},"https://www.quadralevel.com");}observer=new MutationObserver(ready);observer.observe(document.documentElement,{childList:true,subtree:true,characterData:true});document.addEventListener("DOMContentLoaded",ready,{once:true});ready();})();</script>';
+    result = result.replace(/<head\b[^>]*>/i, '$&' + readyScript);
+  }
   return result;
 }
 module.exports = { optimizeAuthoredHtml };
