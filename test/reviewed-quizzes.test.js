@@ -41,6 +41,21 @@ test('authored catalog receives live progress script without obsolete placeholde
  const output=prepareCourseHtml(Buffer.from(input),'launch-visual-20261017/course-home.html','marketing-launch',4).toString();
  assert(output.includes('launch-course-catalog.js'));assert(!output.includes("QLLearning.request('learning',1)"));assert(output.includes('keepFilters()'));
 });
+test('all four authored visual course catalogs keep their own course identity',()=>{
+ const {prepareCourseHtml}=require('../src/routes/content');
+ for(const slug of ['marketing-launch','marketing-growth','marketing-mastery','marketing-leadership']){
+  const input='<html><head><meta content="2026-10-17" name="ql-course-release"></head><body><a href="course-home.html">الفهرس</a></body></html>';
+  const output=prepareCourseHtml(Buffer.from(input),'course-home.html',slug,4).toString();
+  assert(output.includes('content="'+slug+'"'));assert(output.includes('/learn/'+slug+'/chapter/1?activity=index'));
+  assert(output.includes('launch-course-catalog.js?v=20261017-3'));assert(!output.includes('ql-chapter-visual'));
+ }
+});
+test('live assessment theme control is restored without changing authored lesson content',()=>{
+ const {prepareCourseHtml}=require('../src/routes/content');
+ const input='<html><head><meta content="2026-10-17" name="ql-course-release"></head><body><button id="assessmentTheme">الوضع المظلم</button><p>نص التقييم</p></body></html>';
+ const output=prepareCourseHtml(Buffer.from(input),'assessment1.html','marketing-growth',4).toString();
+ assert(output.includes('id="ql-live-assessment-theme"'));assert(output.includes('<p>نص التقييم</p>'));assert(!output.includes('site-floatnav'));
+});
 test('quiz endpoint rejects missing or stale versions and incomplete answers before saving attempts',async()=>{
  const db=require('../src/db'),original=db.from;let inserted=0;
  db.from=(table)=>{const q={select(){return q},eq(){return q},order(){return q},limit(){return q},async maybeSingle(){return {data:table==='courses'?{id:1,slug:'marketing-launch',price_cents:0}:table==='quizzes'?{id:1,quiz_key:'quiz-1',passing_score:70,questions:[]}:table==='users'?{id:9,role:'admin'}:null}},insert(){inserted++;return q},async single(){return {data:{score:100,passed:true}}}};return q};

@@ -98,9 +98,13 @@ function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "", courseId
   if (authoredRelease) {
     const catalogUrl = `https://www.quadralevel.com/learn/${encodeURIComponent(courseIdentifier(courseSlug, courseId))}/chapter/1?activity=index`;
     sanitized = sanitized.replace(/href=(["'])course-home\.html\1/gi, 'href="' + catalogUrl + '" target="_top"');
-    if (String(courseSlug).toLowerCase() === "marketing-launch" && /(?:^|\/)course-home\.html$/i.test(requestedPath)) {
+    if (["marketing-launch", "marketing-growth", "marketing-mastery", "marketing-leadership"].includes(String(courseSlug).toLowerCase()) && /(?:^|\/)course-home\.html$/i.test(requestedPath)) {
       sanitized = sanitized.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, (script) => /QLLearning\.request\(\s*['"]learning['"]\s*,\s*1\s*\)/.test(script) ? "" : script);
-      sanitized = sanitized.replace(/<\/body>/i, '<script src="https://www.quadralevel.com/js/launch-course-catalog.js?v=20261017-2"></script></body>');
+      sanitized = sanitized.replace(/<\/head>/i, '<meta name="ql-course-slug" content="' + escapeHtml(courseSlug) + '"></head>');
+      sanitized = sanitized.replace(/<\/body>/i, '<script src="https://www.quadralevel.com/js/launch-course-catalog.js?v=20261017-3"></script></body>');
+    }
+    if (/id=["']assessmentTheme["']/i.test(sanitized)) {
+      sanitized = sanitized.replace(/<\/body>/i, '<script id="ql-live-assessment-theme">(function(){var b=document.getElementById("assessmentTheme");if(b&&!b.onclick)b.addEventListener("click",function(){document.body.classList.toggle("dark")},true)})();</script></body>');
     }
     return Buffer.from(sanitized, "utf8");
   }
