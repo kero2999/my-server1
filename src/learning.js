@@ -1,3 +1,4 @@
+const { reviewedQuiz } = require('./reviewed-quizzes');
 const supabase = require("./db");
 
 const { getCountryConfig, getCourseVariants, normalizeCountryCode } = require("./country-service");
@@ -177,6 +178,8 @@ async function buildLearning({ userId, course, access, country, preview = false 
     const chapterTemplate = getChapterTemplate(course.slug, n);
     const unlocked = Boolean(access?.admin) || n === 1 || Boolean(previous && (assessmentSystemEnabled ? previous.assessment?.passed : previous.result?.passed));
     const lessonProgress = lesson ? progress.find((item) => item.lesson_key === lesson.lesson_key) : null;
+    const reviewed = reviewedQuiz(course, quiz);
+    const currentQuestions = reviewed?.questions || quizLocal?.questions || quiz?.questions;
     chapters.push({
       number: n,
       lessonKey: lesson ? lesson.lesson_key : `ch${n}`,
@@ -201,6 +204,8 @@ async function buildLearning({ userId, course, access, country, preview = false 
         weaknesses: Array.isArray(assessment.weaknesses) ? assessment.weaknesses : [],
         finalFeedback: assessment.final_feedback || assessment.understanding_feedback || assessment.template_feedback || "",
         templateSubmission: parseTemplateSubmission(assessment.template_text),
+        templateFeedback: assessment.template_feedback || "",
+        questions: assessment.status === "questions_pending" ? (assessment.questions || []) : [],
       } : null,
       practicalTask: chapterTemplate
         ? practicalTaskText(chapterTemplate)
@@ -213,12 +218,13 @@ async function buildLearning({ userId, course, access, country, preview = false 
       quiz: quiz ? {
         id: quiz.id,
         quizKey: quiz.quiz_key,
+        version: reviewed?.version || null,
         title: preserveUploadedCourseTitles ? quiz.title : (quizLocal?.title || quiz.title),
         passingScore: Number(quiz.passing_score || 70),
-        questionCount: quizQuestions(quizLocal?.questions || quiz.questions).length,
-        requiredCorrect: Math.ceil((quizQuestions(quizLocal?.questions || quiz.questions).length * Number(quiz.passing_score || 70)) / 100),
+        questionCount: quizQuestions(currentQuestions).length,
+        requiredCorrect: Math.ceil((quizQuestions(currentQuestions).length * Number(quiz.passing_score || 70)) / 100),
         scenarioContext: quizLocal?.scenario_context || resolvedCountry.quizContexts?.[n] || "",
-        questions: quizQuestions(quizLocal?.questions || quiz.questions),
+        questions: quizQuestions(currentQuestions),
       } : null,
       result: attempt ? {
         score: Number(attempt.score || 0),
