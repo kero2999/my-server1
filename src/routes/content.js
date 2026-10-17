@@ -100,7 +100,7 @@ function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "", courseId
     sanitized = sanitized.replace(/href=(["'])course-home\.html\1/gi, 'href="' + catalogUrl + '" target="_top"');
     if (String(courseSlug).toLowerCase() === "marketing-launch" && /(?:^|\/)course-home\.html$/i.test(requestedPath)) {
       sanitized = sanitized.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, (script) => /QLLearning\.request\(\s*['"]learning['"]\s*,\s*1\s*\)/.test(script) ? "" : script);
-      sanitized = sanitized.replace(/<\/body>/i, '<script src="https://www.quadralevel.com/js/launch-course-catalog.js"></script></body>');
+      sanitized = sanitized.replace(/<\/body>/i, '<script src="https://www.quadralevel.com/js/launch-course-catalog.js?v=20261017-2"></script></body>');
     }
     return Buffer.from(sanitized, "utf8");
   }
