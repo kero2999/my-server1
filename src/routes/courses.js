@@ -243,7 +243,8 @@ async function resolveEntryFile(course) {
   // Marketing Launch is uploaded with a root index.html. Avoid a storage tree scan
   // on every content-token request; the content gateway still discovers a nested
   // index.html if an older upload placed the files under a folder.
-  if (String(course?.slug || "") === "marketing-launch" && /\.html?$/i.test(currentEntry)) {
+  if ((String(course?.slug || "") === "marketing-launch" ||
+    (["marketing-growth", "marketing-mastery", "marketing-leadership"].includes(String(course?.slug || "")) && /^(?:growth|mastery|leadership)-visual-[^/]+\//i.test(currentEntry))) && /\.html?$/i.test(currentEntry)) {
     return currentEntry;
   }
   const preferred = preferredStartFile(currentEntry, course);
