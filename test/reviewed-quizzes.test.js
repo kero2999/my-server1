@@ -20,6 +20,27 @@ test('reviewed authored presentation skips legacy layout additions only',()=>{
  assert.equal(output,input);
  assert.match(prepareCourseHtml(Buffer.from('<html><head></head><body>قديم</body></html>'),'ch2.html','marketing-launch',1).toString(),/site-floatnav/);
 });
+test('HTML serializer attribute order never reintroduces legacy chapter images',()=>{
+ const {prepareCourseHtml}=require('../src/routes/content');
+ for(const marker of [
+  '<meta content="2026-10-17" name="ql-course-release"/>',
+  "<META data-other='value' content = '2026-10-17' name = 'ql-course-release'>",
+  '<meta\nname="ql-course-release"\ncontent="2026-10-17">'
+ ]){
+  const input='<html><head>'+marker+'</head><body><h1>الفكرة</h1><img src="authored.jpg"><a href="course-home.html">الفهرس</a></body></html>';
+  for(const file of ['index.html','ch2.html','ch12.html']){
+   const output=prepareCourseHtml(Buffer.from(input),file,'marketing-launch',4).toString();
+   assert(!output.includes('ql-chapter-visual'));assert(!output.includes('site-floatnav'));
+   assert(output.includes('authored.jpg'));assert(output.includes('?activity=index'));
+  }
+ }
+});
+test('authored catalog receives live progress script without obsolete placeholder status script',()=>{
+ const {prepareCourseHtml}=require('../src/routes/content');
+ const input='<html><head><meta content="2026-10-17" name="ql-course-release"/></head><body><script>QLLearning.request(\'learning\',1).then(()=>{});</script><script>keepFilters()</script></body></html>';
+ const output=prepareCourseHtml(Buffer.from(input),'launch-visual-20261017/course-home.html','marketing-launch',4).toString();
+ assert(output.includes('launch-course-catalog.js'));assert(!output.includes("QLLearning.request('learning',1)"));assert(output.includes('keepFilters()'));
+});
 test('quiz endpoint rejects missing or stale versions and incomplete answers before saving attempts',async()=>{
  const db=require('../src/db'),original=db.from;let inserted=0;
  db.from=(table)=>{const q={select(){return q},eq(){return q},order(){return q},limit(){return q},async maybeSingle(){return {data:table==='courses'?{id:1,slug:'marketing-launch',price_cents:0}:table==='quizzes'?{id:1,quiz_key:'quiz-1',passing_score:70,questions:[]}:table==='users'?{id:9,role:'admin'}:null}},insert(){inserted++;return q},async single(){return {data:{score:100,passed:true}}}};return q};
