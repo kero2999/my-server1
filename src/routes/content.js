@@ -238,7 +238,7 @@ function tokenFromReferer(req) {
   try {
     const refererUrl = new URL(referer);
     const requestOrigin = `${req.protocol}://${req.get("host")}`;
-    if (refererUrl.origin !== requestOrigin || !refererUrl.pathname.startsWith("/api/content/")) return "";
+    if (refererUrl.origin !== requestOrigin || !refererUrl.pathname.startsWith(`/api/content/${encodeURIComponent(String(req.params.courseId))}/`)) return "";
     return String(refererUrl.searchParams.get("access_token") || "").trim();
   } catch (e) {
     return "";
