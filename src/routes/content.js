@@ -238,7 +238,7 @@ function tokenFromReferer(req) {
   try {
     const refererUrl = new URL(referer);
     const requestOrigin = `${req.protocol}://${req.get("host")}`;
-    if (refererUrl.origin !== requestOrigin || !refererUrl.pathname.startsWith("/api/content/")) return "";
+    if (refererUrl.origin !== requestOrigin || !refererUrl.pathname.startsWith(`/api/content/${encodeURIComponent(String(req.params.courseId))}/`)) return "";
     return String(refererUrl.searchParams.get("access_token") || "").trim();
   } catch (e) {
     return "";
@@ -304,7 +304,7 @@ router.get("/:courseId/*", async (req, res) => {
     const isHtmlContent = /text\/html/i.test(contentType);
     res.set({
       "Content-Type": contentType,
-      "Cache-Control": isHtmlContent || access.accessType !== "enrolled" ? "private, no-store" : "private, max-age=300",
+      "Cache-Control": "private, no-store",
       "Referrer-Policy": "same-origin",
       "X-Content-Type-Options": "nosniff",
     });
@@ -312,7 +312,7 @@ router.get("/:courseId/*", async (req, res) => {
       let maxAge = 900;
       try {
         const payload = jwt.decode(identity.accessToken);
-        if (payload && Number.isFinite(payload.exp)) maxAge = Math.max(60, Number(payload.exp) - Math.floor(Date.now() / 1000));
+        if (payload && Number.isFinite(payload.exp)) maxAge = Math.max(0, Number(payload.exp) - Math.floor(Date.now() / 1000));
       } catch (e) {
         // Keep the short default if decoding is unavailable.
       }
