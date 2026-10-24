@@ -1,10 +1,12 @@
 const express = require('express');
+const { DIALOGUE_PROFILE } = require('./mentor-consultant-pilot');
 
 function createMentorLab({ db, authorize, sourceLimit, chatLimit, loadKnowledge, buildPrompt, countryForUser, fetchModel = fetch }) {
   const router = express.Router();
   const busy = new Set();
   router.use(authorize);
   router.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
+  router.get('/profile', (req,res) => res.json({ok:true,experience:DIALOGUE_PROFILE}));
   router.get('/source', sourceLimit, async (req, res) => {
     const slug = String(req.query.courseSlug || 'marketing-launch');
     const chapter = Number(req.query.chapter || 1);
@@ -33,7 +35,7 @@ function createMentorLab({ db, authorize, sourceLimit, chatLimit, loadKnowledge,
       if (!response.ok) return res.status(502).json({ok:false,error:'تعذر الحصول على رد من النموذج. أعد المحاولة لاحقًا.'});
       const data=await response.json(), choice=data.choices?.[0],reply=choice?.message?.content?.trim();
       if(!reply || choice.finish_reason!=='stop') return res.status(502).json({ok:false,error:'رد النموذج لم يكتمل؛ لم نعرضه باعتباره إجابة كاملة.'});
-      return res.json({ok:true,reply,source:metadata(source),usage:data.usage,elapsedMs:Date.now()-started,review:'requires_human_review'});
+      return res.json({ok:true,reply,experience:DIALOGUE_PROFILE,source:metadata(source),usage:data.usage,elapsedMs:Date.now()-started,review:'requires_human_review'});
     } catch { return res.status(503).json({ok:false,error:source?'لم يكتمل طلب المحادثة. أعد المحاولة بعد قليل.':'تعذر التحقق من محتوى الفصل الحالي؛ لم يتم تخمين إجابة.'}); }
     finally { busy.delete(req.userId); }
   });
@@ -41,3 +43,4 @@ function createMentorLab({ db, authorize, sourceLimit, chatLimit, loadKnowledge,
 }
 function metadata(source) { return {courseSlug:source.courseSlug,chapter:source.chapter,title:source.title,versionId:source.versionId,file:source.file,sha256:source.sha256,characters:source.content.length}; }
 module.exports = { createMentorLab };
+
