@@ -18,9 +18,9 @@ function optimizeAuthoredHtml(html) {
   }
   // Keep the approved mark separate from course/chapter titles; never alter lesson content.
   result = result.replace(/<header\b[^>]*class=["'][^"']*\b(?:index-top|mast|assessment-top)\b[^"']*["'][^>]*>[\s\S]*?<\/header>/gi, (header) =>
-    header.replace(/<img\b[^>]*>/gi, (img) => img.replace(/\bsrc=["'][^"']*["']/i, 'src="https://www.quadralevel.com/images/logo-mark.png"'))
+    header.replace(/<img\b[^>]*>/gi, (img) => img.replace(/\bsrc=["'][^"']*["']/i, 'src="https://www.quadralevel.com/images/quadralevel-signature-original.png"'))
   );
-  if (!result.includes('id="ql-mark-only"')) result = result.replace(/<\/head>/i, '<style id="ql-mark-only">.index-top,.mast,.assessment-top{direction:rtl!important}.ql-index-brand>span{display:none!important}.index-top .ql-index-brand,.mast>.brand{order:-1!important}.index-top .ql-index-brand img,.mast>.brand>img,.assessment-top>img.logo{width:56px!important;height:44px!important;max-width:56px!important;object-fit:contain!important;padding:0!important;border-radius:8px}.assessment-top>img.logo{order:-1!important}@media(max-width:600px){.index-top .ql-index-brand img,.mast>.brand>img,.assessment-top>img.logo{width:48px!important;height:38px!important}}</style></head>');
+  if (!result.includes('id="ql-mark-only"')) result = result.replace(/<\/head>/i, '<style id="ql-mark-only">.index-top,.mast,.assessment-top{direction:rtl!important}.ql-index-brand>span{display:none!important}.index-top .ql-index-brand,.mast>.brand{order:-1!important}.index-top .ql-index-brand img,.mast>.brand>img,.assessment-top>img.logo{width:220px!important;height:60px!important;max-width:220px!important;flex-shrink:0!important;object-fit:cover!important;object-position:center!important;padding:0!important;border-radius:8px}.assessment-top>img.logo{order:-1!important}@media(max-width:600px){.index-top .ql-index-brand img,.mast>.brand>img,.assessment-top>img.logo{width:176px!important;height:48px!important}}</style></head>');
   return result;
 }
 module.exports = { optimizeAuthoredHtml };
