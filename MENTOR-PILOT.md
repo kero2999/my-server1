@@ -2,9 +2,16 @@
 
 Scope: conversational chat only, Marketing Launch chapter 1. Existing structured grading, access controls, trial message limits and all other chats remain unchanged. Enable only after review with MENTOR_CONSULTANT_PILOT=true in a test environment. No database migration.
 
-The reference text is extracted from platform/ch1.html, the public preview. It has NOT been compared to the current protected uploaded Launch chapter. Outlines are guidance metadata only, not retrieval of advanced lesson content. Launch titles come from marketing-launch-modern-titles.sql; Growth titles from the reviewed font-fixed upload package; Mastery and Leadership from their repository content JSONs. These must be reconciled with active published versions before rollout. The existing Growth/Launch shared legacy content file is identified but not changed by this pilot.
+Knowledge now comes from Supabase's active courses.current_version_id, storage pointer and manifest. It downloads only the selected current-course chN.html. Other published levels supply lesson-title metadata only; their paid lesson bodies are never loaded. Pointers are rechecked after download; mismatch, upload during read, missing file, unsafe path or extraction failure stops grounded chat with an honest temporary-unavailability message. No fallback to the legacy nine-chapter/public preview file. No silent truncation. Existing legacy chats remain unchanged while the pilot is OFF.
 
-Validation: node --test tests/mentor-consultant-pilot.test.js; node --check src/routes/mentor.js. This checks configuration and source integrity; it does not establish educational correctness of model responses. No live LLM evaluation or student-account test has been performed; no model credentials were available.
+Validation: node --test tests/mentor-consultant-pilot.test.js tests/mentor-course-knowledge.test.js; node --check src/routes/mentor.js. Seven automated tests include 48 independently scoped chapter/version cases, extraction, path rejection and fail-closed behavior. This is mocked integration coverage, not verification of live Supabase records or LLM educational quality.
+
+Live verification tool (run inside the backend environment with its existing secrets; never paste keys into chat):
+
+    node scripts/check-mentor-consultant-pilot.js
+    node scripts/check-mentor-consultant-pilot.js --dialogues
+
+The first command reads 48 active lesson files and records version/hash/file/character counts without API writes or full content in the report. The second also runs 12 real conversational cases (13 model calls) and saves actual replies, usage, response completion and timings. It uses paid model API tokens. Semantic outcome is explicitly REQUIRES_HUMAN_REVIEW, never an invented pass score. Inspect mentor-consultant-evaluation.json before activation. Credentials and live output are unavailable in this local environment, so neither live command has been claimed as run.
 
 Required conversational acceptance cases before activation:
 
