@@ -1,0 +1,74 @@
+{
+  "marketing-launch": {
+    "level": 1,
+    "title": "Marketing Launch",
+    "chapters": [
+      "مقدمة إلى التسويق",
+      "السوق والعميل",
+      "شخصية العميل المثالي",
+      "رحلة العميل",
+      "علم نفس التسويق",
+      "أنواع التسويق",
+      "أساسيات العلامة التجارية",
+      "عرض القيمة",
+      "الاستراتيجية التسويقية",
+      "المحتوى التسويقي",
+      "الحملة التسويقية",
+      "القياس والتحسين"
+    ]
+  },
+  "marketing-mastery": {
+    "level": 3,
+    "title": "Marketing Mastery",
+    "chapters": [
+      "الاستراتيجية التسويقية المتقدمة",
+      "تحليل السوق والعملاء المتقدم",
+      "التموضع وبناء القيمة المقترحة",
+      "استراتيجية العرض والتسعير",
+      "رحلة العميل المتقدمة وبناء الـFunnel",
+      "Performance Marketing",
+      "Conversion Rate Optimization",
+      "Marketing Analytics & Metrics",
+      "Customer Retention & CRM",
+      "Content & Creative Strategy",
+      "Growth Marketing",
+      "بناء نظام تسويقي متكامل"
+    ]
+  },
+  "marketing-leadership": {
+    "level": 4,
+    "title": "Marketing Leadership",
+    "chapters": [
+      "القيادة التسويقية والتفكير الاستراتيجي",
+      "استراتيجية الأعمال للمسوّق",
+      "ذكاء السوق والاستراتيجية التنافسية",
+      "Brand Strategy & Market Positioning",
+      "علم نفس العميل المتقدم",
+      "Marketing Finance & Economics",
+      "Marketing Operations & Team Management",
+      "Omnichannel Marketing & Integrated Campaigns",
+      "Advanced Growth, Scaling & Expansion",
+      "Marketing Technology, AI & Automation",
+      "Crisis Management, Reputation & Risk",
+      "بناء وقيادة منظمة التسويق"
+    ]
+  },
+  "marketing-growth": {
+    "level": 2,
+    "title": "Marketing Growth",
+    "chapters": [
+      "Marketing Growth الفصل الأول · البحث التسويقي",
+      "Marketing Growth الفصل 02 · التحليل المتقدم للعميل",
+      "Marketing Growth الفصل 03 · تحليل المنافسين",
+      "Marketing Growth الفصل 04 · التموضع التسويقي",
+      "Marketing Growth الفصل 05 · استراتيجية العرض",
+      "Marketing Growth الفصل 06 · القمع التسويقي",
+      "Marketing Growth الفصل 07 · توليد العملاء المحتملين",
+      "Marketing Growth الفصل 08 · تحسين التحويل",
+      "Marketing Growth الفصل 09 · التسويق المدفوع",
+      "Marketing Growth الفصل 10 · الأتمتة التسويقية",
+      "Marketing Growth الفصل 11 · الاحتفاظ بالعملاء والنمو",
+      "Marketing Growth الفصل 12 · النظام التسويقي المتكامل"
+    ]
+  }
+}

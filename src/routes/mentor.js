@@ -7,6 +7,7 @@ const { getMentorProjectPrompt } = require("../mentor-projects");
 const supabase = require("../db");
 const { getCountryConfig, getUserCountry, normalizeCountryCode } = require("../country-service");
 const { getAccess } = require("./courses");
+const { isConsultantPilot, buildConsultantPrompt } = require("../mentor-consultant-pilot");
 
 const router = express.Router();
 
@@ -446,7 +447,7 @@ async function callMentorModel(
 
           model: MODEL,
 
-          max_completion_tokens: 300,
+          max_completion_tokens: isConsultantPilot(chapter, courseSlug) ? 1400 : 300,
 
           /*
            مهم:
@@ -459,7 +460,7 @@ async function callMentorModel(
             {
               role: "system",
               content:
-                buildSystemPrompt(
+                isConsultantPilot(chapter, courseSlug) ? buildConsultantPrompt(country) : buildSystemPrompt(
                   chapter,
                   country,
                   courseSlug
@@ -984,3 +985,4 @@ router.post(
 
 module.exports = router;
 module.exports.callKeroStructured = callKeroStructured;
+
