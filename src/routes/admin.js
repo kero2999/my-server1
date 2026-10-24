@@ -75,6 +75,16 @@ function publicAdminCourse(row) {
 }
 
 router.use(requireAdmin);
+// Protected sandbox: does not enable the student pilot or change grades/progress.
+router.use('/mentor-lab', require('../mentor-lab').createMentorLab({
+  db: supabase,
+  authorize: requireAdmin,
+  sourceLimit: require('../middleware/rate-limit').rateLimit({name:'mentor-lab-source',windowMs:60000,max:120,keyGenerator:req=>req.userId}),
+  chatLimit: require('../middleware/rate-limit').rateLimit({name:'mentor-lab-chat',windowMs:60000,max:20,keyGenerator:req=>req.userId}),
+  loadKnowledge: require('../mentor-course-knowledge').loadCourseKnowledge,
+  buildPrompt: require('../mentor-consultant-pilot').buildConsultantPrompt,
+  countryForUser: require('../country-service').getUserCountry,
+}));
 
 router.get("/categories", async (req, res) => {
   try {
@@ -364,3 +374,4 @@ router.post("/courses/:courseId/publish", async (req, res) => {
 });
 
 module.exports = router;
+
