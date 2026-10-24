@@ -7,6 +7,8 @@ const { getMentorProjectPrompt } = require("../mentor-projects");
 const supabase = require("../db");
 const { getCountryConfig, getUserCountry, normalizeCountryCode } = require("../country-service");
 const { getAccess } = require("./courses");
+const { isConsultantPilot, buildConsultantPrompt } = require("../mentor-consultant-pilot");
+const { loadCourseKnowledge } = require("../mentor-course-knowledge");
 
 const router = express.Router();
 
@@ -426,6 +428,12 @@ async function callMentorModel(
   country,
   courseSlug
 ) {
+  const pilot = isConsultantPilot(chapter, courseSlug);
+  let pilotKnowledge;
+  if (pilot) {
+    try { pilotKnowledge = await loadCourseKnowledge(supabase, courseSlug, Number(chapter)); }
+    catch { return "مش قادر أتحقق من النسخة الحالية للفصل دلوقتي، فمش هخمن محتواه. جرّب تاني بعد قليل."; }
+  }
 
   const apiRes =
     await fetch(
@@ -446,7 +454,7 @@ async function callMentorModel(
 
           model: MODEL,
 
-          max_completion_tokens: 300,
+          max_completion_tokens: pilot ? 2400 : 300,
 
           /*
            مهم:
@@ -459,7 +467,7 @@ async function callMentorModel(
             {
               role: "system",
               content:
-                buildSystemPrompt(
+                pilot ? buildConsultantPrompt(country, pilotKnowledge) : buildSystemPrompt(
                   chapter,
                   country,
                   courseSlug
@@ -984,3 +992,4 @@ router.post(
 
 module.exports = router;
 module.exports.callKeroStructured = callKeroStructured;
+
