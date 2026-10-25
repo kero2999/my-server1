@@ -1,5 +1,7 @@
 const express = require('express');
 const { DIALOGUE_PROFILE } = require('./mentor-consultant-pilot');
+const crypto = require('node:crypto');
+const { DIALOGUE_FORMAT, parseDialogueTurn } = require('./mentor-dialogue-contract');
 
 function createMentorLab({ db, authorize, sourceLimit, chatLimit, loadKnowledge, buildPrompt, countryForUser, fetchModel = fetch }) {
   const router = express.Router();
@@ -27,15 +29,21 @@ function createMentorLab({ db, authorize, sourceLimit, chatLimit, loadKnowledge,
     try {
       source = await loadKnowledge(db,'marketing-launch',1);
       const country = await countryForUser(req.userId);
+      const prompt = buildPrompt(country,source);
+      const requestedModel = process.env.OPENAI_MODEL||'gpt-5-mini';
+      const promptSha256 = crypto.createHash('sha256').update(prompt).digest('hex');
       const response = await fetchModel('https://api.openai.com/v1/chat/completions', {
         method:'POST', headers:{'Content-Type':'application/json',Authorization:`Bearer ${process.env.OPENAI_API_KEY}`},
-        body:JSON.stringify({model:process.env.OPENAI_MODEL||'gpt-5-mini',max_completion_tokens:2400,messages:[{role:'system',content:buildPrompt(country,source)},...messages.map(m=>({role:m.role,content:m.content.trim()}))]}),
+        body:JSON.stringify({model:requestedModel,max_completion_tokens:2400,response_format:DIALOGUE_FORMAT,messages:[{role:'system',content:prompt},...messages.map(m=>({role:m.role,content:m.content.trim()}))]}),
         signal:AbortSignal.timeout(45000),
       });
       if (!response.ok) return res.status(502).json({ok:false,error:'تعذر الحصول على رد من النموذج. أعد المحاولة لاحقًا.'});
       const data=await response.json(), choice=data.choices?.[0],reply=choice?.message?.content?.trim();
       if(!reply || choice.finish_reason!=='stop') return res.status(502).json({ok:false,error:'رد النموذج لم يكتمل؛ لم نعرضه باعتباره إجابة كاملة.'});
-      return res.json({ok:true,reply,experience:DIALOGUE_PROFILE,source:metadata(source),usage:data.usage,elapsedMs:Date.now()-started,review:'requires_human_review'});
+      let turn;
+      try { turn=parseDialogueTurn(reply); }
+      catch { return res.status(502).json({ok:false,error:'رد التجربة خرج عن صيغة الحوار المختصرة. أعد المحاولة؛ لم نعرضه كأنه اجتاز الفحص.',experience:DIALOGUE_PROFILE,review:'format_failed'}); }
+      return res.json({ok:true,reply:turn.reply,dialogue:{move:turn.move,hasFollowUp:Boolean(turn.followUp)},experience:DIALOGUE_PROFILE,source:metadata(source),generation:{requestedModel,returnedModel:data.model||null,promptSha256},usage:data.usage,elapsedMs:Date.now()-started,review:'requires_human_review'});
     } catch { return res.status(503).json({ok:false,error:source?'لم يكتمل طلب المحادثة. أعد المحاولة بعد قليل.':'تعذر التحقق من محتوى الفصل الحالي؛ لم يتم تخمين إجابة.'}); }
     finally { busy.delete(req.userId); }
   });
@@ -43,4 +51,5 @@ function createMentorLab({ db, authorize, sourceLimit, chatLimit, loadKnowledge,
 }
 function metadata(source) { return {courseSlug:source.courseSlug,chapter:source.chapter,title:source.title,versionId:source.versionId,file:source.file,sha256:source.sha256,characters:source.content.length}; }
 module.exports = { createMentorLab };
+
 
