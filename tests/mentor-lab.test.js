@@ -5,6 +5,20 @@ const {createMentorLab}=require('../src/mentor-lab');
 process.env.OPENAI_API_KEY='fake-test-key';
 const source={courseSlug:'marketing-launch',chapter:1,title:'مقدمة',versionId:'active-v2',file:'launch/ch1.html',sha256:'abc',content:'محتوى الفصل'};
 const servers=[];
+test('React implementation is bounded without a paid call, then marketing resumes',async()=>{
+ const s=await setup();const first={role:'user',content:'صمم تطبيق React واكتب كوده لإدارة المخزون'};
+ const refusal=await (await s.request('/chat',{messages:[first]})).json();assert.equal(refusal.generation.modelCalled,false);assert.equal(refusal.dialogue.move,'scope');assert.equal(s.counts.model,0);
+ const resumed=await (await s.request('/chat',{messages:[first,{role:'assistant',content:refusal.reply},{role:'user',content:'نرجع للتسويق: هل التسويق إعلان فقط؟'}]})).json();assert.equal(resumed.generation.modelCalled,true);assert.equal(s.counts.model,1);
+});
+test('model scope response is bounded before presentation checks and usage stays honest',async()=>{
+ const s=await setup({reply:JSON.stringify({reply:'هل تريد الكود؟\n- مثال خارج المنهج',followUp:'ما بيانات المشروع؟',move:'scope'})});
+ const d=await (await s.request('/chat',{messages:[{role:'user',content:'موضوع غير متاح في المصدر'}]})).json();assert.equal(d.ok,true);assert.equal(d.generation.responseOrigin,'scope_boundary');assert.equal(d.generation.modelCalled,true);assert.equal(d.usage.total_tokens,42);assert.ok(!d.reply.includes('هل تريد'));assert.equal(d.dialogue.hasFollowUp,false);
+});
+test('presentation failures distinguish question, list and length without exposing body',async()=>{
+ for(const [reply,reason] of [['تفاصيل خاصة؟','reply_contains_question'],['- تفاصيل خاصة','reply_contains_list'],[Array(161).fill('خاص').join(' '),'reply_too_long']]){
+ const s=await setup({reply:JSON.stringify({reply,followUp:null,move:'explain'})});const r=await s.request('/chat',{messages:[{role:'user',content:'اشرح'}]});assert.equal(r.status,502);const d=await r.json();assert.equal(d.diagnostics.formatReason,reason);assert.ok(!JSON.stringify(d).includes('تفاصيل خاصة'));
+ }
+});
 after(()=>{servers.forEach(s=>s.close());delete process.env.OPENAI_API_KEY;});
 async function setup(options={}){
  const counts={load:0,model:0};let payload;
@@ -86,6 +100,7 @@ test('timeouts and missing sources return separate fixed diagnostics',async()=>{
  const timeout=await setup({fetchModel:async()=>{const e=new Error('private timeout detail');e.name='TimeoutError';throw e;}});let d=await (await timeout.request('/chat',{messages:[{role:'user',content:'اختبار'}]})).json();assert.equal(d.code,'MENTOR_MODEL_TIMEOUT');assert.ok(!JSON.stringify(d).includes('private'));
  const missing=await setup({sourceFail:true});d=await (await missing.request('/chat',{messages:[{role:'user',content:'اختبار'}]})).json();assert.equal(d.code,'MENTOR_SOURCE_UNAVAILABLE');
 });
+
 
 
 

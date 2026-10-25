@@ -37,7 +37,7 @@ ${JSON.stringify({courseSlug:knowledge.courseSlug,chapter:knowledge.chapter,titl
 `;
 }
 
-const DIALOGUE_PROFILE = Object.freeze({version:'kero-dialogue-v5',label:'الحوار الاستشاري — الإصدار 5',scope:'marketing-launch/chapter/1'});
+const DIALOGUE_PROFILE = Object.freeze({version:'kero-dialogue-v5',revision:2,label:'الحوار الاستشاري — الإصدار 5 المحسّن',scope:'marketing-launch/chapter/1'});
 
 function buildDialoguePrompt(country, knowledge) {
   if (!knowledge?.content || knowledge.courseSlug !== 'marketing-launch' || knowledge.chapter !== 1 || !knowledge.versionId) throw new Error('verified_pilot_knowledge_required');
@@ -62,6 +62,8 @@ function buildDialoguePrompt(country, knowledge) {
 - اعرض الاحتمالات بوضوح كاحتمالات، واذكر ما نعرفه فعلًا وما لا نعرفه. لا تستخدم كلمات يقين ثم تضف «مش ضمان» وكأنها تصحح الادعاء.
 
 دقة الأمثلة واكتمال الإجابة:
+- اكتفِ بالفائدة المباشرة التي تبررها الخاصية المذكورة. لا تمد السلسلة تلقائيًا إلى رضا العميل أو تكرار الشراء أو زيادة المبيعات أو سرعة رقمية غير مذكورة؛ حتى «ممكن» ليست دليلًا. إن سأل الطالب عن الأثر الأبعد، اذكر أنه فرضية تحتاج قياسًا وحدد ما يلزم للتحقق منها.
+- عند رفض ادعاء مبالغ فيه، يجب أن تكون الصياغة البديلة أضيق ومبنية على المعلومة المتاحة وحدها. قابلية شيء لعملية لا تعني حدوثها فعلًا أو تحقق أثرها؛ ووجود خاصية واحدة لا يثبت سياسة أو التزام الشركة. لا تنسب تحسنًا بيئيًا أو صحيًا أو التزامًا مؤسسيًا من خاصية منفردة دون دليل.
 - اختر مثالًا يربط خاصية مذكورة بفائدة مباشرة يمكن تفسيرها، لا قفزة إلى أثر صحي أو بيئي أو مالي أو سلوكي يحتاج دراسة. لا تضف خاصية أو ضمانًا من عندك لتصنع فائدة أقوى.
 - إذا كانت الفائدة تعتمد على شرط غير معلوم، وضّح الشرط أو اختر فائدة أقرب وأقل ادعاءً. كلمة «ممكن» وحدها لا تجعل علاقة غير مبررة مثالًا جيدًا. لا تَعِد بنتيجة لمجرد أن المثال افتراضي.
 - ميّز بين خاصية الخدمة، والنتيجة القريبة للعميل، والادعاء الذي يحتاج دليلًا. عند طلب مراجعة رسالة، ناقش صلاحية الاستنتاج ولا تكرر الادعاء كحقيقة.
@@ -112,5 +114,6 @@ ${JSON.stringify({title:knowledge.title,versionId:knowledge.versionId,content:kn
 }
 
 module.exports = { isConsultantPilot, buildConsultantPrompt, buildDialoguePrompt, DIALOGUE_PROFILE };
+
 
 

@@ -1,7 +1,7 @@
 const express = require('express');
 const { DIALOGUE_PROFILE } = require('./mentor-consultant-pilot');
 const crypto = require('node:crypto');
-const { DIALOGUE_FORMAT, parseDialogueTurn } = require('./mentor-dialogue-contract');
+const { DIALOGUE_FORMAT, parseDialogueTurn, FORMAT_REASONS } = require('./mentor-dialogue-contract');
 const LAB_MODELS = Object.freeze(['gpt-4o-mini','gpt-5-mini']);
 const { requiresScopeBoundary, boundedScopeReply } = require('./mentor-scope-boundary');
 
@@ -50,9 +50,8 @@ function createMentorLab({ db, authorize, sourceLimit, chatLimit, loadKnowledge,
       if(!reply || choice.finish_reason!=='stop') return res.status(502).json({ok:false,code:'MENTOR_REPLY_INCOMPLETE',error:'رد النموذج لم يكتمل؛ لم نعرضه باعتباره إجابة كاملة.',diagnostics:{requestedModel,returnedModel:data.model||null,finishReason:choice?.finish_reason||null,usage:data.usage||null,elapsedMs:Date.now()-started}});
       let turn;
       try { turn=parseDialogueTurn(reply); }
-      catch (error) { const formatReason=['invalid_dialogue_turn','invalid_dialogue_shape','invalid_dialogue_question'].includes(error.message)?error.message:'invalid_json';return res.status(502).json({ok:false,code:'MENTOR_FORMAT_INVALID',error:'رد التجربة خرج عن صيغة الحوار المختصرة. لم نعرضه كأنه اجتاز الفحص.',experience:DIALOGUE_PROFILE,review:'format_failed',diagnostics:{formatReason,requestedModel,returnedModel:data.model||null,promptSha256,sourceSha256:source.sha256,usage:data.usage||null,elapsedMs:Date.now()-started}}); }
+      catch (error) { const formatReason=FORMAT_REASONS.includes(error.message)?error.message:'invalid_json';return res.status(502).json({ok:false,code:'MENTOR_FORMAT_INVALID',error:'رد التجربة خرج عن صيغة الحوار المختصرة. لم نعرضه كأنه اجتاز الفحص.',experience:DIALOGUE_PROFILE,review:'format_failed',diagnostics:{formatReason,requestedModel,returnedModel:data.model||null,promptSha256,sourceSha256:source.sha256,usage:data.usage||null,elapsedMs:Date.now()-started}}); }
       const modelScope=turn.move==='scope';
-      if(modelScope)turn=boundedScopeReply();
       return res.json({ok:true,reply:turn.reply,dialogue:{move:turn.move,hasFollowUp:Boolean(turn.followUp),followUpSuppressed:Boolean(turn.followUpSuppressed)},experience:DIALOGUE_PROFILE,source:metadata(source),generation:{requestedModel,returnedModel:data.model||null,promptSha256,maxCompletionTokens:2400,reasoningEffort:'model-default',responseOrigin:modelScope?'scope_boundary':'model',boundaryReason:modelScope?'model_scope':null,modelCalled:true},usage:data.usage,elapsedMs:Date.now()-started,review:'requires_human_review'});
     } catch (error) { const timeout=['AbortError','TimeoutError'].includes(error?.name);return res.status(503).json({ok:false,code:!source?'MENTOR_SOURCE_UNAVAILABLE':timeout?'MENTOR_MODEL_TIMEOUT':'MENTOR_REQUEST_INCOMPLETE',error:!source?'تعذر التحقق من محتوى الفصل الحالي؛ لم يتم تخمين إجابة.':timeout?'انتهت مهلة طلب النموذج قبل وصول رد كامل.':'لم يكتمل طلب المحادثة. أعد المحاولة بعد قليل.'}); }
     finally { busy.delete(req.userId); }
@@ -61,6 +60,7 @@ function createMentorLab({ db, authorize, sourceLimit, chatLimit, loadKnowledge,
 }
 function metadata(source) { return {courseSlug:source.courseSlug,chapter:source.chapter,title:source.title,versionId:source.versionId,file:source.file,sha256:source.sha256,characters:source.content.length}; }
 module.exports = { createMentorLab };
+
 
 
 
