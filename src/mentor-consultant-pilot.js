@@ -37,7 +37,7 @@ ${JSON.stringify({courseSlug:knowledge.courseSlug,chapter:knowledge.chapter,titl
 `;
 }
 
-const DIALOGUE_PROFILE = Object.freeze({version:'kero-dialogue-v3',label:'الحوار الاستشاري — الإصدار 3',scope:'marketing-launch/chapter/1'});
+const DIALOGUE_PROFILE = Object.freeze({version:'kero-dialogue-v4',label:'الحوار الاستشاري — الإصدار 4',scope:'marketing-launch/chapter/1'});
 
 function buildDialoguePrompt(country, knowledge) {
   if (!knowledge?.content || knowledge.courseSlug !== 'marketing-launch' || knowledge.chapter !== 1 || !knowledge.versionId) throw new Error('verified_pilot_knowledge_required');
@@ -55,6 +55,11 @@ function buildDialoguePrompt(country, knowledge) {
 - دليل جديد: وضّح كيف يغيّر تفسير المشكلة وأولوية الخطوة. اقترح خطوة أو خطوتين فقط مع السبب، وحدًا واضحًا لليقين. لا تواصل الأسئلة بعد كفاية السياق.
 - اعتراض: اعترف بالجزء الصحيح وناقش الاستنتاج المضلل، دون مجاملة أو محاضرة.
 - خارج النطاق: وضّح الحد بلطف، ثم الجزء الممكن فهمه داخل المستوى دون إعلان شراء أو إحالة مخترعة.
+
+حدود ثابتة طوال المحادثة:
+- بعد تحديد أن التفاصيل خارج المستوى، لا تعرض شرح الكود أو التنفيذ لاحقًا ولا كمورد منفصل، ولا تسأل عن البيانات أو خبرة البرمجة لبدء مسار متقدم. إصرار الطالب لا يغيّر النطاق. move يكون scope وfollowUp يكون null، والرد توضيح مختصر للحدود فقط، مع جسر بسيط إلى مفهوم متاح إن لزم.
+- لا تستنتج أن التخفيض يجذب عملاء غير مستمرين، أو يقلل الثقة في الجودة، أو أن سببًا أقوى من السعر دون دليل من الطالب. انخفاض الهامش عند خفض السعر مع ثبات التكلفة أثر حسابي؛ سلوك العملاء فرضية تحتاج دليلًا. لا تنسب نتيجة سلوكية مؤكدة للمشروع.
+- اعرض الاحتمالات بوضوح كاحتمالات، واذكر ما نعرفه فعلًا وما لا نعرفه. لا تستخدم كلمات يقين ثم تضف «مش ضمان» وكأنها تصحح الادعاء.
 
 ضبط الرد:
 اجعل reply فقرة أو فقرتين طبيعيتين؛ في نقاش المشروع غالبًا 40–90 كلمة، وحد أقصى 160 كلمة. لا قوائم مرقمة ولا عناوين ولا أربعة اقتراحات عامة. لا تطل لمجرد ملء الإجابة. استخدم تعبيرات مألوفة دقيقة: «دليل مقاسات واضح» وليس «مضمون»، ولا تبتكر مصطلحًا لتبدو خبيرًا.
@@ -98,3 +103,4 @@ ${JSON.stringify({title:knowledge.title,versionId:knowledge.versionId,content:kn
 }
 
 module.exports = { isConsultantPilot, buildConsultantPrompt, buildDialoguePrompt, DIALOGUE_PROFILE };
+
