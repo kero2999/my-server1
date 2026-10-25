@@ -11,7 +11,7 @@ function createMentorLab({ db, authorize, sourceLimit, chatLimit, loadKnowledge,
   const busy = new Set();
   router.use(authorize);
   router.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
-  router.get('/profile', (req,res) => res.json({ok:true,experience:DIALOGUE_PROFILE,diagnosticsVersion:1,answerReview:{version:2,maxModelCalls:2,defaultMode:'direct',comparison:{draftModel:'gpt-4o-mini',reviewerModel:'gpt-5-mini',historyPolicy:'shared_direct_history'}},modelComparison:{version:1,models:LAB_MODELS,defaultModel:'gpt-4o-mini'}}));
+  router.get('/profile', (req,res) => res.json({ok:true,experience:DIALOGUE_PROFILE,diagnosticsVersion:1,directValidation:{version:1,model:'gpt-4o-mini',maxModelCallsPerTurn:1},answerReview:{version:2,maxModelCalls:2,defaultMode:'direct',comparison:{draftModel:'gpt-4o-mini',reviewerModel:'gpt-5-mini',historyPolicy:'shared_direct_history'}},modelComparison:{version:1,models:LAB_MODELS,defaultModel:'gpt-4o-mini'}}));
   router.get('/source', sourceLimit, async (req, res) => {
     const slug = String(req.query.courseSlug || 'marketing-launch');
     const chapter = Number(req.query.chapter || 1);
@@ -92,6 +92,7 @@ function createMentorLab({ db, authorize, sourceLimit, chatLimit, loadKnowledge,
 }
 function metadata(source) { return {courseSlug:source.courseSlug,chapter:source.chapter,title:source.title,versionId:source.versionId,file:source.file,sha256:source.sha256,characters:source.content.length}; }
 module.exports = { createMentorLab };
+
 
 
 
