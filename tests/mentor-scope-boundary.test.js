@@ -10,6 +10,7 @@ test('clear technical requests and pressure follow-ups keep their boundary',()=>
  assert.equal(requiresScopeBoundary([user('Build a machine learning model in Python with code')]),'technical_implementation');
 });
 test('marketing coupons, project discussion and conceptual questions are not blanket-blocked',()=>{
+ for(const text of ['هل React يساعد في عرض المنتجات؟','استخدم موقع React، أعمل كود خصم؟'])assert.equal(requiresScopeBoundary([user(text)]),null);
  for(const text of ['ما معنى كود خصم؟','هل تعلم الآلة له علاقة بفهم الطلب؟','عندي خدمة تنظيف، أعمل خصم؟','اشرح قيمة العميل بمثال'])assert.equal(requiresScopeBoundary([user(text)]),null);
  const initial=user('اكتب كود تعلم آلي');assert.equal(requiresScopeBoundary([initial,user('طيب ما معنى كود خصم؟')]),null);
 });

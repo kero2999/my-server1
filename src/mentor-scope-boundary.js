@@ -1,10 +1,11 @@
 function normalize(value) { return String(value||'').normalize('NFKC').replace(/[\u064B-\u065F\u0670]/g,'').replace(/[أإآ]/g,'ا').toLowerCase(); }
-const TECH = /تعلم\s*(?:ال)?(?:الي|الة)|تعل[يّ]?م\s*(?:ال)?الة|machine\s*learning|scikit|xgboost|tensorflow|\bpython\b|بايثون/i;
+const TECH = /تعلم\s*(?:ال)?(?:الي|الة)|تعل[يّ]?م\s*(?:ال)?الة|machine\s*learning|scikit|xgboost|tensorflow|\bpython\b|بايثون|\breact\b|رياكت|جافاسكريبت|\bjavascript\b/i;
 const IMPLEMENT = /(?:ال)?كود|\bcode\b|برمج|تنفيذ|نفذ|ابني|نبني|بناء|در[بّ]|تدريب|implementation/i;
 function requiresScopeBoundary(messages) {
   const users=(messages||[]).filter(m=>m.role==='user').map(m=>normalize(m.content));
   const current=users.at(-1)||'';
-  if(TECH.test(current)&&IMPLEMENT.test(current))return 'technical_implementation';
+  const technicalCurrent=current.replace(/كود\s*(?:خصم|ترويجي)|coupon|promo\s*code/g,'');
+  if(TECH.test(technicalCurrent)&&IMPLEMENT.test(technicalCurrent))return 'technical_implementation';
   // A normal marketing coupon question is not a programming request.
   if(/كود\s*(?:خصم|ترويجي)|coupon|promo\s*code/.test(current))return null;
   if((IMPLEMENT.test(current)||/مورد\s*منفصل|بعيد\s*عن\s*الكورس|خارج\s*الكورس/.test(current))&&users.slice(0,-1).some(m=>TECH.test(m)&&IMPLEMENT.test(m)))return 'repeated_technical_request';
@@ -18,3 +19,4 @@ function boundedScopeReply(reason='model_scope') {
     move:'scope',followUp:null};
 }
 module.exports={requiresScopeBoundary,boundedScopeReply};
+
