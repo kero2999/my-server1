@@ -85,7 +85,7 @@ test('parallel model requests for the same admin are blocked and released',async
 });
 test('version handshake is authenticated and free of source/model requests',async()=>{
  const s=await setup();assert.equal((await s.request('/profile',null,null)).status,401);assert.equal((await s.request('/profile',null,'student')).status,403);
- const r=await s.request('/profile');assert.equal(r.status,200);assert.equal((await r.json()).experience.version,'kero-dialogue-v5');assert.deepEqual(s.counts,{load:0,model:0});
+ const r=await s.request('/profile');assert.equal(r.status,200);const profile=await r.json();assert.equal(profile.experience.version,'kero-dialogue-v5');assert.equal(profile.experience.revision,5);assert.deepEqual(profile.directValidation,{version:1,model:'gpt-4o-mini',maxModelCallsPerTurn:1});assert.deepEqual(s.counts,{load:0,model:0});
 });
 test('lab transmits the dialogue prompt and returns its revision with the reply',async()=>{
  const {buildDialoguePrompt,DIALOGUE_PROFILE}=require('../src/mentor-consultant-pilot');const s=await setup({buildPrompt:buildDialoguePrompt});
@@ -131,6 +131,7 @@ test('timeouts and missing sources return separate fixed diagnostics',async()=>{
  const timeout=await setup({fetchModel:async()=>{const e=new Error('private timeout detail');e.name='TimeoutError';throw e;}});let d=await (await timeout.request('/chat',{messages:[{role:'user',content:'اختبار'}]})).json();assert.equal(d.code,'MENTOR_MODEL_TIMEOUT');assert.ok(!JSON.stringify(d).includes('private'));
  const missing=await setup({sourceFail:true});d=await (await missing.request('/chat',{messages:[{role:'user',content:'اختبار'}]})).json();assert.equal(d.code,'MENTOR_SOURCE_UNAVAILABLE');
 });
+
 
 
 
