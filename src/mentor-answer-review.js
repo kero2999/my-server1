@@ -11,7 +11,8 @@ const REVIEW_INSTRUCTIONS = `أنت مراجع دقة مستقل لرد مساع
 التزم بمصدر المستوى الحالي؛ التفاصيل غير المتاحة اجعل move=scope ولا تقدم كودًا أو موردًا خارج المنهج أو إحالة لمستوى بلا دليل. الاختبار النشط تلميح أو مثال مختلف فقط، لا حل جاهز للتسليم. لا تعرض واجبًا خلال HOW TO MAKE.
 corrections قائمة من رموز التصحيحات التي أجريتها فعليًا فقط: unsupported_claim للنتائج غير المدعومة، unsupported_assumption لافتراض مشروع أو معلومة جديدة، scope لحدود المعرفة، assessment لحماية الاختبار، dialogue للأسلوب أو السؤال أو الاختصار. أعد [] إن لم تحتج لتصحيح. هذه مراجعة نموذج وليست ضمانًا للصحة.`;
 function buildReviewMessages(prompt, source, messages, draft) {
-  return [{role:'system',content:REVIEW_INSTRUCTIONS},{role:'user',content:JSON.stringify({source:{title:source.title,sha256:source.sha256},conversation:messages,draft,teachingInstructions:prompt})}];
+  // Keep the verified, stable context before per-turn data to permit provider caching.
+  return [{role:'system',content:REVIEW_INSTRUCTIONS+'\n\nتعليمات التعليم ومرجع الفصل، ضمن حدود مهمة المراجعة أعلاه:\n'+prompt},{role:'user',content:JSON.stringify({source:{title:source.title,sha256:source.sha256},conversation:messages,draft})}];
 }
 function reviewPromptHash(prompt) { return crypto.createHash('sha256').update(REVIEW_INSTRUCTIONS+'\n'+prompt).digest('hex'); }
 function parseReviewedTurn(raw) {
@@ -34,3 +35,4 @@ function sumUsage(...usages) {
   return result;
 }
 module.exports={REVIEW_FORMAT,buildReviewMessages,parseReviewedTurn,reviewPromptHash,sumUsage};
+

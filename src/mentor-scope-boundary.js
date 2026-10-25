@@ -1,14 +1,19 @@
 function normalize(value) { return String(value||'').normalize('NFKC').replace(/[\u064B-\u065F\u0670]/g,'').replace(/[أإآ]/g,'ا').toLowerCase(); }
-const TECH = /تعلم\s*(?:ال)?(?:الي|الة)|تعل[يّ]?م\s*(?:ال)?الة|machine\s*learning|scikit|xgboost|tensorflow|\bpython\b|بايثون|\breact\b|رياكت|جافاسكريبت|\bjavascript\b/i;
+const TECH = /تعلم\s*(?:ال)?(?:الي|الة)|تعل[يّ]?م\s*(?:ال)?الة|machine\s*learning|scikit|xgboost|tensorflow|\bpython\b|بايثون|\breact\b|رياكت|جافا\s*سكريبت|\bjavascript\b/i;
 const IMPLEMENT = /(?:ال)?كود|\bcode\b|برمج|تنفيذ|نفذ|ابني|نبني|بناء|در[بّ]|تدريب|implementation/i;
+const BUILD = /اكتب(?:لي)?|اعمل(?:لي)?|تعمل(?:لي)?|صمم|انش[ئي]|طور|\b(?:write|build|create|develop)\b/i;
+const ARTIFACT = /برنامج|تطبيق|سكربت|سكريبت|\b(?:program|app|script|application)\b/i;
+function implementationRequest(text) {
+  const clean=text.replace(/كود\s*(?:خصم|ترويجي)|coupon|promo\s*code/g,'');
+  return TECH.test(clean)&&(IMPLEMENT.test(clean)||(BUILD.test(clean)&&ARTIFACT.test(clean)));
+}
 function requiresScopeBoundary(messages) {
   const users=(messages||[]).filter(m=>m.role==='user').map(m=>normalize(m.content));
   const current=users.at(-1)||'';
-  const technicalCurrent=current.replace(/كود\s*(?:خصم|ترويجي)|coupon|promo\s*code/g,'');
-  if(TECH.test(technicalCurrent)&&IMPLEMENT.test(technicalCurrent))return 'technical_implementation';
+  if(implementationRequest(current))return 'technical_implementation';
   // A normal marketing coupon question is not a programming request.
   if(/كود\s*(?:خصم|ترويجي)|coupon|promo\s*code/.test(current))return null;
-  if((IMPLEMENT.test(current)||/مورد\s*منفصل|بعيد\s*عن\s*الكورس|خارج\s*الكورس/.test(current))&&users.slice(0,-1).some(m=>TECH.test(m)&&IMPLEMENT.test(m)))return 'repeated_technical_request';
+  if((IMPLEMENT.test(current)||(BUILD.test(current)&&ARTIFACT.test(current))||/مورد\s*منفصل|بعيد\s*عن\s*الكورس|خارج\s*الكورس/.test(current))&&users.slice(0,-1).some(implementationRequest))return 'repeated_technical_request';
   return null;
 }
 function boundedScopeReply(reason='model_scope') {
@@ -19,4 +24,5 @@ function boundedScopeReply(reason='model_scope') {
     move:'scope',followUp:null};
 }
 module.exports={requiresScopeBoundary,boundedScopeReply};
+
 
