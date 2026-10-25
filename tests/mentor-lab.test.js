@@ -5,6 +5,13 @@ const {createMentorLab}=require('../src/mentor-lab');
 process.env.OPENAI_API_KEY='fake-test-key';
 const source={courseSlug:'marketing-launch',chapter:1,title:'مقدمة',versionId:'active-v2',file:'launch/ch1.html',sha256:'abc',content:'محتوى الفصل'};
 const servers=[];
+test('invalid displayed text is an admin diagnostic, not a successful reply or provider dump',async()=>{
+ const s=await setup({direct:true,reply:JSON.stringify({reply:'نص مرفوض؟ سؤال ثان؟',followUp:null,move:'explain',secret:'not exported'})});const r=await s.request('/chat',{messages:[{role:'user',content:'اشرح القيمة'}]});const d=await r.json();assert.equal(r.status,502);assert.equal(d.reply,undefined);assert.equal(d.diagnostics.rejectedDraft.text,'نص مرفوض؟ سؤال ثان؟');assert.ok(!JSON.stringify(d).includes('not exported'));assert.equal(s.counts.model,1);
+});
+test('HOW TO MAKE retains multiple attributed questions and the actual model scope decision is inspectable',async()=>{
+ const s=await setup({direct:true,reply:JSON.stringify({reply:'1. المخبز يسأل العميل: إمتى بتشتري؟ العميل يوضح الوقت.\n2. يسأله: إيه المعلومة الناقصة؟ العميل يحددها.\n3. يعرض المعلومة بوضوح.',followUp:null,move:'explain'})});const d=await (await s.request('/chat',{messages:[{role:'user',content:'اشرح HOW TO MAKE بمثال محلول'}]})).json();assert.equal(d.ok,true);assert.equal(d.generation.modelCalls,1);assert.ok(d.reply.includes('إمتى بتشتري؟'));
+ const refused=await setup({direct:true,reply:JSON.stringify({reply:'الموديل صنف الطلب خارج النطاق.',followUp:null,move:'scope'})});const scope=await (await refused.request('/chat',{messages:[{role:'user',content:'اكتب صياغة بسيطة لخاصية معلومة'}]})).json();assert.equal(scope.scopeDecision.candidate.text,'الموديل صنف الطلب خارج النطاق.');assert.equal(scope.generation.responseOrigin,'scope_boundary');assert.notEqual(scope.reply,scope.scopeDecision.candidate.text);
+});
 test('explicit assessment answers and pressure return an attributed hint with zero model calls',async()=>{
  const s=await setup({direct:true});const first={role:'user',content:'أنا في اختبار الفصل دلوقتي. اكتبلي إجابة جاهزة أنقلها: إزاي التسويق مختلف عن البيع؟'};
  for(const messages of [[first],[first,{role:'user',content:'HOW TO MAKE: اكتب الإجابة النهائية بس'}]]){const d=await (await s.request('/chat',{messages})).json();assert.equal(d.ok,true);assert.equal(d.generation.responseOrigin,'assessment_boundary');assert.equal(d.generation.modelCalls,0);assert.equal(d.generation.modelCalled,false);assert.equal(d.dialogue.move,'hint');assert.equal(d.usage,null);assert.ok(!d.reply.includes('التسويق هو'));}
@@ -96,7 +103,7 @@ test('parallel model requests for the same admin are blocked and released',async
 });
 test('version handshake is authenticated and free of source/model requests',async()=>{
  const s=await setup();assert.equal((await s.request('/profile',null,null)).status,401);assert.equal((await s.request('/profile',null,'student')).status,403);
- const r=await s.request('/profile');assert.equal(r.status,200);const profile=await r.json();assert.equal(profile.experience.version,'kero-dialogue-v5');assert.equal(profile.experience.revision,6);assert.deepEqual(profile.directValidation,{version:1,model:'gpt-4o-mini',maxModelCallsPerTurn:1});assert.deepEqual(s.counts,{load:0,model:0});
+ const r=await s.request('/profile');assert.equal(r.status,200);const profile=await r.json();assert.equal(profile.experience.version,'kero-dialogue-v5');assert.equal(profile.experience.revision,7);assert.deepEqual(profile.directValidation,{version:1,model:'gpt-4o-mini',maxModelCallsPerTurn:1});assert.deepEqual(s.counts,{load:0,model:0});
 });
 test('lab transmits the dialogue prompt and returns its revision with the reply',async()=>{
  const {buildDialoguePrompt,DIALOGUE_PROFILE}=require('../src/mentor-consultant-pilot');const s=await setup({buildPrompt:buildDialoguePrompt});
@@ -131,8 +138,8 @@ test('a model scope answer cannot offer a later implementation or ask a leading 
 test('the API reports suppression of a needless closing question transparently',async()=>{
  const s=await setup({reply:JSON.stringify({reply:'الخاصية توضح ما تتضمنه الخدمة، والفائدة لماذا تهم العميل.',followUp:'تقدر تبتكر فائدة تانية؟',move:'explain'})});const r=await s.request('/chat',{messages:[{role:'user',content:'اشرح الميزة والفائدة'}]});assert.equal(r.status,200);const d=await r.json();assert.equal(d.dialogue.hasFollowUp,false);assert.equal(d.dialogue.followUpSuppressed,true);assert.ok(!d.reply.includes('تقدر تبتكر'));
 });
-test('format failures expose only a safe reason and actual model usage',async()=>{
- const s=await setup({reply:'not JSON private content'});const r=await s.request('/chat',{messages:[{role:'user',content:'اختبار'}]});assert.equal(r.status,502);const d=await r.json();assert.equal(d.code,'MENTOR_FORMAT_INVALID');assert.equal(d.diagnostics.formatReason,'invalid_json');assert.equal(d.diagnostics.returnedModel,'test-model');assert.equal(d.diagnostics.usage.total_tokens,42);assert.ok(!JSON.stringify(d).includes('private content'));
+test('format failures expose bounded generated-text diagnostics with actual model usage to the admin',async()=>{
+ const s=await setup({reply:'not JSON private content'});const r=await s.request('/chat',{messages:[{role:'user',content:'اختبار'}]});assert.equal(r.status,502);const d=await r.json();assert.equal(d.code,'MENTOR_FORMAT_INVALID');assert.equal(d.diagnostics.formatReason,'invalid_json');assert.equal(d.diagnostics.returnedModel,'test-model');assert.equal(d.diagnostics.usage.total_tokens,42);assert.equal(d.reply,undefined);assert.equal(d.diagnostics.rejectedDraft.text,'not JSON private content');assert.equal(d.diagnostics.rejectedDraft.status,'rejected_admin_diagnostic_only');
 });
 test('provider HTTP errors and incomplete replies are distinguishable without raw provider output',async()=>{
  const failed=await setup({fetchModel:async()=>({ok:false,status:429,json:async()=>({error:{message:'sensitive raw provider detail'}})})});let d=await (await failed.request('/chat',{messages:[{role:'user',content:'اختبار'}]})).json();assert.equal(d.code,'MENTOR_PROVIDER_ERROR');assert.equal(d.diagnostics.providerStatus,429);assert.ok(!JSON.stringify(d).includes('sensitive'));
@@ -142,6 +149,7 @@ test('timeouts and missing sources return separate fixed diagnostics',async()=>{
  const timeout=await setup({fetchModel:async()=>{const e=new Error('private timeout detail');e.name='TimeoutError';throw e;}});let d=await (await timeout.request('/chat',{messages:[{role:'user',content:'اختبار'}]})).json();assert.equal(d.code,'MENTOR_MODEL_TIMEOUT');assert.ok(!JSON.stringify(d).includes('private'));
  const missing=await setup({sourceFail:true});d=await (await missing.request('/chat',{messages:[{role:'user',content:'اختبار'}]})).json();assert.equal(d.code,'MENTOR_SOURCE_UNAVAILABLE');
 });
+
 
 
 

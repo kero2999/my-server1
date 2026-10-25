@@ -20,7 +20,7 @@ function parseDialogueTurn(raw,{workedExample=false}={}) {
   const followUpSuppressed=Boolean(proposedFollowUp && (workedExample||['explain','conclude'].includes(turn.move)||bodyQuestionCount));
   const followUp=followUpSuppressed ? null : proposedFollowUp;
   if(reply.split(/\s+/u).length>(workedExample?300:160))throw Error('reply_too_long');
-  if(bodyQuestionCount>1)throw Error('reply_multiple_questions');
+  if(bodyQuestionCount>(workedExample?6:1))throw Error('reply_multiple_questions');
   const steps=(reply.match(/(?:^|\n)\s*(?:[-*•]|[0-9٠-٩]+[.)])\s+/gu)||[]).length;
   if(steps&&!workedExample)throw Error('reply_contains_list');
   if(workedExample&&steps>6)throw Error('reply_too_many_steps');
@@ -30,6 +30,7 @@ function parseDialogueTurn(raw,{workedExample=false}={}) {
   return {reply:reply+(followUp?'\n\n'+followUp:''),move:turn.move,followUp,followUpSuppressed};
 }
 module.exports={DIALOGUE_FORMAT,parseDialogueTurn,parseDialogueEnvelope,FORMAT_REASONS};
+
 
 
 
