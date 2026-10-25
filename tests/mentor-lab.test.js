@@ -49,4 +49,20 @@ test('lab transmits the dialogue prompt and returns its revision with the reply'
 test('nonconforming answers do not silently fall back to the old article format',async()=>{
  const s=await setup({reply:JSON.stringify({reply:'قائمة نصائح\n1. السعر\n2. المنافسون',followUp:null,move:'discuss'})});const r=await s.request('/chat',{messages:[{role:'user',content:'أعمل خصم؟'}]});assert.equal(r.status,502);const d=await r.json();assert.equal(d.review,'format_failed');assert.equal(d.reply,undefined);assert.equal(s.counts.model,1,'no hidden paid retries');
 });
+test('model selection is allowlisted before any source read or paid request',async()=>{
+ const s=await setup();for(const model of ['gpt-unknown','',null,['gpt-5-mini'],{name:'gpt-5-mini'}])assert.equal((await s.request('/chat',{model,messages:[{role:'user',content:'اختبار'}]})).status,400);assert.deepEqual(s.counts,{load:0,model:0});
+});
+test('switching model changes only the model in otherwise identical requests',async()=>{
+ const s=await setup();const messages=[{role:'user',content:'أعمل خصم؟'}];let first;
+ for(const model of ['gpt-4o-mini','gpt-5-mini']){const r=await s.request('/chat',{model,messages});assert.equal(r.status,200);const d=await r.json();assert.equal(d.generation.requestedModel,model);assert.equal(s.payload.model,model);const {model:_,...rest}=s.payload;if(!first)first={rest,d};else{assert.deepEqual(rest,first.rest);assert.equal(d.generation.promptSha256,first.d.generation.promptSha256);}}
+});
+test('source/prompt changes stop a comparison before another paid call',async()=>{
+ const s=await setup();const r=await s.request('/chat',{model:'gpt-5-mini',expectedPromptSha256:'0'.repeat(64),messages:[{role:'user',content:'اختبار'}]});assert.equal(r.status,409);assert.equal(s.counts.model,0);
+});
+test('profile advertises only the two allowed lab models without changing global settings',async()=>{
+ const original=process.env.OPENAI_MODEL;process.env.OPENAI_MODEL='student-model-unchanged';
+ try{const s=await setup();const d=await (await s.request('/profile')).json();assert.deepEqual(d.modelComparison.models,['gpt-4o-mini','gpt-5-mini']);await s.request('/chat',{model:'gpt-5-mini',messages:[{role:'user',content:'اختبار'}]});assert.equal(process.env.OPENAI_MODEL,'student-model-unchanged');}
+ finally{if(original===undefined)delete process.env.OPENAI_MODEL;else process.env.OPENAI_MODEL=original;}
+});
+
 
