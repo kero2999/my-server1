@@ -8,7 +8,7 @@ const servers=[];
 after(()=>{servers.forEach(s=>s.close());delete process.env.OPENAI_API_KEY;});
 async function setup(options={}){
  const counts={load:0,model:0};let payload;
- const app=express();app.use(express.json());app.use('/lab',createMentorLab({db:{},authorize(req,res,next){if(req.headers.authorization!=='Bearer admin')return res.status(req.headers.authorization?403:401).json({error:'forbidden'});req.userId='admin-1';next();},sourceLimit:(req,res,next)=>next(),chatLimit:(req,res,next)=>next(),loadKnowledge:async(db,slug,chapter)=>{counts.load++;if(options.sourceFail)throw Error('private bucket secret');return {...source,courseSlug:slug,chapter};},buildPrompt:options.buildPrompt||(()=> 'trusted system'),countryForUser:async()=>null,fetchModel:async(url,request)=>{counts.model++;payload=JSON.parse(request.body);if(options.fetchModel)return options.fetchModel();return {ok:!options.httpFail,json:async()=>({choices:[{finish_reason:options.truncated?'length':'stop',message:{content:options.reply||'شرح مفيد'}}],usage:{total_tokens:42}})};}}));
+ const app=express();app.use(express.json());app.use('/lab',createMentorLab({db:{},authorize(req,res,next){if(req.headers.authorization!=='Bearer admin')return res.status(req.headers.authorization?403:401).json({error:'forbidden'});req.userId='admin-1';next();},sourceLimit:(req,res,next)=>next(),chatLimit:(req,res,next)=>next(),loadKnowledge:async(db,slug,chapter)=>{counts.load++;if(options.sourceFail)throw Error('private bucket secret');return {...source,courseSlug:slug,chapter};},buildPrompt:options.buildPrompt||(()=> 'trusted system'),countryForUser:async()=>null,fetchModel:async(url,request)=>{counts.model++;payload=JSON.parse(request.body);if(options.fetchModel)return options.fetchModel();return {ok:!options.httpFail,json:async()=>({choices:[{finish_reason:options.truncated?'length':'stop',message:{content:options.reply||JSON.stringify({reply:'شرح مفيد',followUp:null,move:'explain'})}}],model:'test-model',usage:{total_tokens:42}})};}}));
  const server=app.listen(0,'127.0.0.1');servers.push(server);await new Promise(r=>server.once('listening',r));
  return {counts,get payload(){return payload;},async request(path,body,token='admin'){return fetch(`http://127.0.0.1:${server.address().port}/lab${path}`,{method:body?'POST':'GET',headers:{...(token?{Authorization:`Bearer ${token}`}:{ }),...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});}};
 }
@@ -33,16 +33,20 @@ test('incomplete or failed model responses are never reported as complete',async
  for(const options of [{truncated:true},{httpFail:true}]){const s=await setup(options);assert.equal((await s.request('/chat',{messages:[{role:'user',content:'hello'}]})).status,502);}
 });
 test('parallel model requests for the same admin are blocked and released',async()=>{
- let release;const wait=new Promise(r=>release=r);const s=await setup({fetchModel:async()=>{await wait;return {ok:true,json:async()=>({choices:[{finish_reason:'stop',message:{content:'done'}}]})};}});
+ let release;const wait=new Promise(r=>release=r);const s=await setup({fetchModel:async()=>{await wait;return {ok:true,json:async()=>({choices:[{finish_reason:'stop',message:{content:JSON.stringify({reply:'done',followUp:null,move:'conclude'})}}]})};}});
  const first=s.request('/chat',{messages:[{role:'user',content:'first'}]});
  while(!s.counts.model)await new Promise(r=>setTimeout(r,5));
  assert.equal((await s.request('/chat',{messages:[{role:'user',content:'second'}]})).status,429);release();assert.equal((await first).status,200);assert.equal((await s.request('/chat',{messages:[{role:'user',content:'third'}]})).status,200);
 });
 test('version handshake is authenticated and free of source/model requests',async()=>{
  const s=await setup();assert.equal((await s.request('/profile',null,null)).status,401);assert.equal((await s.request('/profile',null,'student')).status,403);
- const r=await s.request('/profile');assert.equal(r.status,200);assert.equal((await r.json()).experience.version,'kero-dialogue-v2');assert.deepEqual(s.counts,{load:0,model:0});
+ const r=await s.request('/profile');assert.equal(r.status,200);assert.equal((await r.json()).experience.version,'kero-dialogue-v3');assert.deepEqual(s.counts,{load:0,model:0});
 });
 test('lab transmits the dialogue prompt and returns its revision with the reply',async()=>{
  const {buildDialoguePrompt,DIALOGUE_PROFILE}=require('../src/mentor-consultant-pilot');const s=await setup({buildPrompt:buildDialoguePrompt});
- const r=await s.request('/chat',{messages:[{role:'user',content:'ناقش اختياري'}]});assert.equal(r.status,200);const d=await r.json();assert.equal(d.experience.version,DIALOGUE_PROFILE.version);assert.equal(s.payload.messages[0].content,buildDialoguePrompt(null,source));assert.equal(s.payload.messages[1].content,'ناقش اختياري');
+ const r=await s.request('/chat',{messages:[{role:'user',content:'ناقش اختياري'}]});assert.equal(r.status,200);const d=await r.json();assert.equal(d.experience.version,DIALOGUE_PROFILE.version);assert.equal(s.payload.messages[0].content,buildDialoguePrompt(null,source));assert.equal(s.payload.messages[1].content,'ناقش اختياري');assert.equal(s.payload.response_format.type,'json_schema');assert.equal(d.generation.returnedModel,'test-model');assert.equal(d.generation.promptSha256.length,64);
 });
+test('nonconforming answers do not silently fall back to the old article format',async()=>{
+ const s=await setup({reply:JSON.stringify({reply:'قائمة نصائح\n1. السعر\n2. المنافسون',followUp:null,move:'discuss'})});const r=await s.request('/chat',{messages:[{role:'user',content:'أعمل خصم؟'}]});assert.equal(r.status,502);const d=await r.json();assert.equal(d.review,'format_failed');assert.equal(d.reply,undefined);assert.equal(s.counts.model,1,'no hidden paid retries');
+});
+
