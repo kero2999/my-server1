@@ -40,7 +40,7 @@ test('parallel model requests for the same admin are blocked and released',async
 });
 test('version handshake is authenticated and free of source/model requests',async()=>{
  const s=await setup();assert.equal((await s.request('/profile',null,null)).status,401);assert.equal((await s.request('/profile',null,'student')).status,403);
- const r=await s.request('/profile');assert.equal(r.status,200);assert.equal((await r.json()).experience.version,'kero-dialogue-v4');assert.deepEqual(s.counts,{load:0,model:0});
+ const r=await s.request('/profile');assert.equal(r.status,200);assert.equal((await r.json()).experience.version,'kero-dialogue-v5');assert.deepEqual(s.counts,{load:0,model:0});
 });
 test('lab transmits the dialogue prompt and returns its revision with the reply',async()=>{
  const {buildDialoguePrompt,DIALOGUE_PROFILE}=require('../src/mentor-consultant-pilot');const s=await setup({buildPrompt:buildDialoguePrompt});
@@ -72,6 +72,10 @@ test('technical scope and repeated resource requests use an attributed boundary 
 test('a model scope answer cannot offer a later implementation or ask a leading follow-up',async()=>{
  const s=await setup({reply:JSON.stringify({reply:'ده خارج المستوى لكن أقدر أقدمه كمورد منفصل.',followUp:'هل عندك بيانات؟',move:'scope'})});const r=await s.request('/chat',{messages:[{role:'user',content:'موضوع خارج المستوى'}]});assert.equal(r.status,200);const d=await r.json();assert.equal(d.generation.modelCalled,true);assert.equal(d.generation.responseOrigin,'scope_boundary');assert.equal(d.generation.boundaryReason,'model_scope');assert.equal(d.dialogue.hasFollowUp,false);assert.ok(!d.reply.includes('أقدر أقدمه'));assert.ok(!d.reply.includes('هل عندك بيانات'));
 });
+test('the API reports suppression of a needless closing question transparently',async()=>{
+ const s=await setup({reply:JSON.stringify({reply:'الخاصية توضح ما تتضمنه الخدمة، والفائدة لماذا تهم العميل.',followUp:'تقدر تبتكر فائدة تانية؟',move:'explain'})});const r=await s.request('/chat',{messages:[{role:'user',content:'اشرح الميزة والفائدة'}]});assert.equal(r.status,200);const d=await r.json();assert.equal(d.dialogue.hasFollowUp,false);assert.equal(d.dialogue.followUpSuppressed,true);assert.ok(!d.reply.includes('تقدر تبتكر'));
+});
+
 
 
 
