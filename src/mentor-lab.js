@@ -31,7 +31,7 @@ function createMentorLab({ db, authorize, sourceLimit, chatLimit, loadKnowledge,
     if (!process.env.OPENAI_API_KEY) return res.status(503).json({ok:false,code:'MENTOR_NOT_CONFIGURED',error:'مفتاح النموذج غير مضبوط في إعدادات السيرفر.'});
     if (busy.has(req.userId)) return res.status(429).json({ok:false,code:'MENTOR_BUSY',error:'انتظر انتهاء الطلب الحالي.'});
     busy.add(req.userId);
-    let source,stage='draft',draftUsage=null,draftElapsedMs=null,reviewStarted=null;
+    let source,stage='draft',draftUsage=null,draftElapsedMs=null,reviewStarted=null,modelCalls=0;
     const started = Date.now();
     try {
       source = await loadKnowledge(db,'marketing-launch',1);
@@ -43,6 +43,7 @@ function createMentorLab({ db, authorize, sourceLimit, chatLimit, loadKnowledge,
       if(boundaryReason){const turn=boundedScopeReply(boundaryReason);return res.json({ok:true,reply:turn.reply,answerReview:{status:'not_needed_scope',modelCalled:false},dialogue:{move:'scope',hasFollowUp:false},experience:DIALOGUE_PROFILE,source:metadata(source),generation:{requestedModel,returnedModel:null,promptSha256,responseOrigin:'scope_boundary',boundaryReason,modelCalled:false,modelCalls:0},usage:null,elapsedMs:Date.now()-started,review:'requires_human_review'});}
       const signal=AbortSignal.timeout(45000);
       const draftStarted=Date.now();
+      modelCalls++;
       const response = await fetchModel('https://api.openai.com/v1/chat/completions', {
         method:'POST', headers:{'Content-Type':'application/json',Authorization:`Bearer ${process.env.OPENAI_API_KEY}`},
         body:JSON.stringify({model:requestedModel,max_completion_tokens:2400,response_format:DIALOGUE_FORMAT,messages:[{role:'system',content:prompt},...messages.map(m=>({role:m.role,content:m.content.trim()}))]}),
@@ -58,6 +59,7 @@ function createMentorLab({ db, authorize, sourceLimit, chatLimit, loadKnowledge,
       let answerReview={status:'not_needed_scope',modelCalled:false};
       if(!turn){
         stage='review';reviewStarted=Date.now();
+        modelCalls++;
         const reviewedResponse=await fetchModel('https://api.openai.com/v1/chat/completions',{
           method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${process.env.OPENAI_API_KEY}`},
           body:JSON.stringify({model:requestedModel,max_completion_tokens:2400,response_format:REVIEW_FORMAT,messages:buildReviewMessages(prompt,source,messages,draft)}),signal,
@@ -74,7 +76,7 @@ function createMentorLab({ db, authorize, sourceLimit, chatLimit, loadKnowledge,
       }
       const modelScope=turn.move==='scope';
       return res.json({ok:true,reply:turn.reply,answerReview,dialogue:{move:turn.move,hasFollowUp:Boolean(turn.followUp),followUpSuppressed:Boolean(turn.followUpSuppressed)},experience:DIALOGUE_PROFILE,source:metadata(source),generation:{requestedModel,returnedModel:data.model||null,promptSha256,maxCompletionTokens:2400,reasoningEffort:'model-default',responseOrigin:modelScope?'scope_boundary':'model',boundaryReason:modelScope?'model_scope':null,modelCalled:true,modelCalls:answerReview.modelCalled?2:1,draftElapsedMs,draftUsage},usage:answerReview.modelCalled?sumUsage(draftUsage,answerReview.usage):draftUsage,elapsedMs:Date.now()-started,review:'requires_human_review'});
-    } catch (error) { const timeout=['AbortError','TimeoutError'].includes(error?.name);return res.status(503).json({ok:false,code:!source?'MENTOR_SOURCE_UNAVAILABLE':timeout?(stage==='review'?'MENTOR_REVIEW_TIMEOUT':'MENTOR_MODEL_TIMEOUT'):'MENTOR_REQUEST_INCOMPLETE',diagnostics:{stage,modelCalls:stage==='review'?2:1,usageComplete:false,usage:draftUsage,elapsedMs:Date.now()-started},error:!source?'تعذر التحقق من محتوى الفصل الحالي؛ لم يتم تخمين إجابة.':timeout?(stage==='review'?'انتهت مهلة مراجعة الرد؛ لم نعرض المسودة.':'انتهت مهلة طلب النموذج قبل وصول رد كامل.'):'لم يكتمل طلب المحادثة. أعد المحاولة بعد قليل.'}); }
+    } catch (error) { const timeout=['AbortError','TimeoutError'].includes(error?.name);return res.status(503).json({ok:false,code:!source?'MENTOR_SOURCE_UNAVAILABLE':timeout?(stage==='review'?'MENTOR_REVIEW_TIMEOUT':'MENTOR_MODEL_TIMEOUT'):'MENTOR_REQUEST_INCOMPLETE',diagnostics:{stage,modelCalls,usageComplete:false,usage:draftUsage,elapsedMs:Date.now()-started},error:!source?'تعذر التحقق من محتوى الفصل الحالي؛ لم يتم تخمين إجابة.':timeout?(stage==='review'?'انتهت مهلة مراجعة الرد؛ لم نعرض المسودة.':'انتهت مهلة طلب النموذج قبل وصول رد كامل.'):'لم يكتمل طلب المحادثة. أعد المحاولة بعد قليل.'}); }
     finally { busy.delete(req.userId); }
   });
   return router;
