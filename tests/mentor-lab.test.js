@@ -40,7 +40,7 @@ test('parallel model requests for the same admin are blocked and released',async
 });
 test('version handshake is authenticated and free of source/model requests',async()=>{
  const s=await setup();assert.equal((await s.request('/profile',null,null)).status,401);assert.equal((await s.request('/profile',null,'student')).status,403);
- const r=await s.request('/profile');assert.equal(r.status,200);assert.equal((await r.json()).experience.version,'kero-dialogue-v3');assert.deepEqual(s.counts,{load:0,model:0});
+ const r=await s.request('/profile');assert.equal(r.status,200);assert.equal((await r.json()).experience.version,'kero-dialogue-v4');assert.deepEqual(s.counts,{load:0,model:0});
 });
 test('lab transmits the dialogue prompt and returns its revision with the reply',async()=>{
  const {buildDialoguePrompt,DIALOGUE_PROFILE}=require('../src/mentor-consultant-pilot');const s=await setup({buildPrompt:buildDialoguePrompt});
@@ -64,5 +64,14 @@ test('profile advertises only the two allowed lab models without changing global
  try{const s=await setup();const d=await (await s.request('/profile')).json();assert.deepEqual(d.modelComparison.models,['gpt-4o-mini','gpt-5-mini']);await s.request('/chat',{model:'gpt-5-mini',messages:[{role:'user',content:'اختبار'}]});assert.equal(process.env.OPENAI_MODEL,'student-model-unchanged');}
  finally{if(original===undefined)delete process.env.OPENAI_MODEL;else process.env.OPENAI_MODEL=original;}
 });
+test('technical scope and repeated resource requests use an attributed boundary without paid calls',async()=>{
+ const s=await setup();const initial={role:'user',content:'اكتب كود نموذج تعلم آلي يتوقع الطلب'};
+ for(const messages of [[initial],[initial,{role:'user',content:'أنا فاهم إنه خارج المستوى، بس اشرح الكود برضه'}],[initial,{role:'user',content:'ابعته كمورد منفصل بعيد عن الكورس'}]]){const r=await s.request('/chat',{model:'gpt-4o-mini',messages});assert.equal(r.status,200);const d=await r.json();assert.equal(d.dialogue.hasFollowUp,false);assert.equal(d.generation.modelCalled,false);assert.equal(d.generation.responseOrigin,'scope_boundary');assert.equal(d.generation.returnedModel,null);assert.equal(d.usage,null);}
+ assert.equal(s.counts.model,0);
+});
+test('a model scope answer cannot offer a later implementation or ask a leading follow-up',async()=>{
+ const s=await setup({reply:JSON.stringify({reply:'ده خارج المستوى لكن أقدر أقدمه كمورد منفصل.',followUp:'هل عندك بيانات؟',move:'scope'})});const r=await s.request('/chat',{messages:[{role:'user',content:'موضوع خارج المستوى'}]});assert.equal(r.status,200);const d=await r.json();assert.equal(d.generation.modelCalled,true);assert.equal(d.generation.responseOrigin,'scope_boundary');assert.equal(d.generation.boundaryReason,'model_scope');assert.equal(d.dialogue.hasFollowUp,false);assert.ok(!d.reply.includes('أقدر أقدمه'));assert.ok(!d.reply.includes('هل عندك بيانات'));
+});
+
 
 
