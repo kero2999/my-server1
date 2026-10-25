@@ -2,6 +2,13 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const {parseDialogueTurn}=require('../src/mentor-dialogue-contract');
 function answer(move,followUp){return JSON.stringify({reply:'الميزة خاصية الخدمة، والفائدة ما تساعد العميل على تحقيقه.',move,followUp});}
+test('worked examples allow bounded steps while ordinary dialogue retains its limits',()=>{
+ const raw=JSON.stringify({reply:'1. مخبز افتراضي يسمع أن العميل يريد شراءً سريعًا.\n2. يعرض الخيارات المتاحة بوضوح لتسهيل الاختيار.\n3. يراجع هل المعلومة أوضح، دون ضمان مبيعات.',move:'explain',followUp:'اكتب مشروعك هنا؟'});
+ assert.throws(()=>parseDialogueTurn(raw),/reply_contains_list/);
+ const t=parseDialogueTurn(raw,{workedExample:true});assert.ok(t.reply.includes('1.'));assert.equal(t.followUp,null);assert.equal(t.followUpSuppressed,true);
+ const long=JSON.stringify({reply:Array(200).fill('شرح').join(' '),followUp:null,move:'explain'});assert.throws(()=>parseDialogueTurn(long),/reply_too_long/);assert.ok(parseDialogueTurn(long,{workedExample:true}));
+ const tooMany=JSON.stringify({reply:Array.from({length:7},(_,i)=>`${i+1}. خطوة`).join('\n'),followUp:null,move:'explain'});assert.throws(()=>parseDialogueTurn(tooMany,{workedExample:true}),/reply_too_many_steps/);
+});
 test('one inline question does not discard a response or duplicate its follow-up',()=>{
  const turn=parseDialogueTurn(JSON.stringify({reply:'مش هنفترض إن السعر السبب. إيه اللي قاله العملاء؟',followUp:'إيه اللي قاله العملاء؟',move:'discuss'}));assert.equal(turn.followUp,null);assert.equal(turn.followUpSuppressed,true);assert.equal((turn.reply.match(/؟/g)||[]).length,1);
 });
@@ -21,4 +28,5 @@ test('purposeful clarification and discussion can still ask one question',()=>{
 test('an already-complete direct response is preserved verbatim',()=>{
  const turn=parseDialogueTurn(answer('explain',null));assert.equal(turn.reply,'الميزة خاصية الخدمة، والفائدة ما تساعد العميل على تحقيقه.');assert.equal(turn.followUpSuppressed,false);
 });
+
 

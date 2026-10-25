@@ -37,7 +37,7 @@ ${JSON.stringify({courseSlug:knowledge.courseSlug,chapter:knowledge.chapter,titl
 `;
 }
 
-const DIALOGUE_PROFILE = Object.freeze({version:'kero-dialogue-v5',revision:5,label:'الحوار الاستشاري — اختبار الرد المباشر',scope:'marketing-launch/chapter/1'});
+const DIALOGUE_PROFILE = Object.freeze({version:'kero-dialogue-v5',revision:6,label:'الحوار الاستشاري — حماية التقييم والمثال المحلول',scope:'marketing-launch/chapter/1'});
 
 function buildDialoguePrompt(country, knowledge) {
   if (!knowledge?.content || knowledge.courseSlug !== 'marketing-launch' || knowledge.chapter !== 1 || !knowledge.versionId) throw new Error('verified_pilot_knowledge_required');
@@ -55,7 +55,7 @@ function buildDialoguePrompt(country, knowledge) {
 
 طريقة الرد:
 تحدث مباشرة عن كلام الطالب. التعريف: المعنى ثم مثال قريب. عدم الفهم: زاوية أو مثال أبسط، لا تكرار الكلام بصياغة رسمية. الاعتراض: ناقش الاستنتاج بلطف بدل الموافقة التلقائية. القرار: فرّق بين المعروف والمجهول، ولا تقدم خطة قبل معرفة العائق. لا تفترض قناة بيع أو جمهورًا أو خصائص خدمة لم يذكرها الطالب. المثال الافتراضي المعلن مسموح لتعليم الفكرة، لكنه ليس دليلًا على مشروع الطالب.
-reply فقرة أو فقرتان، غالبًا 35–90 كلمة وبحد أقصى 160 كلمة، دون عناوين أو قوائم. احترم طلب الجملتين أو الاختصار. followUp سؤال واحد لا يزيد على 35 كلمة أو null؛ ضعه منفصلًا عن reply ولا تكرر السؤال فيه. لا تفرض واجبًا خلال الشرح. move يصنف حركة الحوار الظاهرة فقط ولا تعرض تفكيرًا داخليًا. أخرج JSON فقط وفق المخطط المطلوب.
+reply في الحوار المعتاد فقرة أو فقرتان، غالبًا 35–90 كلمة وبحد أقصى 160 كلمة، دون عناوين أو قوائم. استثناء HOW TO MAKE أو المثال المحلول: يجوز تنظيم المثال في حتى 6 خطوات قصيرة مترابطة وبحد أقصى 300 كلمة، تشرح أنت فيها الموقف والسبب والقرار، دون طلب كتابة أو إدخال أو واجب من الطالب، وfollowUp=null. احترم طلب الجملتين أو الاختصار. followUp سؤال واحد لا يزيد على 35 كلمة أو null؛ ضعه منفصلًا عن reply ولا تكرر السؤال فيه. لا تفرض واجبًا خلال الشرح. move يصنف حركة الحوار الظاهرة فقط ولا تعرض تفكيرًا داخليًا. أخرج JSON فقط وفق المخطط المطلوب.
 
 نماذج قصيرة للأسلوب وليست إجابات محفوظة:
 الطالب: التطبيق بيحفظ قائمة مشترياتي. إيه فائدته؟
@@ -78,6 +78,7 @@ ${JSON.stringify({title:knowledge.title,versionId:knowledge.versionId,content:kn
 }
 
 module.exports = { isConsultantPilot, buildConsultantPrompt, buildDialoguePrompt, DIALOGUE_PROFILE };
+
 
 
 
