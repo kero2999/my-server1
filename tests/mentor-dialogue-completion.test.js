@@ -2,6 +2,11 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const {parseDialogueTurn}=require('../src/mentor-dialogue-contract');
 function answer(move,followUp){return JSON.stringify({reply:'الميزة خاصية الخدمة، والفائدة ما تساعد العميل على تحقيقه.',move,followUp});}
+test('questions inside a worked story do not discard the example or create a student task',()=>{
+ const raw=JSON.stringify({reply:'1. صاحب المخبز يسأل العميل: محتاج إيه؟ العميل يوضح حاجته.\n2. يسأله: إيه اللي عطلك؟ العميل يذكر المعلومة الناقصة.\n3. المخبز يوضح المعلومة بدل افتراض السبب.',move:'explain',followUp:'اكتب ردك؟'});
+ assert.throws(()=>parseDialogueTurn(raw),/reply_multiple_questions/);const t=parseDialogueTurn(raw,{workedExample:true});assert.ok(t.reply.includes('محتاج إيه؟'));assert.equal(t.followUp,null);
+ const many=JSON.stringify({reply:'سؤال؟ '.repeat(7),move:'explain',followUp:null});assert.throws(()=>parseDialogueTurn(many,{workedExample:true}),/reply_multiple_questions/);
+});
 test('worked examples allow bounded steps while ordinary dialogue retains its limits',()=>{
  const raw=JSON.stringify({reply:'1. مخبز افتراضي يسمع أن العميل يريد شراءً سريعًا.\n2. يعرض الخيارات المتاحة بوضوح لتسهيل الاختيار.\n3. يراجع هل المعلومة أوضح، دون ضمان مبيعات.',move:'explain',followUp:'اكتب مشروعك هنا؟'});
  assert.throws(()=>parseDialogueTurn(raw),/reply_contains_list/);
@@ -28,5 +33,6 @@ test('purposeful clarification and discussion can still ask one question',()=>{
 test('an already-complete direct response is preserved verbatim',()=>{
  const turn=parseDialogueTurn(answer('explain',null));assert.equal(turn.reply,'الميزة خاصية الخدمة، والفائدة ما تساعد العميل على تحقيقه.');assert.equal(turn.followUpSuppressed,false);
 });
+
 
 
