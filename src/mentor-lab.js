@@ -1,7 +1,8 @@
 const express = require('express');
 const { DIALOGUE_PROFILE } = require('./mentor-consultant-pilot');
 const crypto = require('node:crypto');
-const { DIALOGUE_FORMAT, parseDialogueTurn, FORMAT_REASONS } = require('./mentor-dialogue-contract');
+const { DIALOGUE_FORMAT, parseDialogueTurn, parseDialogueEnvelope, FORMAT_REASONS } = require('./mentor-dialogue-contract');
+const { REVIEW_FORMAT, buildReviewMessages, parseReviewedTurn, reviewPromptHash, sumUsage } = require('./mentor-answer-review');
 const LAB_MODELS = Object.freeze(['gpt-4o-mini','gpt-5-mini']);
 const { requiresScopeBoundary, boundedScopeReply } = require('./mentor-scope-boundary');
 
@@ -10,7 +11,7 @@ function createMentorLab({ db, authorize, sourceLimit, chatLimit, loadKnowledge,
   const busy = new Set();
   router.use(authorize);
   router.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
-  router.get('/profile', (req,res) => res.json({ok:true,experience:DIALOGUE_PROFILE,diagnosticsVersion:1,modelComparison:{version:1,models:LAB_MODELS,defaultModel:'gpt-4o-mini'}}));
+  router.get('/profile', (req,res) => res.json({ok:true,experience:DIALOGUE_PROFILE,diagnosticsVersion:1,answerReview:{version:1,maxModelCalls:2},modelComparison:{version:1,models:LAB_MODELS,defaultModel:'gpt-4o-mini'}}));
   router.get('/source', sourceLimit, async (req, res) => {
     const slug = String(req.query.courseSlug || 'marketing-launch');
     const chapter = Number(req.query.chapter || 1);
@@ -30,36 +31,57 @@ function createMentorLab({ db, authorize, sourceLimit, chatLimit, loadKnowledge,
     if (!process.env.OPENAI_API_KEY) return res.status(503).json({ok:false,code:'MENTOR_NOT_CONFIGURED',error:'مفتاح النموذج غير مضبوط في إعدادات السيرفر.'});
     if (busy.has(req.userId)) return res.status(429).json({ok:false,code:'MENTOR_BUSY',error:'انتظر انتهاء الطلب الحالي.'});
     busy.add(req.userId);
-    let source;
+    let source,stage='draft',draftUsage=null,draftElapsedMs=null,reviewStarted=null;
     const started = Date.now();
     try {
       source = await loadKnowledge(db,'marketing-launch',1);
       const country = await countryForUser(req.userId);
       const prompt = buildPrompt(country,source);
-      const promptSha256 = crypto.createHash('sha256').update(prompt).digest('hex');
+      const promptSha256 = crypto.createHash('sha256').update(prompt+'\n'+reviewPromptHash(prompt)).digest('hex');
       if (expectedPrompt && expectedPrompt !== promptSha256) return res.status(409).json({ok:false,code:'MENTOR_CONTEXT_CHANGED',error:'تغيّر محتوى الفصل أو التعليمات أثناء المقارنة. ابدأ مقارنة جديدة.'});
       const boundaryReason=requiresScopeBoundary(messages);
-      if(boundaryReason){const turn=boundedScopeReply(boundaryReason);return res.json({ok:true,reply:turn.reply,dialogue:{move:'scope',hasFollowUp:false},experience:DIALOGUE_PROFILE,source:metadata(source),generation:{requestedModel,returnedModel:null,promptSha256,responseOrigin:'scope_boundary',boundaryReason,modelCalled:false},usage:null,elapsedMs:Date.now()-started,review:'requires_human_review'});}
+      if(boundaryReason){const turn=boundedScopeReply(boundaryReason);return res.json({ok:true,reply:turn.reply,answerReview:{status:'not_needed_scope',modelCalled:false},dialogue:{move:'scope',hasFollowUp:false},experience:DIALOGUE_PROFILE,source:metadata(source),generation:{requestedModel,returnedModel:null,promptSha256,responseOrigin:'scope_boundary',boundaryReason,modelCalled:false,modelCalls:0},usage:null,elapsedMs:Date.now()-started,review:'requires_human_review'});}
+      const signal=AbortSignal.timeout(45000);
+      const draftStarted=Date.now();
       const response = await fetchModel('https://api.openai.com/v1/chat/completions', {
         method:'POST', headers:{'Content-Type':'application/json',Authorization:`Bearer ${process.env.OPENAI_API_KEY}`},
         body:JSON.stringify({model:requestedModel,max_completion_tokens:2400,response_format:DIALOGUE_FORMAT,messages:[{role:'system',content:prompt},...messages.map(m=>({role:m.role,content:m.content.trim()}))]}),
-        signal:AbortSignal.timeout(45000),
+        signal,
       });
       if (!response.ok) return res.status(502).json({ok:false,code:'MENTOR_PROVIDER_ERROR',error:'تعذر استخدام النموذج المحدد. تحقق من إتاحته ورصيد API؛ لم نبدله بنموذج آخر.',diagnostics:{requestedModel,providerStatus:response.status,elapsedMs:Date.now()-started}});
       const data=await response.json(), choice=data.choices?.[0],reply=choice?.message?.content?.trim();
       if(!reply || choice.finish_reason!=='stop') return res.status(502).json({ok:false,code:'MENTOR_REPLY_INCOMPLETE',error:'رد النموذج لم يكتمل؛ لم نعرضه باعتباره إجابة كاملة.',diagnostics:{requestedModel,returnedModel:data.model||null,finishReason:choice?.finish_reason||null,usage:data.usage||null,elapsedMs:Date.now()-started}});
-      let turn;
-      try { turn=parseDialogueTurn(reply); }
+      draftUsage=data.usage||null;draftElapsedMs=Date.now()-draftStarted;
+      let turn,draft;
+      try { draft=parseDialogueEnvelope(reply);if(draft.move==='scope')turn=parseDialogueTurn(reply); }
       catch (error) { const formatReason=FORMAT_REASONS.includes(error.message)?error.message:'invalid_json';return res.status(502).json({ok:false,code:'MENTOR_FORMAT_INVALID',error:'رد التجربة خرج عن صيغة الحوار المختصرة. لم نعرضه كأنه اجتاز الفحص.',experience:DIALOGUE_PROFILE,review:'format_failed',diagnostics:{formatReason,requestedModel,returnedModel:data.model||null,promptSha256,sourceSha256:source.sha256,usage:data.usage||null,elapsedMs:Date.now()-started}}); }
+      let answerReview={status:'not_needed_scope',modelCalled:false};
+      if(!turn){
+        stage='review';reviewStarted=Date.now();
+        const reviewedResponse=await fetchModel('https://api.openai.com/v1/chat/completions',{
+          method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${process.env.OPENAI_API_KEY}`},
+          body:JSON.stringify({model:requestedModel,max_completion_tokens:2400,response_format:REVIEW_FORMAT,messages:buildReviewMessages(prompt,source,messages,draft)}),signal,
+        });
+        if(!reviewedResponse.ok)return res.status(502).json({ok:false,code:'MENTOR_REVIEW_UNAVAILABLE',error:'تعذرت مراجعة دقة الرد؛ لم نعرض المسودة. أعد المحاولة لاحقًا.',diagnostics:{stage,modelCalls:2,usageComplete:false,providerStatus:reviewedResponse.status,requestedModel,usage:draftUsage,elapsedMs:Date.now()-started}});
+        const reviewedData=await reviewedResponse.json(),reviewedChoice=reviewedData.choices?.[0];
+        const accountedUsage=sumUsage(draftUsage,reviewedData.usage||null);
+        if(!reviewedChoice?.message?.content || reviewedChoice.finish_reason!=='stop')return res.status(502).json({ok:false,code:'MENTOR_REVIEW_INCOMPLETE',error:'مراجعة الرد لم تكتمل؛ لم نعرض المسودة.',diagnostics:{stage,modelCalls:2,usageComplete:Boolean(accountedUsage),finishReason:reviewedChoice?.finish_reason||null,requestedModel,usage:accountedUsage,elapsedMs:Date.now()-started}});
+        let reviewed;
+        try{reviewed=parseReviewedTurn(reviewedChoice.message.content);}
+        catch(error){return res.status(502).json({ok:false,code:'MENTOR_REVIEW_FORMAT_INVALID',error:'تعذر اعتماد صيغة الرد المراجع؛ لم نعرض المسودة.',review:'format_failed',diagnostics:{stage,modelCalls:2,usageComplete:Boolean(accountedUsage),formatReason:FORMAT_REASONS.includes(error.message)?error.message:'invalid_review_envelope',requestedModel,usage:accountedUsage,elapsedMs:Date.now()-started}});}
+        turn=reviewed.turn;
+        answerReview={status:'model_reviewed_requires_human_review',modelCalled:true,requestedModel,returnedModel:reviewedData.model||null,promptSha256:reviewPromptHash(prompt),corrections:reviewed.corrections,usage:reviewedData.usage||null,elapsedMs:Date.now()-reviewStarted};
+      }
       const modelScope=turn.move==='scope';
-      return res.json({ok:true,reply:turn.reply,dialogue:{move:turn.move,hasFollowUp:Boolean(turn.followUp),followUpSuppressed:Boolean(turn.followUpSuppressed)},experience:DIALOGUE_PROFILE,source:metadata(source),generation:{requestedModel,returnedModel:data.model||null,promptSha256,maxCompletionTokens:2400,reasoningEffort:'model-default',responseOrigin:modelScope?'scope_boundary':'model',boundaryReason:modelScope?'model_scope':null,modelCalled:true},usage:data.usage,elapsedMs:Date.now()-started,review:'requires_human_review'});
-    } catch (error) { const timeout=['AbortError','TimeoutError'].includes(error?.name);return res.status(503).json({ok:false,code:!source?'MENTOR_SOURCE_UNAVAILABLE':timeout?'MENTOR_MODEL_TIMEOUT':'MENTOR_REQUEST_INCOMPLETE',error:!source?'تعذر التحقق من محتوى الفصل الحالي؛ لم يتم تخمين إجابة.':timeout?'انتهت مهلة طلب النموذج قبل وصول رد كامل.':'لم يكتمل طلب المحادثة. أعد المحاولة بعد قليل.'}); }
+      return res.json({ok:true,reply:turn.reply,answerReview,dialogue:{move:turn.move,hasFollowUp:Boolean(turn.followUp),followUpSuppressed:Boolean(turn.followUpSuppressed)},experience:DIALOGUE_PROFILE,source:metadata(source),generation:{requestedModel,returnedModel:data.model||null,promptSha256,maxCompletionTokens:2400,reasoningEffort:'model-default',responseOrigin:modelScope?'scope_boundary':'model',boundaryReason:modelScope?'model_scope':null,modelCalled:true,modelCalls:answerReview.modelCalled?2:1,draftElapsedMs,draftUsage},usage:answerReview.modelCalled?sumUsage(draftUsage,answerReview.usage):draftUsage,elapsedMs:Date.now()-started,review:'requires_human_review'});
+    } catch (error) { const timeout=['AbortError','TimeoutError'].includes(error?.name);return res.status(503).json({ok:false,code:!source?'MENTOR_SOURCE_UNAVAILABLE':timeout?(stage==='review'?'MENTOR_REVIEW_TIMEOUT':'MENTOR_MODEL_TIMEOUT'):'MENTOR_REQUEST_INCOMPLETE',diagnostics:{stage,modelCalls:stage==='review'?2:1,usageComplete:false,usage:draftUsage,elapsedMs:Date.now()-started},error:!source?'تعذر التحقق من محتوى الفصل الحالي؛ لم يتم تخمين إجابة.':timeout?(stage==='review'?'انتهت مهلة مراجعة الرد؛ لم نعرض المسودة.':'انتهت مهلة طلب النموذج قبل وصول رد كامل.'):'لم يكتمل طلب المحادثة. أعد المحاولة بعد قليل.'}); }
     finally { busy.delete(req.userId); }
   });
   return router;
 }
 function metadata(source) { return {courseSlug:source.courseSlug,chapter:source.chapter,title:source.title,versionId:source.versionId,file:source.file,sha256:source.sha256,characters:source.content.length}; }
 module.exports = { createMentorLab };
+
 
 
 

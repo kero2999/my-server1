@@ -2,6 +2,9 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const {parseDialogueTurn}=require('../src/mentor-dialogue-contract');
 function answer(move,followUp){return JSON.stringify({reply:'الميزة خاصية الخدمة، والفائدة ما تساعد العميل على تحقيقه.',move,followUp});}
+test('one inline question does not discard a response or duplicate its follow-up',()=>{
+ const turn=parseDialogueTurn(JSON.stringify({reply:'مش هنفترض إن السعر السبب. إيه اللي قاله العملاء؟',followUp:'إيه اللي قاله العملاء؟',move:'discuss'}));assert.equal(turn.followUp,null);assert.equal(turn.followUpSuppressed,true);assert.equal((turn.reply.match(/؟/g)||[]).length,1);
+});
 test('scope envelope must still be valid and extra fields are rejected',()=>{
  for(const turn of [{reply:'غير متاح؟',move:'scope',followUp:42},{reply:'غير متاح',move:'scope',followUp:null,extra:'x'}])assert.throws(()=>parseDialogueTurn(JSON.stringify(turn)),/invalid_dialogue_turn/);
  assert.throws(()=>parseDialogueTurn('not JSON'));
@@ -18,3 +21,4 @@ test('purposeful clarification and discussion can still ask one question',()=>{
 test('an already-complete direct response is preserved verbatim',()=>{
  const turn=parseDialogueTurn(answer('explain',null));assert.equal(turn.reply,'الميزة خاصية الخدمة، والفائدة ما تساعد العميل على تحقيقه.');assert.equal(turn.followUpSuppressed,false);
 });
+

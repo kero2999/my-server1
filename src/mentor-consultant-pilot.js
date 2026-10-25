@@ -37,7 +37,7 @@ ${JSON.stringify({courseSlug:knowledge.courseSlug,chapter:knowledge.chapter,titl
 `;
 }
 
-const DIALOGUE_PROFILE = Object.freeze({version:'kero-dialogue-v5',revision:2,label:'الحوار الاستشاري — الإصدار 5 المحسّن',scope:'marketing-launch/chapter/1'});
+const DIALOGUE_PROFILE = Object.freeze({version:'kero-dialogue-v5',revision:3,label:'الحوار الاستشاري — مراجعة الدقة التجريبية',scope:'marketing-launch/chapter/1'});
 
 function buildDialoguePrompt(country, knowledge) {
   if (!knowledge?.content || knowledge.courseSlug !== 'marketing-launch' || knowledge.chapter !== 1 || !knowledge.versionId) throw new Error('verified_pilot_knowledge_required');
@@ -114,6 +114,7 @@ ${JSON.stringify({title:knowledge.title,versionId:knowledge.versionId,content:kn
 }
 
 module.exports = { isConsultantPilot, buildConsultantPrompt, buildDialoguePrompt, DIALOGUE_PROFILE };
+
 
 
 
