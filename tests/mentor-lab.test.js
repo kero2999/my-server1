@@ -75,6 +75,18 @@ test('a model scope answer cannot offer a later implementation or ask a leading 
 test('the API reports suppression of a needless closing question transparently',async()=>{
  const s=await setup({reply:JSON.stringify({reply:'الخاصية توضح ما تتضمنه الخدمة، والفائدة لماذا تهم العميل.',followUp:'تقدر تبتكر فائدة تانية؟',move:'explain'})});const r=await s.request('/chat',{messages:[{role:'user',content:'اشرح الميزة والفائدة'}]});assert.equal(r.status,200);const d=await r.json();assert.equal(d.dialogue.hasFollowUp,false);assert.equal(d.dialogue.followUpSuppressed,true);assert.ok(!d.reply.includes('تقدر تبتكر'));
 });
+test('format failures expose only a safe reason and actual model usage',async()=>{
+ const s=await setup({reply:'not JSON private content'});const r=await s.request('/chat',{messages:[{role:'user',content:'اختبار'}]});assert.equal(r.status,502);const d=await r.json();assert.equal(d.code,'MENTOR_FORMAT_INVALID');assert.equal(d.diagnostics.formatReason,'invalid_json');assert.equal(d.diagnostics.returnedModel,'test-model');assert.equal(d.diagnostics.usage.total_tokens,42);assert.ok(!JSON.stringify(d).includes('private content'));
+});
+test('provider HTTP errors and incomplete replies are distinguishable without raw provider output',async()=>{
+ const failed=await setup({fetchModel:async()=>({ok:false,status:429,json:async()=>({error:{message:'sensitive raw provider detail'}})})});let d=await (await failed.request('/chat',{messages:[{role:'user',content:'اختبار'}]})).json();assert.equal(d.code,'MENTOR_PROVIDER_ERROR');assert.equal(d.diagnostics.providerStatus,429);assert.ok(!JSON.stringify(d).includes('sensitive'));
+ const incomplete=await setup({truncated:true});d=await (await incomplete.request('/chat',{messages:[{role:'user',content:'اختبار'}]})).json();assert.equal(d.code,'MENTOR_REPLY_INCOMPLETE');assert.equal(d.diagnostics.finishReason,'length');
+});
+test('timeouts and missing sources return separate fixed diagnostics',async()=>{
+ const timeout=await setup({fetchModel:async()=>{const e=new Error('private timeout detail');e.name='TimeoutError';throw e;}});let d=await (await timeout.request('/chat',{messages:[{role:'user',content:'اختبار'}]})).json();assert.equal(d.code,'MENTOR_MODEL_TIMEOUT');assert.ok(!JSON.stringify(d).includes('private'));
+ const missing=await setup({sourceFail:true});d=await (await missing.request('/chat',{messages:[{role:'user',content:'اختبار'}]})).json();assert.equal(d.code,'MENTOR_SOURCE_UNAVAILABLE');
+});
+
 
 
 
