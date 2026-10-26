@@ -1,4 +1,5 @@
 const express = require('express');
+const {composeTeachingMessages}=require('./mentor-reading-reference');
 const { DIALOGUE_PROFILE } = require('./mentor-consultant-pilot');
 const crypto = require('node:crypto');
 const { DIALOGUE_FORMAT, parseDialogueTurn, parseDialogueEnvelope, FORMAT_REASONS } = require('./mentor-dialogue-contract');
@@ -44,14 +45,14 @@ function createMentorLab({ db, authorize, sourceLimit, chatLimit, loadKnowledge,
     let source,stage='draft',draftUsage=null,draftElapsedMs=null,reviewStarted=null,modelCalls=0,baseline=null;
     const started = Date.now();
     try {
-      source = await loadKnowledge(db,'marketing-launch',1);
+      source = await loadKnowledge(db,'marketing-launch',1,{readingOnly:true});
       const country = await countryForUser(req.userId);
       const teachingRoute=selectTeachingRoute(messages);
       const variants=ROUTES.map(route=>buildPrompt(country,source,route));
       const prompt=variants[ROUTES.indexOf(teachingRoute.name)];
       const hash=value=>crypto.createHash('sha256').update(value).digest('hex');
-      const promptSha256=hash(prompt);
-      const contextSha256=hash(variants.join('\n')+'\n'+reviewPromptHash(variants[0])+'\nrouted-context-v1\nturn-policy-v2');
+      const promptSha256=hash(JSON.stringify(composeTeachingMessages(prompt,[])));
+      const contextSha256=hash(JSON.stringify(variants.map(p=>composeTeachingMessages(p,[])))+'\n'+reviewPromptHash(variants[0])+'\nrouted-context-v2-reading-reference\nturn-policy-v2');
       if ((expectedPrompt&&expectedPrompt!==promptSha256)||(expectedContext&&expectedContext!==contextSha256))return res.status(409).json({ok:false,code:'MENTOR_CONTEXT_CHANGED',error:'تغيّر محتوى الفصل أو التعليمات. ابدأ تجربة جديدة.'});
       const assessmentReason=assessmentBoundaryReason(messages);
       if(assessmentReason){const turn=assessmentHint();return res.json({ok:true,reply:turn.reply,dialogue:{move:'hint',hasFollowUp:false},answerReview:{status:'not_needed_assessment',modelCalled:false},...(compareReview?{comparison:{kind:'paired_review',evaluated:false,reason:'deterministic_assessment',direct:{reply:turn.reply,modelCalled:false},reviewed:null}}:{}),experience:DIALOGUE_PROFILE,source:metadata(source),generation:{requestedModel,returnedModel:null,promptSha256,contextSha256,teachingRoute,responseOrigin:'assessment_boundary',boundaryReason:assessmentReason,modelCalled:false,modelCalls:0},usage:null,elapsedMs:Date.now()-started,review:'requires_human_review'});}
@@ -63,7 +64,7 @@ function createMentorLab({ db, authorize, sourceLimit, chatLimit, loadKnowledge,
       modelCalls++;
       const response = await fetchModel('https://api.openai.com/v1/chat/completions', {
         method:'POST', headers:{'Content-Type':'application/json',Authorization:`Bearer ${process.env.OPENAI_API_KEY}`},
-        body:JSON.stringify({model:requestedModel,max_completion_tokens:2400,response_format:DIALOGUE_FORMAT,messages:[{role:'system',content:prompt},...messages.map(m=>({role:m.role,content:m.content.trim()}))]}),
+        body:JSON.stringify({model:requestedModel,max_completion_tokens:2400,response_format:DIALOGUE_FORMAT,messages:composeTeachingMessages(prompt,messages)}),
         signal,
       });
       if (!response.ok) return res.status(502).json({ok:false,code:'MENTOR_PROVIDER_ERROR',error:'تعذر استخدام النموذج المحدد. تحقق من إتاحته ورصيد API؛ لم نبدله بنموذج آخر.',diagnostics:{requestedModel,providerStatus:response.status,elapsedMs:Date.now()-started}});
@@ -110,6 +111,7 @@ function createMentorLab({ db, authorize, sourceLimit, chatLimit, loadKnowledge,
 }
 function metadata(source) { return {courseSlug:source.courseSlug,chapter:source.chapter,title:source.title,versionId:source.versionId,file:source.file,sha256:source.sha256,characters:source.content.length}; }
 module.exports = { createMentorLab };
+
 
 
 
