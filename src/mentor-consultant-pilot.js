@@ -37,7 +37,7 @@ ${JSON.stringify({courseSlug:knowledge.courseSlug,chapter:knowledge.chapter,titl
 `;
 }
 
-const DIALOGUE_PROFILE = Object.freeze({version:'kero-dialogue-v5',revision:8,label:'الحوار الاستشاري — مسارات التعليم',scope:'marketing-launch/chapter/1'});
+const DIALOGUE_PROFILE = Object.freeze({version:'kero-dialogue-v5',revision:9,label:'الحوار الاستشاري — دقة الأمثلة واستمرار النقاش',scope:'marketing-launch/chapter/1'});
 
 const {routeInstruction}=require('./mentor-teaching-routes');
 function buildDialoguePrompt(country, knowledge, route='concept_explanation') {
