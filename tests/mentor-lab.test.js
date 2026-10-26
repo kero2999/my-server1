@@ -20,7 +20,7 @@ test('explicit assessment answers and pressure return an attributed hint with ze
 });
 test('HOW TO MAKE uses server-derived list allowance with one direct call and no follow-up',async()=>{
  const reply=JSON.stringify({reply:'1. نلاحظ احتياج العميل في مثال افتراضي.\n2. نعرض معلومة تعالج الاحتياج.\n3. نراجع وضوح العرض.',move:'discuss',followUp:'اكتب إجابتك؟'});const s=await setup({direct:true,reply});
- const d=await (await s.request('/chat',{messages:[{role:'user',content:'اشرح HOW TO MAKE بمثال محلول'}]})).json();assert.equal(d.ok,true);assert.equal(d.generation.modelCalls,1);assert.equal(d.dialogue.hasFollowUp,false);assert.ok(d.reply.includes('1.'));assert.ok(s.payload.messages[0].content.includes('6 خطوات'));
+ const d=await (await s.request('/chat',{messages:[{role:'user',content:'اشرح HOW TO MAKE بمثال محلول'}]})).json();assert.equal(d.ok,true);assert.equal(d.generation.modelCalls,1);assert.equal(d.dialogue.hasFollowUp,false);assert.ok(d.reply.includes('1.'));assert.ok(d.generation.teachingRoute.name==='worked_example');
  const r=await s.request('/chat',{messages:[{role:'user',content:'يعني إيه تسويق؟'}],workedExample:true});assert.equal(r.status,502,'a client field cannot grant list permission');
 });
 test('ordinary admin chat defaults to direct generation without a paid reviewer',async()=>{
@@ -103,7 +103,7 @@ test('parallel model requests for the same admin are blocked and released',async
 });
 test('version handshake is authenticated and free of source/model requests',async()=>{
  const s=await setup();assert.equal((await s.request('/profile',null,null)).status,401);assert.equal((await s.request('/profile',null,'student')).status,403);
- const r=await s.request('/profile');assert.equal(r.status,200);const profile=await r.json();assert.equal(profile.experience.version,'kero-dialogue-v5');assert.equal(profile.experience.revision,7);assert.deepEqual(profile.directValidation,{version:1,model:'gpt-4o-mini',maxModelCallsPerTurn:1});assert.deepEqual(s.counts,{load:0,model:0});
+ const r=await s.request('/profile');assert.equal(r.status,200);const profile=await r.json();assert.equal(profile.experience.version,'kero-dialogue-v5');assert.equal(profile.experience.revision,8);assert.deepEqual(profile.directValidation,{version:1,model:'gpt-4o-mini',maxModelCallsPerTurn:1});assert.deepEqual(s.counts,{load:0,model:0});
 });
 test('lab transmits the dialogue prompt and returns its revision with the reply',async()=>{
  const {buildDialoguePrompt,DIALOGUE_PROFILE}=require('../src/mentor-consultant-pilot');const s=await setup({buildPrompt:buildDialoguePrompt});
@@ -160,3 +160,11 @@ test('timeouts and missing sources return separate fixed diagnostics',async()=>{
 
 
 
+
+test('route changes alter actual prompt hash but keep suite context pinned and preserve history',async()=>{
+ const {buildDialoguePrompt}=require('../src/mentor-consultant-pilot');const s=await setup({direct:true,buildPrompt:buildDialoguePrompt});let history=[{role:'user',content:'عندي متجر'}];const a=await (await s.request('/chat',{messages:history,teachingRoute:'worked_example'})).json();assert.equal(a.generation.teachingRoute.name,'project_discussion');history.push({role:'assistant',content:a.reply},{role:'user',content:'HOW TO MAKE بمثال محلول'});const b=await (await s.request('/chat',{messages:history,expectedContextSha256:a.generation.contextSha256})).json();assert.equal(b.ok,true);assert.equal(b.generation.teachingRoute.name,'worked_example');assert.notEqual(b.generation.promptSha256,a.generation.promptSha256);assert.equal(b.generation.contextSha256,a.generation.contextSha256);assert.deepEqual(s.payload.messages.slice(1),history);assert.equal(s.counts.model,2);assert.equal((await s.request('/chat',{messages:history,expectedContextSha256:'f'.repeat(64)})).status,409);assert.equal(s.counts.model,2);
+});
+test('empty, refusal, malformed and non-JSON provider results are distinguished without retries',async()=>{
+ for(const [value,code] of [[{choices:[{finish_reason:'stop',message:{content:null}}],usage:{completion_tokens:144}},'MENTOR_EMPTY_CONTENT'],[{choices:[{finish_reason:'stop',message:{refusal:'PRIVATE',content:null}}]},'MENTOR_MODEL_REFUSAL'],[{choices:[{finish_reason:'stop',message:{content:[]}}]},'MENTOR_RESPONSE_SHAPE'],[null,'MENTOR_RESPONSE_SHAPE']]){const s=await setup({direct:true,fetchModel:async()=>({ok:true,json:async()=>value})});const d=await (await s.request('/chat',{messages:[{role:'user',content:'اشرح'}]})).json();assert.equal(d.code,code);assert.equal(s.counts.model,1);assert.ok(!JSON.stringify(d).includes('PRIVATE'));if(value?.usage)assert.equal(d.diagnostics.usage.completion_tokens,144);}
+ const s=await setup({direct:true,fetchModel:async()=>({ok:true,json:async()=>{throw Error('PRIVATE')}})});const d=await (await s.request('/chat',{messages:[{role:'user',content:'اشرح'}]})).json();assert.equal(d.code,'MENTOR_PROVIDER_RESPONSE_INVALID');assert.equal(s.counts.model,1);assert.ok(!JSON.stringify(d).includes('PRIVATE'));
+});
