@@ -37,7 +37,7 @@ ${JSON.stringify({courseSlug:knowledge.courseSlug,chapter:knowledge.chapter,titl
 `;
 }
 
-const DIALOGUE_PROFILE = Object.freeze({version:'kero-dialogue-v5',revision:11,label:'الحوار الاستشاري — المحاولة الأخيرة',scope:'marketing-launch/chapter/1'});
+const DIALOGUE_PROFILE = Object.freeze({version:'kero-dialogue-v5',revision:12,label:'الحوار الاستشاري — اختبار السرعة',scope:'marketing-launch/chapter/1'});
 const {routeInstruction}=require('./mentor-teaching-routes');
 function buildDialoguePrompt(country,knowledge,route='concept_explanation'){
  if(!knowledge||typeof knowledge.content!=='string'||knowledge.courseSlug!=='marketing-launch'||knowledge.chapter!==1||!knowledge.versionId)throw Error('verified_pilot_knowledge_required');
