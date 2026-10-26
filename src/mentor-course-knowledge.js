@@ -32,7 +32,7 @@ function extractLessonText(html) {
 
 // Fetch pointers afresh on every request: an upload changes the active version immediately.
 // Only current-course chapter text is downloaded; other levels contribute published titles only.
-async function loadCourseKnowledge(db, slug, chapter) {
+async function loadCourseKnowledge(db, slug, chapter, options = {}) {
   if (!SLUGS.includes(slug) || !Number.isInteger(chapter) || chapter < 1 || chapter > 12) throw new Error('invalid_knowledge_context');
   const { data: courses, error } = await db.from('courses').select('id,slug,title,status,entry_file,content_bucket,content_prefix,current_version_id').in('slug', SLUGS).eq('status', 'published');
   if (error) throw error;
@@ -56,7 +56,7 @@ async function loadCourseKnowledge(db, slug, chapter) {
   if (fileError || !file) throw new Error('knowledge_download_failed');
   if (file.size > 5 * 1024 * 1024) throw new Error('knowledge_html_too_large');
   const html = await file.text();
-  const content = extractLessonText(html);
+  const content = options.readingOnly === true ? require('./mentor-reading-reference').readingReference(html) : extractLessonText(html);
   // Check the pointer after download so a mid-request upload cannot quietly bind an old lesson.
   const { data: latest, error: latestError } = await db.from('courses').select('current_version_id,content_bucket,content_prefix,entry_file').eq('id', course.id).maybeSingle();
   if (latestError) throw latestError;
@@ -65,3 +65,4 @@ async function loadCourseKnowledge(db, slug, chapter) {
 }
 
 module.exports = { loadCourseKnowledge, extractLessonText, safePath };
+
