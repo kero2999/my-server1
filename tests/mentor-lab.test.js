@@ -103,7 +103,7 @@ test('parallel model requests for the same admin are blocked and released',async
 });
 test('version handshake is authenticated and free of source/model requests',async()=>{
  const s=await setup();assert.equal((await s.request('/profile',null,null)).status,401);assert.equal((await s.request('/profile',null,'student')).status,403);
- const r=await s.request('/profile');assert.equal(r.status,200);const profile=await r.json();assert.equal(profile.experience.version,'kero-dialogue-v5');assert.equal(profile.experience.revision,11);assert.deepEqual(profile.directValidation,{version:1,model:'gpt-4o-mini',maxModelCallsPerTurn:1});assert.deepEqual(s.counts,{load:0,model:0});
+ const r=await s.request('/profile');assert.equal(r.status,200);const profile=await r.json();assert.equal(profile.experience.version,'kero-dialogue-v5');assert.equal(profile.experience.revision,12);assert.deepEqual(profile.directValidation,{version:1,model:'gpt-4o-mini',maxModelCallsPerTurn:1});assert.deepEqual(s.counts,{load:0,model:0});
 });
 test('lab transmits the dialogue prompt and returns its revision with the reply',async()=>{
  const {buildDialoguePrompt,DIALOGUE_PROFILE}=require('../src/mentor-consultant-pilot');const s=await setup({buildPrompt:buildDialoguePrompt});
@@ -173,4 +173,10 @@ test('paid draft receives selected text only, while suite context stays stable a
  const {buildDialoguePrompt}=require('../src/mentor-consultant-pilot');const text='MARKETING LAUNCH / المفهوم 1\nما هو التسويق؟\n'+('التسويق فهم العميل. '.repeat(50))+'\nMARKETING LAUNCH / المفهوم 9\nالمواصفات مقابل الفوائد\n'+('الخاصية تصف المنتج والفائدة توضح ما يتيحه. '.repeat(50));
  const s=await setup({direct:true,buildPrompt:buildDialoguePrompt,source:{content:text}});const a=await (await s.request('/chat',{messages:[{role:'user',content:'اشرح الخاصية والفائدة'}]})).json();assert.equal(a.ok,true);assert.equal(a.generation.reference.sections[0].id,9);assert.ok(a.generation.reference.characters<text.length);assert.ok(!s.payload.messages[1].content.includes('التسويق فهم العميل.'));assert.equal(a.generation.modelCalls,1);
  const b=await (await s.request('/chat',{messages:[{role:'user',content:'يعني إيه تسويق؟'}],expectedContextSha256:a.generation.contextSha256})).json();assert.equal(b.ok,true);assert.equal(b.generation.reference.sections[0].id,1);assert.equal(b.generation.contextSha256,a.generation.contextSha256);assert.notEqual(b.generation.promptSha256,a.generation.promptSha256);assert.equal(s.counts.model,2);
+});
+test('gpt-5-mini direct request uses low reasoning with identical teaching input and one call',async()=>{
+ const s=await setup({direct:true});const messages=[{role:'user',content:'عندي متجر، أعمل خصم؟'}];
+ const a=await (await s.request('/chat',{model:'gpt-4o-mini',messages})).json();const first=s.payload;assert.equal(first.reasoning_effort,undefined);
+ const b=await (await s.request('/chat',{model:'gpt-5-mini',messages})).json();assert.equal(b.ok,true);assert.equal(s.payload.reasoning_effort,'low');assert.deepEqual(s.payload.messages,first.messages);assert.equal(s.payload.max_completion_tokens,first.max_completion_tokens);assert.equal(b.generation.reasoningEffort,'low');assert.equal(b.generation.modelCalls,1);assert.equal(b.answerReview.modelCalled,false);assert.equal(b.generation.promptSha256,a.generation.promptSha256);assert.equal(b.generation.contextSha256,a.generation.contextSha256);assert.equal(s.counts.model,2);
+ const profile=await (await s.request('/profile')).json();assert.equal(profile.reasoningSettings.directGpt5Mini,'low');assert.deepEqual(profile.selectedModelValidation.models,['gpt-4o-mini','gpt-5-mini']);
 });
