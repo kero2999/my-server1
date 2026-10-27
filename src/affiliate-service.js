@@ -83,9 +83,11 @@ async function recordAffiliateConversion(payment, eventType) {
     commission_rate: rate,
     commission_amount_cents: commissionAmountCents,
     status: "pending",
-  }, { onConflict: "payment_id" }).select("*").maybeSingle();
+  // Webhook retries must never reset a settled commission to pending or change its rate.
+  }, { onConflict: "payment_id", ignoreDuplicates: true }).select("*").maybeSingle();
   if (commissionError) throw commissionError;
   return commission || null;
 }
 
 module.exports = { normalizeCode, findActiveAffiliate, recordVisit, attributeUser, recordAffiliateConversion };
+

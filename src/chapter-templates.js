@@ -61,8 +61,9 @@ function getChapterTemplate(courseSlug, chapterNumber) {
 function publicChapterTemplate(courseSlug, chapterNumber) {
   const template = getChapterTemplate(courseSlug, chapterNumber);
   if (!template) return null;
-  const { reviewCriteria, ...studentTemplate } = template;
-  return studentTemplate;
+  // These are the task's review criteria, not answers or scoring secrets.
+  // Use the same criteria in the student UI and the server-side review.
+  return template;
 }
 
 function publicHowToMake(courseSlug, chapterNumber) {
@@ -203,3 +204,4 @@ module.exports = {
   serializeTemplateSubmission,
   validateChapterTemplateDefinitions,
 };
+
