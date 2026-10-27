@@ -599,11 +599,21 @@ router.get("/:courseId/content-token", requireAuth, async (req, res) => {
     const course = await findPublishedCourse(req.params.courseId);
     if (!course) return res.status(404).json({ ok: false, error: "الكورس غير موجود." });
     const includeShell = req.query.include === "learning-shell";
+    const requestedChapter = req.query.chapter == null ? 0 : Number(req.query.chapter);
+    if (req.query.chapter != null && (!Number.isInteger(requestedChapter) || requestedChapter < 1 || requestedChapter > 12)) {
+      return res.status(400).json({ ok: false, error: "رقم الفصل غير صالح." });
+    }
     const [access, country] = await Promise.all([
       getAccess(req.userId, course.id),
       includeShell ? getUserCountry(req.userId) : Promise.resolve(null),
     ]);
     if (!access.canAccess) return res.status(403).json({ ok: false, error: "لا تملك صلاحية الوصول إلى محتوى هذا الكورس." });
+    if (requestedChapter > 1 && !access.admin) {
+      const unlock = await isChapterUnlocked(req.userId, course.id, requestedChapter);
+      if (!unlock.unlocked) return res.status(403).json({ ok: false, code: "CHAPTER_LOCKED",
+        error: "هذا الفصل مقفول. أكمل تقييم الفصل السابق بنسبة 75% أو أكثر أولًا.",
+        requiredChapter: requestedChapter - 1 });
+    }
     const [entryFile, prices] = await Promise.all([
       resolveEntryFile(course),
       includeShell ? getCoursePrices([course.id], country.countryCode) : Promise.resolve(null),
@@ -990,3 +1000,4 @@ module.exports.getAccess = getAccess;
 module.exports.resolveEntryFile = resolveEntryFile;
 module.exports.pickIndexFile = pickIndexFile;
 module.exports.pickCourseEntryFile = pickCourseEntryFile;
+

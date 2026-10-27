@@ -100,7 +100,9 @@ router.post("/paymob", async (req, res) => {
     }
 
     if (payment.status === "paid") {
-      if (payment.payment_type === "campaign_trial") await activateCampaignTrial(payment);
+      // A previous delivery may have persisted payment before fulfillment failed.
+      // Always retry the idempotent fulfillment before acknowledging a duplicate.
+      await fulfillPaidPayment(payment);
       await recordWebhookAudit(req, `PAYMOB_WEBHOOK_DUPLICATE ${payment.id}`, "success", { paymentId: payment.id, providerOrderId: details.providerOrderId, transactionId: details.transactionId, paymentStatus: "paid" });
       return res.status(200).json({ received: true, duplicate: true });
     }
@@ -113,26 +115,12 @@ router.post("/paymob", async (req, res) => {
       raw_callback: details.raw,
       paid_at: paidAt,
       updated_at: new Date().toISOString(),
-    }).eq("id", payment.id);
+    }).eq("id", payment.id).neq("status", "paid");
     if (updateError) throw updateError;
 
     if (details.success) {
-      if (payment.payment_type === "campaign_trial") {
-        const paidPayment = { ...payment, status: "paid", paid_at: paidAt };
-        await activateCampaignTrial(paidPayment);
-      } else {
-        const { error: enrollmentError } = await supabase.from("enrollments").upsert({
-          user_id: payment.user_id,
-          course_id: payment.course_id,
-          status: "active",
-          source: "paymob",
-          payment_id: payment.id,
-          purchased_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }, { onConflict: "user_id,course_id" });
-        if (enrollmentError) throw enrollmentError;
-        await recordAffiliateConversion({ ...payment, status: "paid", paid_at: paidAt }, "affiliate_purchase");
-      }
+      await fulfillPaidPayment({ ...payment, status: "paid", paid_at: paidAt,
+        provider_transaction_id: details.transactionId });
     }
 
     await recordWebhookAudit(req, `PAYMOB_WEBHOOK_PROCESSED ${payment.id}`, "success", { paymentId: payment.id, providerOrderId: details.providerOrderId, transactionId: details.transactionId, paymentStatus: nextStatus, success: details.success });
@@ -144,6 +132,29 @@ router.post("/paymob", async (req, res) => {
     return res.status(500).json({ ok: false, error: "Webhook processing failed" });
   }
 });
+
+async function fulfillPaidPayment(payment) {
+  if (payment.payment_type === "campaign_trial") return activateCampaignTrial(payment);
+  const { data: existing, error: lookupError } = await supabase.from("enrollments")
+    .select("id, payment_id, status").eq("user_id", payment.user_id).eq("course_id", payment.course_id).maybeSingle();
+  if (lookupError) throw lookupError;
+  // Replaying an old paid callback must not undo a later manual revocation.
+  if (existing && String(existing.payment_id) === String(payment.id)) {
+    if (existing.status === "active") await recordAffiliateConversion(payment, "affiliate_purchase");
+    return;
+  }
+  const { error } = await supabase.from("enrollments").upsert({
+    user_id: payment.user_id,
+    course_id: payment.course_id,
+    status: "active",
+    source: "paymob",
+    payment_id: payment.id,
+    purchased_at: payment.paid_at || payment.created_at || new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "user_id,course_id" });
+  if (error) throw error;
+  await recordAffiliateConversion(payment, "affiliate_purchase");
+}
 
 async function activateCampaignTrial(payment) {
   const metadata = payment.metadata && typeof payment.metadata === "object" ? payment.metadata : {};
@@ -253,3 +264,4 @@ async function deactivateByEmail(email) {
 }
 
 module.exports = router;
+

@@ -12,6 +12,7 @@ const { isChapterUnlocked } = require("../learning");
 const { getUserCountry, getCourseVariants } = require("../country-service");
 const { injectContentDialect, rewriteHtmlTextNodes } = require("../content-dialect");
 const { publicHowToMake } = require("../chapter-templates");
+const { repairAssessmentPresentation, contentErrorPage } = require("../course-release-repairs");
 
 const router = express.Router();
 const PUBLIC_MENTOR_IMAGE = "https://www.quadralevel.com/images/mentor-avatar.jpeg";
@@ -73,7 +74,7 @@ function renderHowToMakeSection(courseSlug, chapterNumber) {
 }
 
 function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "", courseId = "", country = null) {
-  const html = buffer.toString("utf8");
+  const html = repairAssessmentPresentation(buffer.toString("utf8"), requestedPath, String(courseSlug).toLowerCase());
   // The outer Marketplace gateway has already authenticated this request.
   // Disable the legacy bundle's origin-local auth redirect inside the iframe.
   let sanitized = html
@@ -279,12 +280,15 @@ router.get("/:courseId/*", async (req, res) => {
 
     let requestedPath = safeRelativePath(req.params[0] || course.entry_file);
     if (!requestedPath) return res.status(400).json({ ok: false, error: "مسار الملف غير صالح." });
-    const chapterFile = requestedPath.match(/(?:^|\/)ch(\d+)\.html$/i);
+    const chapterFile = requestedPath.match(/(?:^|\/)(?:ch|assessment)(\d+)\.html$/i);
     const quizFile = /(?:^|\/)quiz\.html$/i.test(requestedPath) ? Number(req.query.ch || 0) : 0;
     const requestedChapter = chapterFile ? Number(chapterFile[1]) : quizFile || (/(?:^|\/)index\.html$/i.test(requestedPath) ? 1 : 0);
-    if (requestedChapter > 1) {
+    if (requestedChapter > 1 && !access.admin) {
       const unlock = await isChapterUnlocked(identity.userId, course.id, requestedChapter);
-      if (!unlock.unlocked) return res.status(403).json({ ok: false, error: "هذا الفصل مقفول. اجتز اختبار الفصل السابق أولًا." });
+      if (!unlock.unlocked) {
+        const message = "هذا الفصل مقفول. أكمل اختبار وتطبيق وأسئلة فهم الفصل السابق بنسبة 75% أو أكثر أولًا.";
+        return res.status(403).set('Cache-Control', 'private, no-store').type('html').send(contentErrorPage(message, course.slug));
+      }
     }
     const currentEntryPath = safeRelativePath(course.entry_file);
     if (currentEntryPath && requestedPath === currentEntryPath && !/\.html?$/i.test(requestedPath)) {
@@ -355,3 +359,4 @@ module.exports = router;
 module.exports.prepareCourseHtml = prepareCourseHtml;
 module.exports.shouldPreserveUploadedCourse = shouldPreserveUploadedCourse;
 module.exports.renderHowToMakeSection = renderHowToMakeSection;
+
