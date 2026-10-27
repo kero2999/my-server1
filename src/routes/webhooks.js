@@ -14,6 +14,18 @@ function recordWebhookAudit(req, action, status, metadata = {}) {
   });
 }
 
+router.post("/paymob-sandbox", async (req, res) => {
+  try {
+    if (typeof req.body !== "string") return res.status(400).json({ ok: false });
+    let payload;
+    try { payload = JSON.parse(req.body); } catch (_) { return res.status(400).json({ ok: false }); }
+    const signature = req.query.hmac || req.headers["x-paymob-hmac"] || payload.hmac || (payload.obj && payload.obj.hmac);
+    const { processSandboxCallback } = require("../paymob-sandbox");
+    const result = await processSandboxCallback(payload, signature);
+    return res.status(result.code).json({ ok: result.code === 200, sandbox: true, error: result.error, received: result.received });
+  } catch (_) { return res.status(503).json({ ok: false, error: "Sandbox callback unavailable" }); }
+});
+
 router.post("/paymob", async (req, res) => {
   const bodyType = typeof req.body;
   const bodyLength = bodyType === "string" ? req.body.length : 0;
@@ -264,4 +276,5 @@ async function deactivateByEmail(email) {
 }
 
 module.exports = router;
+
 
