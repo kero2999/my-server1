@@ -8,15 +8,15 @@ function required(name) {
   return value;
 }
 
-async function paymobRequest(path, body) {
-  const response = await fetch(API_BASE_URL + path, {
+async function paymobRequest(path, body, sandbox = false) {
+  const response = await fetch((sandbox ? "https://accept.paymob.com/api" : API_BASE_URL) + path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    console.error("Paymob API error:", response.status, data);
+    console.error("Paymob API error:", response.status);
     throw new Error("PAYMOB_UPSTREAM_ERROR");
   }
   return data;
@@ -41,14 +41,16 @@ function normalizedBilling(user) {
   };
 }
 
-async function createCheckout({ amountCents, currency, merchantOrderId, user, paymentMethod = "card", walletPhone }) {
-  const apiKey = required("PAYMOB_API_KEY");
+async function createCheckout({ amountCents, currency, merchantOrderId, user, paymentMethod = "card", walletPhone, sandbox = false }) {
+  const testConfig = sandbox ? require("./paymob-sandbox").sandboxConfig() : null;
+  if (sandbox && paymentMethod !== "card") throw Error("SANDBOX_CARD_ONLY");
+  const apiKey = testConfig ? testConfig.apiKey : required("PAYMOB_API_KEY");
   const integrationEnv = paymentMethod === "wallet" ? "PAYMOB_WALLET_INTEGRATION_ID" : "PAYMOB_INTEGRATION_ID";
-  const integrationId = Number(required(integrationEnv));
-  const iframeId = required("PAYMOB_IFRAME_ID");
+  const integrationId = testConfig ? testConfig.integrationId : Number(required(integrationEnv));
+  const iframeId = testConfig ? testConfig.iframeId : required("PAYMOB_IFRAME_ID");
   if (!Number.isInteger(integrationId)) throw new Error("PAYMOB_INTEGRATION_ID_INVALID");
 
-  const auth = await paymobRequest("/auth/tokens", { api_key: apiKey });
+  const auth = await paymobRequest("/auth/tokens", { api_key: apiKey }, sandbox);
   const order = await paymobRequest("/ecommerce/orders", {
     auth_token: auth.token,
     delivery_needed: false,
@@ -56,7 +58,7 @@ async function createCheckout({ amountCents, currency, merchantOrderId, user, pa
     currency: currency || "EGP",
     merchant_order_id: merchantOrderId,
     items: [],
-  });
+  }, sandbox);
   const paymentKey = await paymobRequest("/acceptance/payment_keys", {
     auth_token: auth.token,
     amount_cents: amountCents,
@@ -66,7 +68,7 @@ async function createCheckout({ amountCents, currency, merchantOrderId, user, pa
     currency: currency || "EGP",
     integration_id: integrationId,
     lock_order_when_paid: true,
-  });
+  }, sandbox);
 
   if (paymentMethod === "wallet") {
     const identifier = String(walletPhone || "").trim();
@@ -154,3 +156,4 @@ function callbackDetails(payload) {
 }
 
 module.exports = { createCheckout, verifyHmac, callbackDetails, calculateHmac };
+

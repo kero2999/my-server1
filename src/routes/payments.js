@@ -9,6 +9,7 @@ const { getUserCountry } = require("../country-service");
 const { recordAuditEvent } = require("../audit-service");
 
 const router = express.Router();
+router.use("/sandbox", require("./payment-sandbox"));
 const checkoutLimiter = rateLimit({ name: "payment-checkout", windowMs: 10 * 60 * 1000, max: 5, keyGenerator: (req) => String(req.userId || req.ip || "unknown") });
 
 function recordPaymentAudit(req, { action, status = "success", payment, metadata = {} }) {
@@ -299,3 +300,4 @@ router.post("/course/:courseId/create", requireAuth, checkoutLimiter, async (req
 });
 
 module.exports = router;
+
