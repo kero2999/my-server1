@@ -10,6 +10,7 @@ const { normalizeCountryCode } = require("../country-service");
 const { attributeUser } = require("../affiliate-service");
 
 const router = express.Router();
+const LEGAL_VERSION = "2026-10-28.1";
 const accountKey = (req) => `${req.ip || "unknown"}:${String(req.body?.email || "").trim().toLowerCase().slice(0, 160)}`;
 const registerLimiter = rateLimit({ name: "auth-register", windowMs: 15 * 60 * 1000, max: 5 });
 const loginLimiter = rateLimit({ name: "auth-login", windowMs: 15 * 60 * 1000, max: 10, keyGenerator: accountKey });
@@ -59,6 +60,8 @@ router.post("/register", registerLimiter, async (req, res) => {
     if (password.length < 8) {
       return res.status(400).json({ ok: false, error: "كلمة المرور يجب أن تكون 8 أحرف على الأقل." });
     }
+    if(req.body?.termsAccepted !== true) return res.status(400).json({ok:false,code:"TERMS_ACCEPTANCE_REQUIRED",error:"راجع الشروط والسياسات ثم وافق عليها لإنشاء حسابك."});
+    if([req.body.termsVersion, req.body.privacyVersion, req.body.refundPolicyVersion].some(version => version !== LEGAL_VERSION)) return res.status(400).json({ok:false,code:"TERMS_VERSION_CHANGED",error:"تم تحديث الوثائق. حدّث صفحة التسجيل وراجع الشروط والسياسات قبل الموافقة."});
     const normalizedEmail = email.trim().toLowerCase();
 
     const { data: existing } = await supabase
@@ -87,6 +90,10 @@ router.post("/register", registerLimiter, async (req, res) => {
         email: normalizedEmail,
         password_hash: passwordHash,
         minimum_age_confirmed: 16,
+        terms_accepted_at: new Date().toISOString(),
+        terms_version: LEGAL_VERSION,
+        privacy_version: LEGAL_VERSION,
+        refund_policy_version: LEGAL_VERSION,
         age_confirmed_at: new Date().toISOString(),
         whop_status: status,
         whop_membership_id: membershipId,

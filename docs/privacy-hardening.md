@@ -13,3 +13,9 @@ Refund action opens the user's email client with a draft to the existing support
 This release reduces collection and clarifies requests. It is not a guarantee of legal compliance across Egypt or other jurisdictions; the owner should obtain review of the 16+ policy, minor users, advertising consent and refund terms as applicable.
 
 Validation: 10 focused mocked/DOM checks for registration assertions and persistence, course asset sanitization, local icon files and refund request UI. No production registration, policy email or real refund was submitted. After setup verify a new registration, fonts/icons on lessons, absence of Clarity network requests and the manual refund email flow in a real browser.
+
+## Mandatory registration agreement
+
+Registration additionally requires termsAccepted===true and exact server-validated document versions for terms, privacy notice and refund policy (2026-10-28.1). The server records terms_accepted_at, terms_version, privacy_version and refund_policy_version. The checkbox is initially unchecked; no recorded acceptance is assigned to existing users. Versioned document copies are preserved under /legal/2026-10-28.1/ and linked at registration. This agreement is not replay recording or marketing consent, and does not waive statutory rights. It does not implement guardian authorization for 16/17-year-olds; that remains a separate pre-release legal/product issue.
+
+Run the updated migration, including the four additional agreement columns, before backend deployment. Focused registration/privacy suite: 15 checks pass.
