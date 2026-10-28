@@ -49,6 +49,7 @@ router.post("/register", registerLimiter, async (req, res) => {
   try {
     const { fullName, email, password, affiliateCode } = req.body || {};
     const countryCode = normalizeCountryCode(req.body?.countryCode || req.body?.country_code);
+    if(req.body?.ageConfirmed !== true) return res.status(400).json({ok:false,code:"AGE_CONFIRMATION_REQUIRED",error:"إنشاء الحساب متاح لمن بلغ 16 سنة فأكثر. أكد عمرك للمتابعة."});
     if (typeof fullName !== "string" || typeof email !== "string" || typeof password !== "string" || !fullName.trim() || !email.trim() || !password) {
       return res.status(400).json({ ok: false, error: "من فضلك املأ جميع الحقول." });
     }
@@ -85,6 +86,8 @@ router.post("/register", registerLimiter, async (req, res) => {
         full_name: fullName.trim(),
         email: normalizedEmail,
         password_hash: passwordHash,
+        minimum_age_confirmed: 16,
+        age_confirmed_at: new Date().toISOString(),
         whop_status: status,
         whop_membership_id: membershipId,
         ...(countryCode ? { country_code: countryCode } : {}),
@@ -278,3 +281,4 @@ router.post("/reset-password", resetLimiter, async (req, res) => {
 });
 
 module.exports = router;
+

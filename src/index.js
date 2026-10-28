@@ -46,6 +46,7 @@ app.use(
 
 app.use((req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Content-Security-Policy", "font-src 'self' data: https://www.quadralevel.com");
   res.setHeader("Referrer-Policy", "no-referrer");
   res.setHeader("Permissions-Policy", "camera=(), geolocation=(), microphone=(self)");
   res.setHeader("Strict-Transport-Security", "max-age=31536000");
@@ -89,3 +90,4 @@ const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`✅ Server running on http://localhost:${PORT}`);
 });
+

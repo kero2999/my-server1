@@ -1,0 +1,13 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const {sanitizeLearningAssets}=require('../src/privacy-assets');
+test('course assets remove replay scripts and remote font styles, retaining content',()=>{
+ const input='<html><head><link href="https://fonts.googleapis.com/css2?family=Tajawal"><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"><script>var x="https://www.clarity.ms/tag/test";</script></head><body><p>المحتوى التعليمي</p><script>window.lessonReady=true;</script></body></html>';
+ const out=sanitizeLearningAssets(input);assert.ok(!out.includes('clarity.ms'));assert.ok(!out.includes('fonts.googleapis'));assert.ok(out.includes('https://www.quadralevel.com/css/fontawesome-local.css'));assert.ok(out.includes('المحتوى التعليمي'));assert.ok(out.includes('window.lessonReady=true'));assert.equal(sanitizeLearningAssets(out),out);
+});
+function authRoute(){let inserted=null,dbCalls=0;const routes={};
+ const db={from(table){dbCalls++;const q={select(){return q},eq(){return q},insert(v){inserted=v;return q},maybeSingle:async()=>({data:null}),single:async()=>({data:{id:8,...inserted}})};return q}};
+ const mocks={'express':{Router:()=>({post(p,...h){routes[p]=h.at(-1)},get(){}})},'bcryptjs':{hash:async()=> 'hashed'},'jsonwebtoken':{sign:()=> 'testtoken'},'crypto':require('crypto'),'@getbrevo/brevo':{},'../db':db,'../middleware/auth':{},'../middleware/rate-limit':{rateLimit:()=>()=>{}},'../country-service':{normalizeCountryCode:()=>''},'../affiliate-service':{}};
+ const module={exports:{}};vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../src/routes/auth.js'),'utf8'),{module,require:n=>mocks[n],process:{env:{}},console,Date});return{run:routes['/register'],get inserted(){return inserted},get dbCalls(){return dbCalls}};
+}
+for(const ageConfirmed of [undefined,false,'true',1])test('registration refuses invalid age assertion '+ageConfirmed,async()=>{const f=authRoute(),res={status(n){this.code=n;return this},json(v){this.body=v}};await f.run({body:{fullName:'Test',email:'test@example.com',password:'password123',ageConfirmed}},res);assert.equal(res.code,400);assert.equal(res.body.code,'AGE_CONFIRMATION_REQUIRED');assert.equal(f.dbCalls,0)});
+test('records 16+ assertion with server timestamp, without date of birth',async()=>{const f=authRoute(),res={status(n){this.code=n;return this},json(v){this.body=v}};await f.run({body:{fullName:'Test',email:'test@example.com',password:'password123',ageConfirmed:true}},res);assert.equal(res.body.ok,true);assert.equal(f.inserted.minimum_age_confirmed,16);assert.ok(Date.parse(f.inserted.age_confirmed_at));assert.ok(!('date_of_birth'in f.inserted));});

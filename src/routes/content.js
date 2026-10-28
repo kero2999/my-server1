@@ -74,7 +74,7 @@ function renderHowToMakeSection(courseSlug, chapterNumber) {
 }
 
 function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "", courseId = "", country = null) {
-  const html = repairAssessmentPresentation(buffer.toString("utf8"), requestedPath, String(courseSlug).toLowerCase());
+  const html = require("../privacy-assets").sanitizeLearningAssets(repairAssessmentPresentation(buffer.toString("utf8"), requestedPath, String(courseSlug).toLowerCase()));
   // The outer Marketplace gateway has already authenticated this request.
   // Disable the legacy bundle's origin-local auth redirect inside the iframe.
   let sanitized = html
@@ -359,5 +359,6 @@ module.exports = router;
 module.exports.prepareCourseHtml = prepareCourseHtml;
 module.exports.shouldPreserveUploadedCourse = shouldPreserveUploadedCourse;
 module.exports.renderHowToMakeSection = renderHowToMakeSection;
+
 
 
