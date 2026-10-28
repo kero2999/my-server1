@@ -11,6 +11,7 @@ const { attributeUser } = require("../affiliate-service");
 
 const router = express.Router();
 const LEGAL_VERSION = "2026-10-28.1";
+const REPLAY_NOTICE_VERSION = "2026-10-28-replay-choice.1";
 const accountKey = (req) => `${req.ip || "unknown"}:${String(req.body?.email || "").trim().toLowerCase().slice(0, 160)}`;
 const registerLimiter = rateLimit({ name: "auth-register", windowMs: 15 * 60 * 1000, max: 5 });
 const loginLimiter = rateLimit({ name: "auth-login", windowMs: 15 * 60 * 1000, max: 10, keyGenerator: accountKey });
@@ -42,6 +43,7 @@ function publicUser(u) {
     status: u.whop_status, // legacy status retained during marketplace migration
     role: u.role || "user",
     countryCode: normalizeCountryCode(u.country_code) || null,
+    replayPreference: { allowed: u.session_replay_consent === true, updatedAt: u.session_replay_consent_at || null, noticeVersion: u.session_replay_notice_version || null },
   };
 }
 
@@ -62,6 +64,8 @@ router.post("/register", registerLimiter, async (req, res) => {
     }
     if(req.body?.termsAccepted !== true) return res.status(400).json({ok:false,code:"TERMS_ACCEPTANCE_REQUIRED",error:"راجع الشروط والسياسات ثم وافق عليها لإنشاء حسابك."});
     if([req.body.termsVersion, req.body.privacyVersion, req.body.refundPolicyVersion].some(version => version !== LEGAL_VERSION)) return res.status(400).json({ok:false,code:"TERMS_VERSION_CHANGED",error:"تم تحديث الوثائق. حدّث صفحة التسجيل وراجع الشروط والسياسات قبل الموافقة."});
+    if(req.body.replayConsent !== undefined && typeof req.body.replayConsent !== "boolean") return res.status(400).json({ok:false,error:"اختيار تسجيل الجلسات غير صالح."});
+    if(req.body.replayConsent === true && (req.body.replayAdultConfirmed !== true || req.body.replayNoticeVersion !== REPLAY_NOTICE_VERSION)) return res.status(400).json({ok:false,error:"الموافقة الاختيارية تتطلب تأكيد 18 سنة فأكثر وقراءة إصدار الإشعار الحالي."});
     const normalizedEmail = email.trim().toLowerCase();
 
     const { data: existing } = await supabase
@@ -90,6 +94,10 @@ router.post("/register", registerLimiter, async (req, res) => {
         email: normalizedEmail,
         password_hash: passwordHash,
         minimum_age_confirmed: 16,
+        session_replay_consent: req.body.replayConsent === true,
+        session_replay_adult_confirmed: req.body.replayConsent === true,
+        session_replay_consent_at: new Date().toISOString(),
+        session_replay_notice_version: REPLAY_NOTICE_VERSION,
         terms_accepted_at: new Date().toISOString(),
         terms_version: LEGAL_VERSION,
         privacy_version: LEGAL_VERSION,
@@ -159,6 +167,20 @@ router.get("/me", requireAuth, async (req, res) => {
   const { data: user } = await supabase.from("users").select("*").eq("id", req.userId).maybeSingle();
   if (!user) return res.status(404).json({ ok: false, error: "المستخدم غير موجود." });
   res.json({ ok: true, user: publicUser(user) });
+});
+
+// Authenticated preference controls: consent does not activate a recorder.
+router.post("/session-replay-consent", requireAuth, async (req, res) => {
+  const { allowed, adultConfirmed, noticeVersion } = req.body || {};
+  if(typeof allowed !== "boolean") return res.status(400).json({ok:false,error:"اختيار غير صالح."});
+  if(allowed && (adultConfirmed !== true || noticeVersion !== REPLAY_NOTICE_VERSION)) return res.status(400).json({ok:false,error:"أكد بلوغ 18 سنة فأكثر وراجع الإشعار الحالي أولًا."});
+  try {
+    const {data:user,error}=await supabase.from("users").update({session_replay_consent:allowed,session_replay_adult_confirmed:allowed && adultConfirmed === true,session_replay_consent_at:new Date().toISOString(),session_replay_notice_version:REPLAY_NOTICE_VERSION}).eq("id",req.userId).select("session_replay_consent,session_replay_consent_at,session_replay_notice_version").maybeSingle();
+    if(error) throw error;
+    if(!user) return res.status(404).json({ok:false,error:"الحساب غير موجود."});
+    res.set("Cache-Control","private, no-store");
+    res.json({ok:true,replayEnabled:false,preference:{allowed:user.session_replay_consent === true,updatedAt:user.session_replay_consent_at,noticeVersion:user.session_replay_notice_version}});
+  } catch (_) {res.status(503).json({ok:false,error:"تعذّر حفظ اختيارك. حاول مرة أخرى."});}
 });
 
 // POST /api/auth/forgot-password
@@ -288,4 +310,5 @@ router.post("/reset-password", resetLimiter, async (req, res) => {
 });
 
 module.exports = router;
+
 
