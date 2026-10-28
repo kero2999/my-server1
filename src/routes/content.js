@@ -119,7 +119,7 @@ function prepareCourseHtml(buffer, requestedPath = "", courseSlug = "", courseId
     if (["marketing-launch", "marketing-growth", "marketing-mastery", "marketing-leadership"].includes(String(courseSlug).toLowerCase()) && /(?:^|\/)course-home\.html$/i.test(requestedPath)) {
       sanitized = sanitized.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, (script) => /QLLearning\.request\(\s*['"]learning['"]\s*,\s*1\s*\)/.test(script) ? "" : script);
       sanitized = sanitized.replace(/<\/head>/i, '<meta name="ql-course-slug" content="' + escapeHtml(courseSlug) + '"></head>');
-      sanitized = sanitized.replace(/<\/body>/i, '<script src="https://www.quadralevel.com/js/launch-course-catalog.js?v=20261017-3"></script></body>');
+      sanitized = sanitized.replace(/<\/body>/i, '<script src="https://www.quadralevel.com/js/launch-course-catalog.js?v=20261028-direct-project"></script></body>');
     }
     if (/id=["']assessmentTheme["']/i.test(sanitized)) {
       sanitized = sanitized.replace(/<\/body>/i, '<script id="ql-live-assessment-theme">(function(){var b=document.getElementById("assessmentTheme");if(b&&!b.onclick)b.addEventListener("click",function(){document.body.classList.toggle("dark")},true)})();</script></body>');
@@ -359,4 +359,5 @@ module.exports = router;
 module.exports.prepareCourseHtml = prepareCourseHtml;
 module.exports.shouldPreserveUploadedCourse = shouldPreserveUploadedCourse;
 module.exports.renderHowToMakeSection = renderHowToMakeSection;
+
 
