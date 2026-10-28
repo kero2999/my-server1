@@ -239,7 +239,12 @@ async function buildLearning({ userId, course, access, country, preview = false 
   const projectBriefValidation = validateGraduationProjectBrief(projectDefinition, chapters.length);
   const latestSubmission = project ? submissions.find((submission) => submission.project_id === project.id) || null : null;
   const allQuizzesPassed = chapters.length > 0 && chapters.every((chapter) => chapter.quiz && chapter.result?.passed);
-  const allChaptersPassed = chapters.length > 0 && (assessmentSystemEnabled ? chapters.every((chapter) => Boolean(chapter.assessment?.passed)) : chapters.every((chapter) => Boolean(chapter.result?.passed)));
+  // Marketing graduation requires a real passing assessment in every chapter.
+  // Admin content access and preview are not evidence of student completion.
+  const requiresChapterAssessments = shouldPreserveUploadedCourseTitles(course.slug);
+  const allChaptersPassed = chapters.length > 0 && (assessmentSystemEnabled
+    ? chapters.every((chapter) => chapter.assessment?.passed === true && Number.isFinite(chapter.assessment.chapterScore) && chapter.assessment.chapterScore >= 75)
+    : !requiresChapterAssessments && chapters.every((chapter) => Boolean(chapter.result?.passed)));
   const quizScores = chapters.map((chapter) => chapter.result?.score).filter((score) => Number.isFinite(score));
   const quizAverage = quizScores.length ? Math.round((quizScores.reduce((sum, score) => sum + score, 0) / quizScores.length) * 100) / 100 : 0;
   const projectPassed = Boolean(latestSubmission && PASSED_PROJECT_STATUSES.has(latestSubmission.status));
@@ -275,7 +280,7 @@ async function buildLearning({ userId, course, access, country, preview = false 
       briefVersion: projectDefinition?.version || null,
       briefValidation: projectBriefValidation,
       passingScore: project.passing_score == null ? 70 : Number(project.passing_score),
-      ready: Boolean(preview || access?.admin || allChaptersPassed),
+      ready: Boolean(!preview && allChaptersPassed),
       preview: Boolean(preview),
       passed: projectPassed,
       submission: latestSubmission,
@@ -370,3 +375,4 @@ module.exports = {
   isChapterUnlocked,
   shouldPreserveUploadedCourseTitles,
 };
+

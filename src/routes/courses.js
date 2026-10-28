@@ -864,7 +864,7 @@ router.post("/:courseId/projects/:projectId/submit", requireAuth, projectSubmitL
     if (!project) return res.status(404).json({ ok: false, error: "المشروع غير موجود." });
     const country = await getUserCountry(req.userId);
     const learning = await buildLearning({ userId: req.userId, course, access, country });
-    if (!learning.overall.allChaptersPassed && !access.admin) return res.status(403).json({ ok: false, error: "أكمل ونجّح تقييمات جميع الفصول بنسبة 75% أو أكثر أولًا." });
+    if (!learning.overall.allChaptersPassed) return res.status(403).json({ ok: false, code: "PROJECT_LOCKED", error: "أكمل ونجّح تقييمات جميع الفصول بنسبة 75% أو أكثر أولًا." });
 
     const { data: user, error: userError } = await supabase.from("users").select("email, full_name").eq("id", req.userId).maybeSingle();
     if (userError) throw userError;
@@ -1000,4 +1000,5 @@ module.exports.getAccess = getAccess;
 module.exports.resolveEntryFile = resolveEntryFile;
 module.exports.pickIndexFile = pickIndexFile;
 module.exports.pickCourseEntryFile = pickCourseEntryFile;
+
 
