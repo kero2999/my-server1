@@ -11,7 +11,7 @@ const { attributeUser } = require("../affiliate-service");
 
 const router = express.Router();
 const LEGAL_VERSION = "2026-10-28.1";
-const REPLAY_NOTICE_VERSION = "2026-10-28-replay-choice.1";
+const REPLAY_NOTICE_VERSION = "2026-10-28-replay-active.2";
 const accountKey = (req) => `${req.ip || "unknown"}:${String(req.body?.email || "").trim().toLowerCase().slice(0, 160)}`;
 const registerLimiter = rateLimit({ name: "auth-register", windowMs: 15 * 60 * 1000, max: 5 });
 const loginLimiter = rateLimit({ name: "auth-login", windowMs: 15 * 60 * 1000, max: 10, keyGenerator: accountKey });
@@ -43,7 +43,7 @@ function publicUser(u) {
     status: u.whop_status, // legacy status retained during marketplace migration
     role: u.role || "user",
     countryCode: normalizeCountryCode(u.country_code) || null,
-    replayPreference: { allowed: u.session_replay_consent === true, updatedAt: u.session_replay_consent_at || null, noticeVersion: u.session_replay_notice_version || null },
+    replayPreference: { allowed: u.session_replay_consent === true && u.session_replay_adult_confirmed === true && u.session_replay_notice_version === REPLAY_NOTICE_VERSION, updatedAt: u.session_replay_consent_at || null, noticeVersion: u.session_replay_notice_version || null },
   };
 }
 
@@ -169,7 +169,7 @@ router.get("/me", requireAuth, async (req, res) => {
   res.json({ ok: true, user: publicUser(user) });
 });
 
-// Authenticated preference controls: consent does not activate a recorder.
+// Authenticated preference controls. The client independently enforces route and consent checks.
 router.post("/session-replay-consent", requireAuth, async (req, res) => {
   const { allowed, adultConfirmed, noticeVersion } = req.body || {};
   if(typeof allowed !== "boolean") return res.status(400).json({ok:false,error:"اختيار غير صالح."});
@@ -310,5 +310,6 @@ router.post("/reset-password", resetLimiter, async (req, res) => {
 });
 
 module.exports = router;
+
 
 
