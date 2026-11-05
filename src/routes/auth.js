@@ -77,14 +77,10 @@ router.post("/register", registerLimiter, async (req, res) => {
       return res.status(400).json({ ok: false, error: "يوجد حساب بهذا الإيميل بالفعل." });
     }
 
-    // هل فيه اشتراك Whop مستني الإيميل ده؟
-    const { data: pending } = await supabase
-      .from("pending_activations")
-      .select("*")
-      .eq("email", normalizedEmail)
-      .maybeSingle();
-    const status = pending ? "active" : "pending";
-    const membershipId = pending ? pending.whop_membership_id : null;
+    // Never grant a pre-existing membership based solely on an unverified email.
+    // Pending memberships must be claimed through a separately verified ownership flow.
+    const status = "pending";
+    const membershipId = null;
 
     const passwordHash = await bcrypt.hash(password, 10);
     const { data: user, error } = await supabase
