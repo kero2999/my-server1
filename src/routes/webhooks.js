@@ -105,6 +105,14 @@ router.post("/paymob", async (req, res) => {
       return res.status(200).json({ received: true, matched: false });
     }
 
+    // Reject a signed callback if its identifiers disagree with the matched local order.
+    // A merchant-order fallback must not silently accept a different provider order.
+    if ((payment.provider_order_id && String(payment.provider_order_id) !== String(details.providerOrderId)) ||
+        (details.merchantOrderId && String(payment.merchant_order_id) !== String(details.merchantOrderId))) {
+      await recordWebhookAudit(req, "PAYMOB_WEBHOOK_ORDER_ID_MISMATCH", "error", { paymentId: payment.id });
+      return res.status(400).json({ ok: false, error: "Payment order mismatch" });
+    }
+
     if (Number(payment.amount_cents) !== details.amountCents || String(payment.currency).toUpperCase() !== String(details.currency).toUpperCase()) {
       console.error("Paymob callback amount/currency mismatch:", { payment, details });
       await recordWebhookAudit(req, "PAYMOB_WEBHOOK_MISMATCH", "error", { paymentId: payment.id, providerOrderId: details.providerOrderId, transactionId: details.transactionId, expectedAmountCents: payment.amount_cents, receivedAmountCents: details.amountCents, expectedCurrency: payment.currency, receivedCurrency: details.currency });
