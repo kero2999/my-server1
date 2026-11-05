@@ -190,8 +190,9 @@ router.post("/forgot-password", recoveryLimiter, async (req, res) => {
 
   try {
 
-    const { email } = req.body;
-    const normalizedEmail = (email || "").trim().toLowerCase();
+    const { email } = req.body || {};
+    if (typeof email !== "string" || email.length > 320) return res.json(genericOk);
+    const normalizedEmail = email.trim().toLowerCase();
 
 
     if (!normalizedEmail) {
@@ -212,6 +213,8 @@ router.post("/forgot-password", recoveryLimiter, async (req, res) => {
       return res.json(genericOk);
     }
 
+
+    if (!apiInstance || !process.env.EMAIL_FROM || !process.env.FRONTEND_URL) return res.json(genericOk);
 
     const token = crypto.randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
