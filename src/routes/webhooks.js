@@ -129,18 +129,24 @@ router.post("/paymob", async (req, res) => {
 
     const nextStatus = details.success ? "paid" : "failed";
     const paidAt = details.success ? new Date().toISOString() : null;
-    const { error: updateError } = await supabase.from("payments").update({
+    const { data: updated, error: updateError } = await supabase.from("payments").update({
       status: nextStatus,
       provider_transaction_id: details.transactionId,
       raw_callback: details.raw,
       paid_at: paidAt,
       updated_at: new Date().toISOString(),
-    }).eq("id", payment.id).neq("status", "paid");
+    }).eq("id", payment.id).neq("status", "paid").select("*").maybeSingle();
     if (updateError) throw updateError;
 
     if (details.success) {
-      await fulfillPaidPayment({ ...payment, status: "paid", paid_at: paidAt,
-        provider_transaction_id: details.transactionId });
+      if (!updated || updated.status !== "paid") {
+        const { data: latest, error: latestError } = await supabase.from("payments").select("*").eq("id", payment.id).maybeSingle();
+        if (latestError) throw latestError;
+        if (!latest || latest.status !== "paid") return res.status(409).json({ ok: false, error: "Payment state changed" });
+        await fulfillPaidPayment(latest);
+      } else {
+        await fulfillPaidPayment(updated);
+      }
     }
 
     await recordWebhookAudit(req, `PAYMOB_WEBHOOK_PROCESSED ${payment.id}`, "success", { paymentId: payment.id, providerOrderId: details.providerOrderId, transactionId: details.transactionId, paymentStatus: nextStatus, success: details.success });
