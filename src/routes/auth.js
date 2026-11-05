@@ -15,6 +15,7 @@ const REPLAY_NOTICE_VERSION = "2026-10-28-replay-active.2";
 const accountKey = (req) => `${req.ip || "unknown"}:${String(req.body?.email || "").trim().toLowerCase().slice(0, 160)}`;
 const registerLimiter = rateLimit({ name: "auth-register", windowMs: 15 * 60 * 1000, max: 5 });
 const loginLimiter = rateLimit({ name: "auth-login", windowMs: 15 * 60 * 1000, max: 10, keyGenerator: accountKey });
+const loginIpLimiter = rateLimit({ name: "auth-login-ip", windowMs: 15 * 60 * 1000, max: 60 });
 const recoveryLimiter = rateLimit({ name: "auth-recovery", windowMs: 60 * 60 * 1000, max: 3, keyGenerator: accountKey });
 const resetLimiter = rateLimit({ name: "auth-reset", windowMs: 60 * 60 * 1000, max: 10 });
 const apiInstance = process.env.BREVO_API_KEY
@@ -125,7 +126,7 @@ router.post("/register", registerLimiter, async (req, res) => {
 });
 
 // POST /api/auth/login
-router.post("/login", loginLimiter, async (req, res) => {
+router.post("/login", loginIpLimiter, loginLimiter, async (req, res) => {
   try {
     const { email, password, affiliateCode } = req.body || {};
     if (typeof email !== "string" || typeof password !== "string" || email.length > 320 || password.length > 128) {
