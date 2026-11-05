@@ -279,6 +279,10 @@ router.post("/reset-password", resetLimiter, async (req, res) => {
       return res.status(400).json({ ok: false, error: "كلمة المرور يجب أن تكون 8 أحرف على الأقل." });
     }
 
+    if (typeof token !== "string" || !/^[a-f0-9]{64}$/.test(token)) {
+      return res.status(400).json({ ok: false, error: "الرابط غير صالح أو منتهي الصلاحية. اطلب رابط جديد." });
+    }
+
     const { data: reset } = await supabase
       .from("password_resets")
       .select("*")
